@@ -1,0 +1,290 @@
+# Porting plan: from mchess2 to a chess engine on NICE
+
+This is the plan for turning [mchess2](https://github.com/MJoergen/mchess2), a
+C++ chess engine for a host PC, into a playable chess program for the NICE
+system. Development targets `niceemu` from
+[nice_cpu](https://github.com/MJoergen/nice_cpu) first, then the
+[NiceMonMEGA65](https://github.com/MJoergen/NiceMonMEGA65) core. There are two
+front ends, a text-only one on the console and a windowed one on the 80×25
+character screen.
+
+The survey behind it used mchess2 at `65e8855` (Nov 2017), nice_cpu at
+`68323dc` (V1.2), and NiceMonMEGA65 `main` as of 2026-11-02. The figures
+below come from those repositories' documents and comments. None of them
+were measured for this plan.
+
+## Summary
+
+1. **Copy, don't link.** Copy the mchess2 sources and test suites into
+   `nice_chess` by hand and leave mchess2 archived. Don't use `git subtree`:
+   mchess2's history carries a 29 MB `book.bin`, which no code reads, and a
+   Windows `mchess.exe`, and a subtree would bring both into this repository
+   forever. A provenance note naming commit `65e8855` is enough. The history
+   is only 13 commits.
+2. **Rewrite in C, using `mchess.c` as the base.** The NICE toolchain
+   compiles C through clang and wasm32, and it has no C++ standard library.
+   mchess2 depends on `std::vector`, `std::string`, and iostreams
+   throughout. nice_cpu already has `runtime/libc/test/mchess.c`, a
+   single-file C version of an earlier mchess, which builds and runs on
+   `niceemu` today. Start from it, and bring over mchess2's extra features
+   one at a time: castling, en passant, the transposition table, iterative
+   deepening, time control, and UCI.
+3. **Memory decides the design, not speed.** On the MEGA65, a program under
+   the monitor gets 28K words (112 KB) for its code, data, and stack. Wasm
+   linear memory alone takes at least one page, 16K words. The current
+   `mchess.c` build uses four pages, which is the whole of the board's RAM.
+4. **Speed comes second, and it is also a real limit.** `mchess.c` takes
+   about 10¹⁰ steps for one depth-5 search from the opening position. At
+   100 MHz and the pipelined core's 1.43 cycles per instruction, that is
+   about 2.5 minutes per move. The evaluation function has to be cheap, and
+   the search has to be stopped by a clock.
+5. **Split the program into an engine core and front ends** (see
+   Architecture). The core builds for the host as well, so the move
+   generator can be checked against perft suites at host speed.
+
+## What exists today
+
+### mchess2 (C++, host PC)
+
+About 4300 lines of C++:
+
+| File | Contents | Bring over? |
+|---|---|---|
+| `CSquare.h`, `CMove.*`, `CMoveList.*` | 10×12 mailbox squares, the move type, the move list (a `std::vector`) | Yes, as C structs and fixed arrays |
+| `CBoard.*` (1524 lines) | Board, FEN reading, legal move generation with castling and en passant, make/undo, evaluation | Yes, the largest part of the port |
+| `CHashEntry.*`, `CHashTable.*` | Zobrist keys (781 × 64 bits) and the transposition table (8M entries × 16 bytes = 128 MB) | Yes, with 32-bit keys and a table of a few thousand entries |
+| `ai.*` | Negamax alpha-beta with a transposition table, quiescence search, killer move, iterative deepening, time control | Yes |
+| `CPerft*`, `CSearchSuite*` | Perft and search test drivers | Yes, as host-side tests |
+| `main.cc` | Console UI and UCI | Rewrite, as front ends |
+| `CTime.h`, `trace.h`, `crc32.h` | `clock()` wrapper, `TRACE` macro, CRC | Replace with small C equivalents |
+| `tests/perftsuite.epd` (126 positions), `tests/searchsuite.epd` (564), `tests/*.fen` | Test positions | Yes |
+| `doc/` (UCI spec, theory PDF) | Reference | Link to them, don't copy |
+| `book.bin`, `mchess.exe` | Unused opening book, Windows binary | No |
+
+Known weak spots, from its own TODO and the code:
+
+- `get_value()` runs the full legal move generator twice for each leaf, to
+  count mobility. On NICE this would be most of the run time.
+- There is no detection of draws by repetition or by the 50-move rule.
+- Each search level copies a `CMoveList`, and the principal variation is
+  built by concatenating lists.
+
+### mchess.c in nice_cpu (C, already runs on niceemu)
+
+`runtime/libc/test/mchess.c` is 987 lines, MIT, by the same author. It has
+the same 10×12 board, alpha-beta at a fixed depth of 5 with quiescence, a
+console UI, and `perft`. It has no castling, en passant, transposition
+table, time control, or UCI. It is a test of nice_cpu's C library, so it
+will stay there. We copy it, and don't depend on it.
+
+What its build says about the platform (from `runtime/libc/Makefile`):
+
+- Each search level puts a move list of 2.5 KB on the wasm stack. Five
+  levels plus up to 30 levels of quiescence came to about 100 KB, so it
+  links with a 128 KB stack and four pages of memory (256 KB).
+- `perft 3` takes 11 million steps, and a `go` from the opening takes about
+  10¹⁰.
+
+## Constraints of the platform
+
+### Language and toolchain
+
+- No compiler targets NICE directly yet (nice_cpu issue #66). C, Zig, and
+  Rust reach NICE as wasm32 modules, which `nicewasm.py` translates into
+  NICE assembly. `translator/nicebuild.py` does all the steps:
+  `nicebuild.py -o chess.bin chess.c`.
+- The C library is small: `printf`, `scanf`, `string.h`, `malloc`,
+  `ctype.h`, `assert`, `clock()`, and the `nice.h` device calls. There is no
+  file I/O, so test positions have to come in on the console or be compiled
+  in.
+- C++ could in principle be built with clang for wasm32 if it used no
+  standard library, no exceptions, and no RTTI. That would mean rewriting
+  every container anyway, and nicebuild does not support it. **C is the
+  choice.**
+- Hot routines can later be written by hand in NICE assembly and joined
+  with `nicebuild.py --asm FILE`.
+- Host tools: Python 3.10+, clang with the wasm32 target, `wasm-ld`, and
+  `llvm-ar`. niceemu comes from the V1.2 release, with or without the
+  window, so no Zig is needed.
+
+### Memory
+
+| Target | Room for the program | Notes |
+|---|---|---|
+| niceemu | Practically unlimited (2³² words) | It is easy to write a program here that never fits on the board. |
+| NiceMonMEGA65, under the monitor | `0x8000`–`0xEFFF`: **28K words**, for the image and the NICE stack | Loaded over the debug link (UART or Ethernet). The monitor cannot load programs from the board by itself yet. |
+| NiceMonMEGA65, in the ROM | 32K words | A C program cannot be a ROM, because its data would be in ROM too. |
+
+Wasm linear memory is a whole number of 64 KB pages, and one page is 16K
+words. So on the board, **code, runtime, and libc must fit in about 12K
+words minus the NICE stack**, with every byte of data in a single 64 KB
+page: the wasm stack, the board, the move stack, the transposition table,
+and the strings. For scale, nice_cpu's `primes.c` example with `printf`
+and `scanf` ends at word `0x631F` when loaded at 0. That is about 9K words
+beyond its one page. The first task of Phase 1 is to measure the
+real size of the engine.
+
+So, from the start:
+
+- Use one global move stack, for example 1024 moves of 4 bytes, indexed
+  by ply. No per-level `MoveList` on the stack.
+- Use 32-bit Zobrist keys, and a transposition table of 2K to 4K entries
+  of 8 bytes (16 to 32 KB). The table's size is a compile-time constant
+  per target.
+- Avoid `printf` in the core. Front ends can use small print routines of
+  their own if `printf` turns out to cost too much code.
+- Keep a `make size` target that reports where the image ends and how
+  much of the linear memory is used, and fail the board build if it does
+  not fit.
+
+If the budget can't be met, there are two ways out. Both are open
+questions, and neither is needed for niceemu:
+
+1. Use more of the board's RAM. The MEGA65 has HyperRAM, but
+   NiceMonMEGA65 doesn't map it today.
+2. Write the move generator and make/undo by hand in NICE assembly. This
+   is smaller and faster than translated wasm.
+
+### Speed
+
+- Translated code: a wasm byte or halfword store becomes a read, a
+  change, and a write of the word. An `int64` becomes two words, and
+  operations on it become multi-word sequences. Keep the board, the move
+  fields, and the counters in `int32_t` (one word each), and keep hash
+  keys at 32 bits.
+- The MEGA65 runs at 100 MHz. The pipelined core measures 1.43 cycles per
+  instruction on nice_cpu's benchmark, so it runs about 70M steps per
+  second. In niceemu, a step is one microsecond of `clock()`, so time
+  controls in the emulator are counted in steps, not wall-clock time.
+- Use evaluation by material plus piece-square tables, updated in
+  make/undo. Drop the mobility evaluation of mchess2. Use iterative
+  deepening with a time or node budget, MVV-LVA capture ordering, the move
+  from the transposition table first, and killer moves.
+- The aim is a move in 5 to 15 seconds on the board, at whatever depth
+  that reaches (probably 4 to 5 ply). That is fine for a demo.
+
+### I/O
+
+- **Console:** `getchar`/`printf` (or `nice_getc`/`nice_pollc`/`nice_putc`).
+  In niceemu the console is stdin and stdout, or a file through `-i`. On
+  the board it is the UART or Ethernet, and the MEGA65 keyboard feeds the
+  same input.
+- **Screen:** 80×25 character cells at `0xFFFF0000`, one word each:
+  ISO 8859-1 code in bits 7..0, foreground color in bits 19..8, and
+  background color in bits 31..20 (4 bits each of R, G, and B). There is
+  a hardware cursor. There are no bitmap graphics and no user-defined
+  glyphs, so pieces are letters or Latin-1 symbols on colored squares.
+- **Keyboard:** in a window, the keys come in through the console. A read
+  returns 0 when no key waits, which lets the engine poll for keys during
+  its search.
+- niceemu `--window` (the windowed build of the release) shows the same
+  screen, so the windowed front end can be developed entirely in the
+  emulator. `niceemu --color -i keys.txt` prints the final screen, which
+  makes the windowed front end testable in CI without a display.
+
+## Architecture
+
+```
+src/engine/   board.c  movegen.c  makemove.c  eval.c  search.c  tt.c  fen.c
+              engine.h            (the core: no I/O, no clock, no malloc)
+src/platform/ nice.c   host.c     (time, poll for key, and output for the core)
+src/ui/       text.c              (console: board diagram, SAN/coordinate input, and UCI)
+              screen.c            (windowed: board on the 80x25 screen, keyboard cursor)
+tests/        perft and search suites, and the expected outputs of niceemu runs
+tools/        build scripts, and the size report
+```
+
+The core's API is small and has no state outside it. For example:
+`engine_new_game`, `engine_set_fen`, `engine_legal_moves`,
+`engine_make_move`, `engine_undo`, `engine_search(limits, callback)`,
+`engine_result` (mate, stalemate, 50 moves, repetition), and `engine_perft`.
+The search calls a platform hook every N nodes, to check the clock and the
+keyboard. That is how the windowed front end stays responsive and lets the
+player stop a search.
+
+Both front ends are separate `main`s that link the same core, so there are
+two `.bin` files, `chess_text.bin` and `chess_screen.bin`. The text front
+end is the one in mchess2's `main.cc`: `show`, `move e2e4`, `go`, `perft
+N`, `fen ...`, `undo`, and a `uci` mode. UCI over the console lets host
+GUIs and cutechess play the engine running inside niceemu.
+
+The core also builds with the host's clang or gcc (`make host`). Perft
+suites run in seconds there, and only a sample of them runs on niceemu.
+
+## Phases
+
+Each phase ends with something that runs and with tests in CI.
+
+**Phase 0: the repository (small).**
+- Copy the mchess2 sources and test suites into `ref/mchess2/`,
+  unchanged, with a `PROVENANCE.md` that names commit `65e8855` and the
+  license. Copy `mchess.c` from nice_cpu the same way. Mark mchess2 as
+  archived on GitHub.
+- Write a Makefile that fetches or points to a nice_cpu checkout (a path
+  variable such as `NICE_CPU ?= ../nice_cpu`, or a pinned release tag),
+  plus a GitHub Actions job that installs clang and lld, downloads niceemu
+  V1.2, and runs `make test`.
+- Exit criterion: `mchess.c`, unchanged, builds and runs `perft 3` on niceemu
+  in CI.
+
+**Phase 1: the engine core in C, measured.**
+- Restructure `mchess.c` into `src/engine/` with the API above. Use the
+  global move stack, `int32_t` everywhere, and 32-bit Zobrist keys.
+- Add castling, en passant, under-promotion, and FEN input/output from
+  mchess2's `CBoard.cc`.
+- Run the perft suite on the host (all 126 positions to depth 4 or 5), and
+  a few positions to depth 3 on niceemu.
+- Add `make size`, and record code words, data bytes, and peak stack.
+- Exit criterion: perft matches on the host and on niceemu, and there is a
+  first size figure against the 28K-word budget.
+
+**Phase 2: search, playable in text on niceemu.**
+- Iterative deepening, the transposition table, quiescence, move
+  ordering, a material plus piece-square table evaluation, a time or node
+  limit, and detection of repetition and the 50-move rule.
+- The text front end with the board diagram, move input, `go`, `undo`, and
+  game end. Add UCI after that.
+- Run a subset of the search suite on the host. On niceemu, run a few
+  fixed-node searches whose best move and node count are checked.
+- Exit criterion: a full game against the engine in `niceemu`, in text,
+  with each reply in a reasonable step budget, plus a host build that beats
+  random moves and plays mchess2 to a sensible result under cutechess.
+
+**Phase 3: the windowed front end on niceemu.**
+- `screen.c`: a board of 8×8 squares, 5 columns × 3 rows of cells each
+  (40×24, which leaves 40 columns on the right for the move list, clocks,
+  the search info, and help), light and dark square colors, and piece
+  letters in two colors. Move by cursor keys and Enter, or by typing
+  `e2e4`. Highlight the last move and legal targets. Show "thinking" while
+  the search runs, and allow Esc to make the engine move now.
+- Test it with `niceemu --color -i keys.txt`, comparing the screen.
+- Exit criterion: a full game played in `niceemu --window`.
+
+**Phase 4: NiceMonMEGA65.**
+- Build with `nicebuild.py --monitor`, which loads at `0x8000`. Load and
+  run over the debug link (`load.py` / `run.py` in NiceMonMEGA65).
+- Get it to fit: tune the table sizes, trim libc use, and if needed move
+  hot routines into hand-written NICE assembly or ask for more RAM in the
+  core.
+- Tune the time limits for the 100 MHz clock (`clock()` there is real
+  microseconds).
+- Exit criterion: a full game on the MEGA65 screen and keyboard, and the
+  text version over the UART or Ethernet.
+
+**Later, optional.** An opening book small enough to compile in (a few
+hundred positions), a better evaluation (pawn structure, king safety),
+PVS or aspiration windows, a ROM-able build once there is a direct NICE C
+compiler or a monitor that loads from SD card, and custom chess glyphs if
+NiceMonMEGA65's font ever becomes programmable.
+
+## Open questions
+
+1. Does nice_chess pin a nice_cpu release (V1.2 now), or track `main`? A
+   release pin is more reproducible. The proposal is a pin, raised by hand.
+2. Is it acceptable to keep `ref/mchess2/` in the repository, or should
+   the reference copy live only in mchess2's archived repo?
+3. Is more RAM on the MEGA65 (HyperRAM) an option in NiceMonMEGA65, or
+   is 28K words a fixed target? That decides how much effort goes into
+   size in Phase 4.
+4. Coordinate notation (`e2e4`) only, or SAN (`Nf3`) too? SAN costs code
+   on the board.
