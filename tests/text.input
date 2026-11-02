@@ -1,0 +1,39 @@
+undo
+perft 1
+perft 2
+perft 3
+fen foo
+e2e5
+fen r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1
+perft 2
+e1g1
+show
+undo
+show
+fen 4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1
+move e5d6
+show
+fen 4k3/1P6/8/8/8/8/8/4K3 w - - 0 1
+b7b8n
+show
+new
+f2f3
+e7e5
+g2g4
+d8h4
+fen k7/8/8/8/3Q4/8/8/7K w - - 0 1
+d4b6
+new
+g1f3
+g8f6
+f3g1
+f6g8
+g1f3
+g8f6
+f3g1
+f6g8
+fen 4k3/8/8/8/8/8/8/R3K3 w - - 99 60
+a1a2
+fen 6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1
+go 2
+quit

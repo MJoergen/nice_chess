@@ -1,0 +1,165 @@
+/***************************************************************
+ * makemove.c: making and taking back moves.
+ *
+ * make_move keeps the material, the king squares, and the Zobrist
+ * key up to date as it goes. undo_move restores the state and the
+ * key from the history, and reverses the rest.
+ *
+ * Copyright (c) 2026 Michael Jørgensen. MIT license (see LICENSE).
+ ***************************************************************/
+
+#include "internal.h"
+
+// The castling rights that remain after a move from or to a square.
+static int32_t castle_keep(int sq)
+{
+    switch (sq)
+    {
+        case A1 : return ~CASTLE_WQ;
+        case E1 : return ~(CASTLE_WK | CASTLE_WQ);
+        case H1 : return ~CASTLE_WK;
+        case A8 : return ~CASTLE_BQ;
+        case E8 : return ~(CASTLE_BK | CASTLE_BQ);
+        case H8 : return ~CASTLE_BK;
+        default : return ~0;
+    }
+}
+
+static inline uint32_t zob(int piece, int sq)
+{
+    return zob_piece[piece + 6][sq64[sq]];
+}
+
+// The change in material, from white's point of view, that a move makes.
+static int material_delta(move_t m)
+{
+    int delta = -piece_value[move_captured(m) + 6];
+    int promoted = move_promoted(m);
+    if (promoted != EM)
+        delta += piece_value[promoted + 6] - piece_value[move_piece(m) + 6];
+    return delta;
+}
+
+/***************************************************************
+ * make_move
+ * Makes a pseudo-legal move. The caller checks move_was_legal.
+ ***************************************************************/
+void make_move(move_t m)
+{
+    int from     = move_from(m);
+    int to       = move_to(m);
+    int piece    = move_piece(m);
+    int captured = move_captured(m);
+    int promoted = move_promoted(m);
+    int kind     = move_kind(m);
+    uint32_t h   = pos.hash;
+
+    assert(pos.ply < MAX_HISTORY);
+    history_t *hs = &hist[pos.ply++];
+    hs->move  = m;
+    hs->state = pos.castle | pos.ep << 4 | pos.halfmove << 11;
+    hs->hash  = h;
+
+    if (captured != EM)
+    {
+        int csq = (kind == MK_EP) ? to - N*pos.side : to;
+        pos.board[csq] = EM;
+        h ^= zob(captured, csq);
+    }
+
+    int arrives = (promoted != EM) ? promoted : piece;
+    pos.board[from] = EM;
+    pos.board[to]   = arrives;
+    h ^= zob(piece, from) ^ zob(arrives, to);
+
+    if (kind == MK_CASTLE)
+    {
+        int rook = pos.side*WR;
+        int rfrom = (to > from) ? to + 1 : to - 2;
+        int rto   = (to > from) ? to - 1 : to + 1;
+        pos.board[rfrom] = EM;
+        pos.board[rto]   = rook;
+        h ^= zob(rook, rfrom) ^ zob(rook, rto);
+    }
+
+    if (piece == WK) pos.king[1] = to;
+    if (piece == BK) pos.king[0] = to;
+
+    pos.material += material_delta(m);
+
+    h ^= zob_castle[pos.castle];
+    pos.castle &= castle_keep(from) & castle_keep(to);
+    h ^= zob_castle[pos.castle];
+
+    if (pos.ep)
+        h ^= zob_ep[file_of(pos.ep)];
+    pos.ep = 0;
+    if (kind == MK_DOUBLE)
+    {
+        pos.ep = (from + to) / 2;
+        h ^= zob_ep[file_of(pos.ep)];
+    }
+
+    if (captured != EM || piece == WP || piece == BP)
+        pos.halfmove = 0;
+    else
+        pos.halfmove++;
+
+    if (pos.side < 0)
+        pos.fullmove++;
+    pos.side = -pos.side;
+    h ^= zob_side;
+    pos.hash = h;
+} // end of make_move
+
+/***************************************************************
+ * undo_move
+ * Takes back the last move made.
+ ***************************************************************/
+void undo_move(void)
+{
+    assert(pos.ply > 0);
+    history_t *hs = &hist[--pos.ply];
+    move_t m = hs->move;
+    int from     = move_from(m);
+    int to       = move_to(m);
+    int piece    = move_piece(m);
+    int captured = move_captured(m);
+    int kind     = move_kind(m);
+
+    pos.side = -pos.side;
+    if (pos.side < 0)
+        pos.fullmove--;
+
+    pos.board[from] = piece;
+    pos.board[to]   = EM;
+    if (captured != EM)
+        pos.board[(kind == MK_EP) ? to - N*pos.side : to] = captured;
+
+    if (kind == MK_CASTLE)
+    {
+        int rfrom = (to > from) ? to + 1 : to - 2;
+        int rto   = (to > from) ? to - 1 : to + 1;
+        pos.board[rto]   = EM;
+        pos.board[rfrom] = pos.side*WR;
+    }
+
+    if (piece == WK) pos.king[1] = from;
+    if (piece == BK) pos.king[0] = from;
+
+    pos.material -= material_delta(m);
+    pos.castle   = hs->state & 0xF;
+    pos.ep       = (hs->state >> 4) & 0x7F;
+    pos.halfmove = hs->state >> 11;
+    pos.hash     = hs->hash;
+} // end of undo_move
+
+/***************************************************************
+ * move_was_legal
+ * After make_move: true if the king of the side that moved is not
+ * attacked.
+ ***************************************************************/
+int move_was_legal(void)
+{
+    return !is_attacked(king_of(-pos.side), -pos.side);
+} // end of move_was_legal

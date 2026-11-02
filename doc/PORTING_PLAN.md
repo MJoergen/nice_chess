@@ -186,13 +186,14 @@ questions, and neither is needed for niceemu:
 ## Architecture
 
 ```
-src/engine/   board.c  movegen.c  makemove.c  eval.c  search.c  tt.c  fen.c
-              engine.h            (the core: no I/O, no clock, no malloc)
-src/platform/ nice.c   host.c     (time, poll for key, and output for the core)
+src/engine/   board.c  movegen.c  makemove.c  eval.c  search.c  fen.c  game.c
+              tt.c (Phase 2)      (the core: no I/O, no clock, no malloc)
+              engine.h            (its interface)
+src/platform/ nice.c   host.c     (time and poll for key, from Phase 2)
 src/ui/       text.c              (console: board diagram, coordinate input, and UCI)
               screen.c            (windowed: board on the 80x25 screen, keyboard cursor)
 tests/        perft and search suites, and the expected outputs of niceemu runs
-tools/        build scripts, and the size report
+tools/        the test runner, and the size report
 ```
 
 The core's API is small and has no state outside it. For example:
@@ -209,8 +210,8 @@ end is the one in mchess2's `main.cc`: `show`, `move e2e4`, `go`, `perft
 N`, `fen ...`, `undo`, and a `uci` mode. UCI over the console lets host
 GUIs and cutechess play the engine running inside niceemu.
 
-The core also builds with the host's clang or gcc (`make host`). Perft
-suites run in seconds there, and only a sample of them runs on niceemu.
+The core also builds with the host's clang or gcc. Perft suites run in
+seconds there, and a smaller depth of them runs on niceemu.
 
 ## Phases
 
@@ -232,8 +233,9 @@ Each phase ends with something that runs and with tests in CI.
   global move stack, `int32_t` everywhere, and 32-bit Zobrist keys.
 - Add castling, en passant, under-promotion, and FEN input/output from
   mchess2's `CBoard.cc`.
-- Fetch the perft suite from mchess2 at `65e8855`, and run it on the host (all 126 positions to depth 4 or 5), and
-  a few positions to depth 3 on niceemu.
+- Fetch the perft suite from mchess2 at `65e8855`, and run it on the
+  host (all 126 positions to depth 4 or 5), and a few positions to depth
+  3 on niceemu.
 - Add `make size`, and record code words, data bytes, and peak stack.
 - Exit criterion: perft matches on the host and on niceemu, and there is a
   first size figure against the 28K-word budget.
@@ -243,11 +245,10 @@ Each phase ends with something that runs and with tests in CI.
   ordering, a material plus piece-square table evaluation, a time or node
   limit, and detection of repetition and the 50-move rule.
 - The text front end with the board diagram, move input in coordinate
-  notation, `go`, `undo`, and
-  game end. Add UCI after that.
+  notation, `go`, `undo`, and game end. Add UCI after that.
 - Run a subset of the search suite (fetched like the perft suite) on the
-  host. On niceemu, run a few
-  fixed-node searches whose best move and node count are checked.
+  host. On niceemu, run a few fixed-node searches whose best move and
+  node count are checked.
 - Exit criterion: a full game against the engine in `niceemu`, in text,
   with each reply in a reasonable step budget, plus a host build that beats
   random moves and plays mchess2 to a sensible result under cutechess.
@@ -278,6 +279,54 @@ hundred positions), a better evaluation (pawn structure, king safety),
 PVS or aspiration windows, SAN move input and output, a ROM-able build once there is a direct NICE C
 compiler or a monitor that loads from SD card, and custom chess glyphs if
 NiceMonMEGA65's font ever becomes programmable.
+
+## Progress
+
+**Phase 0** is done (2026-11-02): the Makefile, the pins, and CI.
+
+**Phase 1** is done (2026-11-02):
+
+- The core is in `src/engine/`, with the interface of `engine.h`. A move
+  is one 32-bit word. The board, the state, and the counters are
+  `int32_t`. Move lists are on one global move stack of 1024 moves, and
+  the history of the game, 512 plies of 12 bytes, keeps what undo needs
+  and the Zobrist key of each position, for the detection of repetition.
+- Castling, en passant, under-promotion, FEN input and output, and
+  32-bit Zobrist keys, kept up to date in make and undo. The game result
+  (mate, stalemate, the 50-move rule, and threefold repetition) is in
+  already. The search and the evaluation are still those of `mchess.c`.
+- The perft suite, all 126 positions, matches on the host to depth 4 in
+  `make test` and to depth 5 (396 million nodes) in `make perft-deep`,
+  with the Zobrist key checked against a full computation at every node.
+  On niceemu, all 126 match to depth 3: 509 thousand nodes in 517
+  million steps, about 7 seconds at the board's speed.
+- Size, from `make size` (NICE build with `-Os` and without asserts):
+
+  | Part | Words |
+  |---|---|
+  | Code, runtime, and libc | 14288 |
+  | Linear memory, one page | 16384 |
+  | Peak NICE stack | 188 |
+  | **Total** | **30860**, which is 2188 over the budget of 28672 |
+
+  In the linear memory, the wasm stack is 8 KB and peaks at about 2 KB,
+  and the data segments take 880 bytes. The game history, the move
+  stack, and the Zobrist keys are about 13.6 KB of zero-initialized data,
+  so most of the page is still free.
+
+  The largest parts of the code are `printf` (its `format` and `number`,
+  3727 words), the text front end's `main` (1238), FEN input (1029) and
+  output (811), move generation (914), and make and undo (1038). Without
+  `printf`, the program would fit, so a small print routine of our own is
+  the first step in Phase 4. `-O2` instead of `-Os` would be 20% faster
+  and 2800 words larger.
+
+Found on the way, for Phase 2: the quiescence search of `mchess.c` tries
+the captures in the order they are generated. On a tactical position
+such as Kiwipete (the second line of the perft suite), `go 1` visits 2.5
+million quiescence nodes, which takes more than 2·10⁹ steps on niceemu.
+Ordering captures by MVV-LVA is the fix, and the reason it comes first in
+Phase 2.
 
 ## Decisions
 
