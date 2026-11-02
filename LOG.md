@@ -1,6 +1,6 @@
 # Log
 
-Investigations that inform the plan (doc/PORTING_PLAN.md), newest first.
+Investigations made during the development (doc/HISTORY.md), newest first.
 
 ## 2026-11-02: The board's speed on the engine
 

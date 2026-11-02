@@ -1,25 +1,18 @@
 # nice_chess
+
+[![CI](https://github.com/MJoergen/nice_chess/actions/workflows/test.yml/badge.svg)](https://github.com/MJoergen/nice_chess/actions/workflows/test.yml)
+
 A simple chess engine for the NICE system
 
-See [doc/PORTING_PLAN.md](doc/PORTING_PLAN.md) for the plan to port the
-[mchess2](https://github.com/MJoergen/mchess2) engine to the NICE system.
+It is a port of the [mchess2](https://github.com/MJoergen/mchess2)
+engine; [doc/HISTORY.md](doc/HISTORY.md) tells how it was done.
 
-## Building and testing
+![The windowed front end on the MEGA65, after the engine mated as black](doc/screenshot.png)
 
-Needs Python 3.10+, clang with the wasm32 target, `wasm-ld`, `llvm-ar`,
-a C compiler for the host, `git`, and `curl`.
+## Playing
 
-    make deps        # nice_cpu V1.2 and niceemu V1.2, and mchess2's test suites, into deps/
-    make             # build/nice/ for niceemu, build/mega65/ for the MEGA65, build/host/chess_text for the host
-    make test        # the tests, on the host and in niceemu
-    make perft-deep  # the perft suite to depth 5 on the host (about a minute)
-    make screen-game # a full game in the windowed front end, in niceemu (a minute)
-    make match-random   # the host build against random moves
-    make match-mchess2  # the host build against mchess2 (about 15 minutes)
-    make size        # the size of the MEGA65 builds, against the 92K words the monitor leaves them
-
-To use local copies of nice_cpu and niceemu instead, pass `NICE_CPU=DIR`
-and `NICEEMU=PATH` to make.
+Build with `make deps all`; [CONTRIBUTING.md](CONTRIBUTING.md) lists
+what that needs, and the tests.
 
 To play in the emulator:
 

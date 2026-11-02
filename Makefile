@@ -1,28 +1,10 @@
 # nice_chess: a chess engine for the NICE system.
 #
 # The NICE toolchain comes from nice_cpu at a pinned release tag, and
-# the perft suite from mchess2 at a pinned commit (doc/PORTING_PLAN.md,
+# the perft suite from mchess2 at a pinned commit (doc/HISTORY.md,
 # Decisions). make deps fetches them into deps/. NICE_CPU=DIR and
 # NICEEMU=PATH use local copies of nice_cpu and niceemu instead.
-#
-#   make             build both front ends, for niceemu, for the MEGA65, and for the host
-#   make test        the tests, on the host and in niceemu
-#   make perft-deep  the perft suite to depth 5 on the host (a minute)
-#   make screen-game a full game in the windowed front end, in niceemu (a minute)
-#   make match-random  the host build against random moves (20 games)
-#   make match-mchess2 the host build against mchess2 (20 games, 15 minutes)
-#   make size        the size of the MEGA65 builds, against the board's budget
-#   make clean       remove build/
-#   make distclean   remove build/ and deps/
-#
-# On the MEGA65, under NiceMonMEGA65's monitor, with ETH=IP (the board's
-# Ethernet port) or PORT=/dev/ttyUSBn (its debug UART), and the tools of a
-# checkout of NiceMonMEGA65 (NICEMON=DIR, ../NiceMonMEGA65 by default):
-#   make board-text    load and run the text front end, then talk to it over the line
-#   make board-screen  load and run the windowed front end, for the screen and keyboard
-#   make board-test    the tests of both front ends, on the board
-#   make board-game    a full game in the windowed front end, on the board (a few minutes)
-#   make board-match   the text front end on the board against the host build, in UCI
+# make help lists the targets.
 
 NICE_CPU_TAG    := V1.2
 NICEEMU_SHA256  := cb498a974cec1ae1f2e56441e6bb1f3ec20d593bb505ff32a566b7f4eade6e94
@@ -58,7 +40,7 @@ MCHESS2_SRC = main.cc CBoard.cc CMove.cc ai.cc CMoveList.cc CPerft.cc \
 # The MEGA65 gives a program under the monitor the words 0x8000 to
 # 0x1EFFF, 92K, for its image, its linear memory, and the NICE stack,
 # which the monitor's routines share and use at most 32 words of
-# (doc/PORTING_PLAN.md, Memory). The Nexys4DDR would give 28K.
+# (NiceMonMEGA65's branch dev-V1.2.1). The Nexys4DDR would give 28K.
 BUDGET = 94176
 
 ENGINE = $(wildcard src/engine/*.c)
@@ -75,8 +57,35 @@ MONFLAGS = $(NICEFLAGS) --monitor
 # evaluation's sums at every node of perft.
 HOSTFLAGS = -O2 -W -Wall -Wextra -DCHECK_STATE
 
-.PHONY: all test host-test nice-test perft-deep screen-game match-random match-mchess2 size deps clean distclean
+.PHONY: help all test host-test nice-test perft-deep screen-game match-random match-mchess2 size deps clean distclean
 .PHONY: board-text board-screen board-test board-game board-match
+help:
+	@echo "nice_chess: a chess engine for the NICE system"
+	@echo ""
+	@echo "  make help          show this text (the default)"
+	@echo "  make deps          fetch nice_cpu $(NICE_CPU_TAG), niceemu $(NICE_CPU_TAG), and mchess2's test suites into deps/"
+	@echo "  make all           build both front ends, for niceemu, for the MEGA65, and for the host"
+	@echo "  make test          the tests, on the host and in niceemu"
+	@echo "  make perft-deep    the perft suite to depth 5 on the host (a minute)"
+	@echo "  make screen-game   a full game in the windowed front end, in niceemu (a minute)"
+	@echo "  make match-random  the host build against random moves (20 games)"
+	@echo "  make match-mchess2 the host build against mchess2 (20 games, 15 minutes)"
+	@echo "  make size          the size of the MEGA65 builds, against the board's budget"
+	@echo "  make clean         remove build/"
+	@echo "  make distclean     remove build/ and deps/"
+	@echo ""
+	@echo "On the MEGA65, under NiceMonMEGA65's monitor, with ETH=IP (the board's"
+	@echo "Ethernet port) or PORT=/dev/ttyUSBn (its debug UART), and the tools of a"
+	@echo "checkout of NiceMonMEGA65 (NICEMON=DIR, ../NiceMonMEGA65 by default):"
+	@echo ""
+	@echo "  make board-text    load and run the text front end, then talk to it over the line"
+	@echo "  make board-screen  load and run the windowed front end, for the screen and keyboard"
+	@echo "  make board-test    the tests of both front ends, on the board"
+	@echo "  make board-game    a full game in the windowed front end, on the board (a few minutes)"
+	@echo "  make board-match   the text front end on the board against the host build, in UCI"
+	@echo ""
+	@echo "NICE_CPU=DIR and NICEEMU=PATH use local copies of nice_cpu and niceemu."
+
 all: build/nice/chess_text.bin build/nice/chess_screen.bin build/host/chess_text \
      build/mega65/chess_text.bin build/mega65/chess_screen.bin
 
