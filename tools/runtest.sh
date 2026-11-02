@@ -1,8 +1,10 @@
 #!/bin/sh
-# runtest.sh NAME CHECK INPUT host|nice PROGRAM [ARGS...]
+# runtest.sh NAME CHECK INPUT host|nice|screen PROGRAM [ARGS...]
 #
 # Runs PROGRAM with INPUT as its console input, on the host or in
 # niceemu ($NICEEMU), and leaves its output in build/test/NAME.raw.
+# screen is nice with --color, so that the screen at the halt, with
+# its colors, is in the output too.
 # The lines that match a pattern of tests/CHECK.grep (with the digits
 # at the end of CHECK left out: perftsuite3 uses perftsuite.grep), after the
 # prompts "> " and the times of info lines (" time N") are taken off, and
@@ -17,8 +19,10 @@ mkdir -p $dir
 raw=$dir/$name.raw
 out=$dir/$name.out
 
-if [ "$kind" = nice ]; then
-    "$NICEEMU" -i "$input" "$prog" < /dev/null > $raw
+if [ "$kind" = nice ] || [ "$kind" = screen ]; then
+    color=
+    [ "$kind" = screen ] && color=--color
+    "$NICEEMU" $color -i "$input" "$prog" < /dev/null > $raw
     r1=$(grep -o 'R1  [0-9a-f]*' $raw | cut -c5-)
     if grep -q 'Halted (HALT)' $raw && [ -n "$r1" ]; then
         status=$(( 0x$r1 ))

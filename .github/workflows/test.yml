@@ -17,6 +17,8 @@ jobs:
         run: make test
       - name: Perft suite to depth 5
         run: make perft-deep
+      - name: A full game in the windowed front end
+        run: make screen-game
       - name: Against random moves
         run: make match-random
       - name: Size

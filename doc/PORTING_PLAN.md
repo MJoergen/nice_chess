@@ -403,6 +403,63 @@ Phase 2.
   is 16 KB, and the peak of the wasm stack is 2.7 KB, so about 12 KB
   of the page is free. Getting the code under the budget is Phase 4's.
 
+**Phase 3** is done (2026-11-02):
+
+- `src/ui/screen.c` is the windowed front end, `build/nice/chess_screen.bin`.
+  The board is 8×8 squares of 5×3 cells, with the ranks in column 0 and
+  the files in row 24. Each piece is its letter on a chip of three
+  cells, black on white or white on black, which reads well on both
+  colors of square. The last move, the piece picked up, the squares it
+  can go to, and a king in check have colors of their own, and the
+  cursor is a pair of red brackets. The right half has the players,
+  the state of the game, the level, the engine's depth, score, nodes,
+  and principal variation, the last 18 moves in two columns, the move
+  being typed (with the hardware cursor), a line for errors, and the keys.
+- A move is made with the arrows and Enter (or Space), or typed as
+  `e2e4` and Enter; an under-promotion is typed, and a promotion by
+  the cursor is to a queen. Esc drops the piece or the typed text, and
+  during a search makes the engine move now. U takes back the player's
+  last move and the reply, S switches sides, R rotates the board, N
+  starts a new game, + and − set the level (1 to 5: 1/9, 1/3, 1, 3,
+  and 9 times `platform_move_time`; 3 by default), and Q quits. The
+  letters of commands are not files or promotion pieces in the place
+  they are typed, so the two kinds of keys do not clash.
+- The engine polls the keyboard during its search through
+  `platform_pollc`, new in `src/platform/`, but only once a read has
+  found no byte waiting, that is, once the input is a keyboard. From a
+  file (`niceemu -i`) a read waits instead, and the program then reads
+  the file only between moves, so a run of the tests is the same every
+  time. Keys pressed during a search, other than Esc, wait for after it.
+- Each move also goes to the console as `move e2e4`, and the end of the
+  game as `result ...`. `tools/screen_game.py` uses that to play white
+  through the keys, with the host build choosing the moves, half of
+  them typed and half by the cursor, and saves the keys.
+- The front end does not use `printf`. `engine.h` has two new calls,
+  `engine_move_from` and `engine_move_to`, for the colors of the squares.
+- Tests: `tests/screen.keys` (the level, a move by the cursor, a typed
+  move, Backspace, undo, switching sides, and an illegal move) runs in
+  `make test`, and its screen with the colors from `niceemu --color` is
+  compared. `make screen-game` (in CI, about a minute) plays the keys of a
+  full game that `screen_game.py` recorded: 75 moves at level 1, until
+  the engine mates, 2.3·10⁹ steps, compared the same way.
+  `tools/screenshot.py` draws the screen as a PNG, from a dump of the
+  screen's memory, in the font of the window.
+- A full game in `niceemu --window`: the same keys, in the window build
+  of niceemu V1.2 with SDL's dummy video driver and `--speed 0`, played
+  the same 150 plies to the same checkmate. A game typed by hand in a
+  real window has not been played yet, and nothing automated presses
+  Esc during a search, as only a keyboard makes the search poll.
+- `--window` runs one step per microsecond by default, so a move at
+  level 3 (300 million steps) takes five minutes there. With
+  `--speed 0` it takes about 7 seconds, as without the window.
+- Not done, from the plan: clocks. In niceemu the clock counts steps,
+  and in the window with `--speed 0` it would run about 40 times too
+  fast while the player thinks, so the panel shows the level instead.
+- Size, from `make size`: the code is 14624 words, against 18894 for the
+  text front end, as `printf` is not linked. It needs 31224 words, 2552
+  over the budget. The front end takes about 4200 of them (`main`, with
+  the handling of the keys, 1494; `draw_info` 1358; `draw_all` 1323).
+
 ## Decisions
 
 These were open questions in the first version of this plan. They were

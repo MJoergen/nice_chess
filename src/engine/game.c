@@ -11,6 +11,16 @@ int engine_piece_at(int file, int rank)
     return pos.board[square(file, rank)];
 }
 
+int engine_move_from(move_t move)
+{
+    return sq64[move_from(move)];
+}
+
+int engine_move_to(move_t move)
+{
+    return sq64[move_to(move)];
+}
+
 int engine_side_to_move(void)
 {
     return pos.side;

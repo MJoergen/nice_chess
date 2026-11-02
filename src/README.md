@@ -14,10 +14,13 @@
   - `tt.c`: the transposition table.
   - `perft.c`: perft.
   - `game.c`: the game as the front ends see it, and its result.
-- `platform/`: the clock, and the default time of a move: `nice.c` for
-  NICE, `host.c` for a PC, behind `platform.h`.
+- `platform/`: the clock, the default time of a move, and a poll of the
+  console for a key: `nice.c` for NICE, `host.c` for a PC, behind
+  `platform.h`.
 - `ui/text.c`: the text front end, on the console, and UCI. `help` lists
   its commands.
+- `ui/screen.c`: the windowed front end, on the 80x25 screen, for NICE
+  only. Its keys are listed at the top of the file and on the screen.
 
 The engine started as `runtime/libc/test/mchess.c` of
 [nice_cpu](https://github.com/MJoergen/nice_cpu) at tag `V1.2`, by the

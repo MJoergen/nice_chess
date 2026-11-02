@@ -16,3 +16,8 @@ uint32_t platform_micros(void)
 // board. On the board itself, where the clock is real, this would be
 // 5 minutes; Phase 4 sets the time for the board.
 const uint32_t platform_move_time = 300000000;
+
+int platform_pollc(void)
+{
+    return nice_pollc();
+}

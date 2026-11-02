@@ -81,6 +81,11 @@ move_t engine_parse_move(const char *s, const char **end);
 // Writes a move in coordinate notation to buf, at least 6 bytes.
 void engine_move_to_str(move_t move, char *buf);
 
+// The squares a move goes from and to, as file + 8 * rank (0 is a1,
+// 63 is h8).
+int engine_move_from(move_t move);
+int engine_move_to(move_t move);
+
 // Makes a legal move. Returns 0, or -1 if the history is full.
 int engine_make_move(move_t move);
 

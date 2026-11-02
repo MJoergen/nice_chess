@@ -8,9 +8,10 @@
 #   make             build the text front end, for NICE and for the host
 #   make test        the tests, on the host and in niceemu
 #   make perft-deep  the perft suite to depth 5 on the host (a minute)
+#   make screen-game a full game in the windowed front end, in niceemu (a minute)
 #   make match-random  the host build against random moves (20 games)
 #   make match-mchess2 the host build against mchess2 (20 games, 15 minutes)
-#   make size        the size of the NICE build, against the board's budget
+#   make size        the size of the NICE builds, against the board's budget
 #   make clean       remove build/
 #   make distclean   remove build/ and deps/
 
@@ -55,12 +56,16 @@ NICEFLAGS = -O s -D NDEBUG --stack 8192 --memory 65536 --symbols --keep
 # evaluation's sums at every node of perft.
 HOSTFLAGS = -O2 -W -Wall -Wextra -DCHECK_STATE
 
-.PHONY: all test host-test nice-test perft-deep match-random match-mchess2 size deps clean distclean
-all: build/nice/chess_text.bin build/host/chess_text
+.PHONY: all test host-test nice-test perft-deep screen-game match-random match-mchess2 size deps clean distclean
+all: build/nice/chess_text.bin build/nice/chess_screen.bin build/host/chess_text
 
 build/nice/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/nice.c | $(NICE_CPU)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(NICEFLAGS) -o $@ $(ENGINE) src/ui/text.c src/platform/nice.c
+
+build/nice/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/platform/nice.c | $(NICE_CPU)
+	@mkdir -p $(@D)
+	$(NICEBUILD) $(NICEFLAGS) -o $@ $(ENGINE) src/ui/screen.c src/platform/nice.c
 
 build/nice/perftsuite.bin: $(ENGINE) $(HEADERS) tests/perftsuite.c | $(NICE_CPU)
 	@mkdir -p $(@D)
@@ -86,13 +91,18 @@ host-test: build/host/chess_text build/host/perftsuite build/host/searchsuite $(
 	@tools/runtest.sh host_perftsuite4 perftsuite4 $(PERFTSUITE) host build/host/perftsuite 4
 	@tools/runtest.sh host_searchsuite searchsuite $(SEARCHSUITE) host build/host/searchsuite 10000
 
-nice-test: build/nice/chess_text.bin build/nice/perftsuite.bin $(PERFTSUITE) | $(NICEEMU)
+nice-test: build/nice/chess_text.bin build/nice/chess_screen.bin build/nice/perftsuite.bin $(PERFTSUITE) | $(NICEEMU)
+	@tools/runtest.sh nice_screen screen tests/screen.keys screen build/nice/chess_screen.bin
 	@tools/runtest.sh nice_text text tests/text.input nice build/nice/chess_text.bin
 	@tools/runtest.sh nice_search search tests/search.input nice build/nice/chess_text.bin
 	@tools/runtest.sh nice_perftsuite3 perftsuite3 $(PERFTSUITE) nice build/nice/perftsuite.bin
 
 perft-deep: build/host/perftsuite $(PERFTSUITE)
 	@tools/runtest.sh host_perftsuite5 perftsuite5 $(PERFTSUITE) host build/host/perftsuite 5
+
+# The keys of a game that tools/screen_game.py played, to checkmate.
+screen-game: build/nice/chess_screen.bin | $(NICEEMU)
+	@tools/runtest.sh nice_screen_game screen_game tests/screen_game.keys screen build/nice/chess_screen.bin
 
 # Against random moves, at 20000 nodes a move: it must win every game.
 match-random: build/host/chess_text
@@ -111,8 +121,9 @@ deps/mchess2/src/%:
 	@mkdir -p $(@D)
 	curl -sSfL -o $@ $(MCHESS2_RAW)/$*
 
-size: build/nice/chess_text.bin | $(NICEEMU)
-	$(PYTHON) tools/size.py --emu $(NICEEMU) --input tests/size.input --budget $(BUDGET) $<
+size: build/nice/chess_text.bin build/nice/chess_screen.bin | $(NICEEMU)
+	$(PYTHON) tools/size.py --emu $(NICEEMU) --input tests/size.input --budget $(BUDGET) build/nice/chess_text.bin
+	$(PYTHON) tools/size.py --emu $(NICEEMU) --input tests/screen.keys --budget $(BUDGET) build/nice/chess_screen.bin
 
 deps: $(NICE_CPU) $(NICEEMU) $(PERFTSUITE) $(SEARCHSUITE)
 

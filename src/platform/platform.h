@@ -21,4 +21,11 @@ uint32_t platform_micros(void);
 // platform_micros.
 extern const uint32_t platform_move_time;
 
+// The next byte of the console's input, if one waits: 0 to 255, or
+// -2 if none waits yet, or -1 once the input has ended. From a file,
+// or from stdin in niceemu, it waits for the next byte, and never
+// returns -2. From a keyboard (niceemu's window, or the board's UART
+// and keyboard) it does not wait.
+int platform_pollc(void);
+
 #endif // PLATFORM_H

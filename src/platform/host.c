@@ -4,7 +4,9 @@
  * Copyright (c) 2026 Michael Jørgensen. MIT license (see LICENSE).
  ***************************************************************/
 
+#include <poll.h>
 #include <time.h>
+#include <unistd.h>
 #include "platform.h"
 
 uint32_t platform_micros(void)
@@ -15,3 +17,12 @@ uint32_t platform_micros(void)
 }
 
 const uint32_t platform_move_time = 1000000; // 1 second
+
+int platform_pollc(void)
+{
+    struct pollfd p = {0, POLLIN, 0};
+    if (poll(&p, 1, 0) <= 0)
+        return -2;
+    unsigned char c;
+    return read(0, &c, 1) == 1 ? c : -1;
+}
