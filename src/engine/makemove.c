@@ -1,8 +1,8 @@
 /***************************************************************
  * makemove.c: making and taking back moves.
  *
- * make_move keeps the material, the king squares, and the Zobrist
- * key up to date as it goes. undo_move restores the state and the
+ * make_move keeps the evaluation's sums, the king squares, and
+ * the Zobrist key up to date as it goes. undo_move restores the state and the
  * key from the history, and reverses the rest.
  *
  * Copyright (c) 2026 Michael Jørgensen. MIT license (see LICENSE).
@@ -30,14 +30,43 @@ static inline uint32_t zob(int piece, int sq)
     return zob_piece[piece + 6][sq64[sq]];
 }
 
-// The change in material, from white's point of view, that a move makes.
-static int material_delta(move_t m)
+static inline int32_t pv(int piece, int sq)
 {
-    int delta = -piece_value[move_captured(m) + 6];
+    return psqt[piece + 6][sq64[sq]];
+}
+
+// The change that a move makes to pos.psqt, which is the same as
+// make_move makes it and as undo_move takes it back. side is the
+// side that moves.
+static int32_t psqt_delta(move_t m, int side)
+{
+    int from     = move_from(m);
+    int to       = move_to(m);
+    int piece    = move_piece(m);
+    int captured = move_captured(m);
+    int promoted = move_promoted(m);
+    int kind     = move_kind(m);
+
+    int32_t d = pv((promoted != EM) ? promoted : piece, to) - pv(piece, from);
+    if (captured != EM)
+        d -= pv(captured, (kind == MK_EP) ? to - N*side : to);
+    if (kind == MK_CASTLE)
+    {
+        int rook = side*WR;
+        d += (to > from) ? pv(rook, to - 1) - pv(rook, to + 1)
+                         : pv(rook, to + 1) - pv(rook, to - 2);
+    }
+    return d;
+}
+
+// The change that a move makes to pos.phase.
+static int phase_delta(move_t m)
+{
+    int d = -phase_value[move_captured(m) + 6];
     int promoted = move_promoted(m);
     if (promoted != EM)
-        delta += piece_value[promoted + 6] - piece_value[move_piece(m) + 6];
-    return delta;
+        d += phase_value[promoted + 6];
+    return d;
 }
 
 /***************************************************************
@@ -85,7 +114,8 @@ void make_move(move_t m)
     if (piece == WK) pos.king[1] = to;
     if (piece == BK) pos.king[0] = to;
 
-    pos.material += material_delta(m);
+    pos.psqt  += psqt_delta(m, pos.side);
+    pos.phase += phase_delta(m);
 
     h ^= zob_castle[pos.castle];
     pos.castle &= castle_keep(from) & castle_keep(to);
@@ -147,7 +177,8 @@ void undo_move(void)
     if (piece == WK) pos.king[1] = from;
     if (piece == BK) pos.king[0] = from;
 
-    pos.material -= material_delta(m);
+    pos.psqt    -= psqt_delta(m, pos.side);
+    pos.phase   -= phase_delta(m);
     pos.castle   = hs->state & 0xF;
     pos.ep       = (hs->state >> 4) & 0x7F;
     pos.halfmove = hs->state >> 11;

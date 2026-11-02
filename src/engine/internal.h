@@ -91,7 +91,8 @@ typedef struct
     int32_t   ep;        // The square behind a pawn that just moved two, or 0
     int32_t   halfmove;  // Plies since the last capture or pawn move
     int32_t   fullmove;  // The move number, from 1
-    int32_t   material;  // In centipawns, from white's point of view
+    int32_t   psqt;      // Material and piece-square values, packed (eval.c)
+    int32_t   phase;     // The material left, from 24 at the start to 0
     uint32_t  hash;      // Zobrist key
     int32_t   king[2];   // The squares of the kings: [0] black, [1] white
     int32_t   ply;       // The number of entries of hist
@@ -103,7 +104,6 @@ extern history_t hist[MAX_HISTORY];
 static inline int king_of(int side) { return pos.king[side > 0]; }
 
 // board.c
-extern const int32_t piece_value[13];   // By piece + 6, signed
 extern uint32_t zob_piece[13][64];      // By piece + 6 and sq64
 extern uint32_t zob_castle[16];
 extern uint32_t zob_ep[8];              // By file
@@ -113,6 +113,7 @@ void board_init(void);
 void board_clear(void);
 void board_put(int sq, int piece);
 uint32_t board_compute_hash(void);
+int  board_consistent(void);
 int  is_attacked(int sq, int side);     // By the side opposite to side
 
 /***************************************************************
@@ -137,8 +138,10 @@ static inline int move_stack_room(void)
 }
 
 // movegen.c
-int gen_pseudo(move_t *list);           // Pseudo-legal moves, returns count
+int gen_moves(move_t *list, int quiet); // Pseudo-legal moves, returns count
 int gen_legal(move_t *list);
+static inline int gen_pseudo(move_t *list)   { return gen_moves(list, 1); }
+static inline int gen_captures(move_t *list) { return gen_moves(list, 0); }
 
 // makemove.c
 void make_move(move_t m);
@@ -146,6 +149,21 @@ void undo_move(void);
 int  move_was_legal(void);              // After make_move: the mover's king is safe
 
 // eval.c
-int evaluate(void);                     // From the point of view of the side to move
+extern int32_t psqt[13][64];            // By piece + 6 and sq64, packed and signed
+extern const int32_t phase_value[13];   // By piece + 6
+void eval_init(void);
+int  evaluate(void);                    // From the point of view of the side to move
+
+// tt.c: the transposition table, of 1 << TT_BITS entries of 8 bytes.
+#ifndef TT_BITS
+#define TT_BITS 11
+#endif
+
+enum { TT_UPPER = 1, TT_LOWER = 2, TT_EXACT = 3 }; // The kind of bound
+
+void tt_clear(void);
+void tt_store(int depth, int value, int bound, move_t move, int ply);
+int  tt_probe(int *depth, int *value, int *bound, int *move, int ply);
+int  tt_match(const move_t *list, int n, int short_move);
 
 #endif // INTERNAL_H

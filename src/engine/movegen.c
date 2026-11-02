@@ -29,13 +29,16 @@ static int add_pawn_moves(move_t *list, int n, int s, int from, int to, int capt
 }
 
 /***************************************************************
- * gen_pseudo
- * Writes all pseudo-legal moves to list, and returns their number.
+ * gen_moves
+ * Writes pseudo-legal moves to list, and returns their number.
  * A pseudo-legal move may leave the mover's own king in check.
  * Castling is generated only when the king is not in check and
  * does not pass an attacked square.
+ *
+ * If quiet is 0, only the captures and the promotions, for the
+ * quiescence search.
  ***************************************************************/
-int gen_pseudo(move_t *list)
+int gen_moves(move_t *list, int quiet)
 {
     static const int32_t dirs[16] = {
         NE, NW, SE, SW, N, E, S, W,         // Bishop 0-3, rook 4-7, queen and king 0-7
@@ -63,10 +66,10 @@ int gen_pseudo(move_t *list)
                 int start    = (s > 0) ? (rank == 1) : (rank == 6);
                 int j = i + N*s;
 
-                if (bd[j] == EM)
+                if (bd[j] == EM && (quiet || promotes))
                 {
                     n = add_pawn_moves(list, n, s, i, j, EM, promotes);
-                    if (start && bd[j + N*s] == EM)
+                    if (start && quiet && bd[j + N*s] == EM)
                         list[n++] = move_new(i, j + N*s, piece, EM, EM, MK_DOUBLE);
                 }
 
@@ -99,7 +102,8 @@ int gen_pseudo(move_t *list)
                 int target = bd[j];
                 if (target == IV || target*s > 0) // Off the board, or our own piece
                     break;
-                list[n++] = move_new(i, j, piece, target, EM, MK_NORMAL);
+                if (quiet || target != EM)
+                    list[n++] = move_new(i, j, piece, target, EM, MK_NORMAL);
                 if (target != EM || !slide)
                     break;
             }
@@ -108,6 +112,7 @@ int gen_pseudo(move_t *list)
 
     // Castling. The king must be on its square and the rook on its
     // corner; the rights alone are not trusted, since a FEN may be wrong.
+    if (quiet)
     {
         int base = (s > 0) ? 0 : 70; // Rank 1 or rank 8
         int king = s*WK, rook = s*WR;
@@ -129,7 +134,7 @@ int gen_pseudo(move_t *list)
 
     assert(n <= ENGINE_MAX_MOVES);
     return n;
-} // end of gen_pseudo
+} // end of gen_moves
 
 /***************************************************************
  * gen_legal

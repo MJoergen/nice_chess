@@ -42,10 +42,15 @@ enum
     ENGINE_REPETITION = 4  // A draw by threefold repetition
 };
 
-// Starts a new game from the opening position.
+// The opening position.
+#define ENGINE_START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
+// Starts a new game from the opening position, and forgets what
+// earlier searches learned (the transposition table).
 void engine_new_game(void);
 
-// Starts a new game from a FEN string. The half-move clock and the
+// Starts a new game from a FEN string, but keeps what earlier
+// searches learned, as a series of positions of one game sends them. The half-move clock and the
 // move number may be left out. Returns 0 on success, and -1 if the
 // FEN is not valid, in which case the position is unchanged. If end
 // is not NULL, it gets a pointer to the first character after the FEN.
@@ -94,12 +99,49 @@ uint32_t engine_hash(void);
 // The Zobrist key of the position, computed from scratch.
 uint32_t engine_hash_full(void);
 
-// Called by engine_search once for each root move, with its score
-// in centipawns from the point of view of the side to move.
-typedef void (*engine_info_fn)(move_t move, int score);
+/***************************************************************
+ * The search
+ ***************************************************************/
 
-// Searches the position to a fixed depth in ply, and returns the best
-// move, or 0 if there is no legal move. info may be NULL.
-move_t engine_search(int depth, engine_info_fn info);
+// Scores are in centipawns, from the point of view of the side to
+// move. A score above ENGINE_MATE - ENGINE_MAX_PLY is a mate in
+// ENGINE_MATE - score plies, and one below -(ENGINE_MATE -
+// ENGINE_MAX_PLY) is being mated in ENGINE_MATE + score plies.
+#define ENGINE_MATE    30000
+#define ENGINE_MAX_PLY 64      // The deepest the search goes, in ply
+
+// The longest principal variation that engine_info_t holds.
+#define ENGINE_MAX_PV  16
+
+// What limits a search. A field of 0 sets no limit. A search that a
+// limit stops still returns a legal move: if it stops during depth 1,
+// the first in the order of the moves (the move of the transposition
+// table, or the best capture).
+typedef struct
+{
+    int      depth;     // The deepest iteration, in ply
+    uint32_t nodes;     // The most nodes to visit
+    int    (*stop)(void); // Called every 1024 nodes; nonzero stops the search
+} engine_limits_t;
+
+// What the search found in an iteration of the iterative deepening.
+typedef struct
+{
+    int      depth;
+    int      score;
+    uint32_t nodes;     // From the start of the search
+    int      pv_len;
+    move_t   pv[ENGINE_MAX_PV]; // The principal variation, from the root
+} engine_info_t;
+
+// Called by engine_search after each iteration that it completes.
+// A nonzero return stops the search. This is where a front end
+// decides that it is not worth starting another iteration.
+typedef int (*engine_info_fn)(const engine_info_t *info);
+
+// Searches the position by iterative deepening, until a limit is
+// reached, and returns the best move, or 0 if there is no legal
+// move. info may be NULL. The position is unchanged afterwards.
+move_t engine_search(const engine_limits_t *limits, engine_info_fn info);
 
 #endif // ENGINE_H

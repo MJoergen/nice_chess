@@ -186,14 +186,14 @@ questions, and neither is needed for niceemu:
 ## Architecture
 
 ```
-src/engine/   board.c  movegen.c  makemove.c  eval.c  search.c  fen.c  game.c
-              tt.c (Phase 2)      (the core: no I/O, no clock, no malloc)
+src/engine/   board.c  movegen.c  makemove.c  eval.c  search.c  tt.c
+              perft.c  fen.c  game.c  (the core: no I/O, no clock, no malloc)
               engine.h            (its interface)
-src/platform/ nice.c   host.c     (time and poll for key, from Phase 2)
+src/platform/ nice.c   host.c     (time, and from Phase 3 the poll for a key)
 src/ui/       text.c              (console: board diagram, coordinate input, and UCI)
               screen.c            (windowed: board on the 80x25 screen, keyboard cursor)
 tests/        perft and search suites, and the expected outputs of niceemu runs
-tools/        the test runner, and the size report
+tools/        the test runner, the size report, and a match runner for UCI engines
 ```
 
 The core's API is small and has no state outside it. For example:
@@ -334,6 +334,74 @@ such as Kiwipete (the second line of the perft suite), `go 1` visits 2.5
 million quiescence nodes, which takes more than 2·10⁹ steps on niceemu.
 Ordering captures by MVV-LVA is the fix, and the reason it comes first in
 Phase 2.
+
+**Phase 2** is done (2026-11-02):
+
+- The evaluation is material plus piece-square tables (Michniewski's
+  "Simplified Evaluation Function", with end-game tables for the king
+  and the pawns), blended by the phase of the game. make and undo keep
+  the middle-game and end-game sums up to date, packed in one word, so
+  `evaluate` reads them and does no work of its own. perft on the host
+  checks the sums, the phase, and the Zobrist key at every node.
+- The search (`search.c`) is alpha-beta by iterative deepening, with a
+  quiescence search of captures and promotions, a check extension,
+  draws by repetition and the 50-move rule inside the tree, and a
+  triangular table for the principal variation. The moves are ordered:
+  the move of the transposition table, captures by MVV-LVA, promotions
+  to a queen, two killer moves a ply, then the rest. The quiescence
+  search uses its own generator of captures.
+- The transposition table (`tt.c`) has 2048 entries of 8 bytes (16 KB),
+  with the move in 16 bits and the value in 16, and the depth and
+  bound in the low 8 bits of the stored key. A new entry always
+  replaces the old.
+- `engine_search` takes limits (depth, nodes, and a stop function
+  that it calls every 1024 nodes) and calls the front end after each
+  iteration, which can stop it. The time is the front end's: it stops
+  the search at the hard limit, and starts no iteration after half of
+  it. The platform gives the clock and the default time of a move:
+  300 million steps on NICE (about 7 seconds in niceemu, 4 on the
+  board), 1 second on the host.
+- The text front end has `go` with UCI's limits (`go depth 5`,
+  `go nodes 20000`, `go movetime 1000`, `go wtime ...`), shows the
+  board after the engine's move, and ends the game at mate, stalemate,
+  the 50-move rule, and repetition. After `uci`, it speaks UCI:
+  `position`, `go`, and the rest, but it cannot hear `stop` during a
+  search.
+- From the opening, `go depth 5` took 10¹⁰ steps before and takes 46
+  million now. The default `go` in niceemu reaches depth 5 from the
+  opening, 4 in a Sicilian Dragon middle game, and 6 in a rook ending,
+  at about 3000 steps a node. niceemu runs about 42 million steps a
+  second on the PC used here.
+- Tests: fixed searches (`tests/search.input`, by depth and by nodes)
+  must print the same lines on the host and in niceemu, which they do
+  since the search is deterministic. mchess2's search suite (fetched at
+  `65e8855`) runs on the host at 10000 nodes a position, and its
+  score is checked: 239 of 548, of which 154 of the 300 of Win at
+  Chess (216 at 100000 nodes). `make match-random` plays 20 games
+  against random moves at 20000 nodes a move, and must win all; it
+  does, in about a second, and runs in CI.
+- Against mchess2 (`make match-mchess2`, 20 games at 40 moves in 20
+  seconds) it won 20 of 20. That is less than it seems: mchess2 at
+  `65e8855` stops its iterative deepening at level 2
+  (`while (level <= 2)` in `ai.cc`), whatever its time.
+- In niceemu, `tools/match.py` played the NICE build, on its default
+  `go`, against the host build at 5000 nodes a move, one game with each
+  color from 1. e4 e5. The NICE build won both by checkmate, with no
+  illegal moves.
+- A full game in niceemu, in text: the NICE build played itself with
+  `go` on every move, and black mated on ply 150. The 150 searches took
+  39.5·10⁹ steps, 263 million a move on average (3.8 seconds on the
+  board), and none more than 298 million. The last completed depth was
+  5 on 102 moves, 4 on 31, 6 on 14, 3 once, and 1 twice (the search
+  stops at depth 1 when there is one legal move or a mate in one).
+- Size, from `make size`: code, runtime, and libc are 18894 words,
+  4606 more than after Phase 1, so the program needs 35426 words, 6754
+  over the budget. The largest new parts are `engine_search` (837
+  words), the parsing of `go` (768), `search` (705), `strtoul` (510),
+  and the printing of the search's info (412). In the linear memory,
+  the zero-initialized data is 43.4 KB, of which the transposition table
+  is 16 KB, and the peak of the wasm stack is 2.7 KB, so about 12 KB
+  of the page is free. Getting the code under the budget is Phase 4's.
 
 ## Decisions
 

@@ -1,49 +1,183 @@
 /***************************************************************
- * search.c: the search, and perft.
+ * search.c: the search.
+ *
+ * A negamax alpha-beta search, fail-soft, by iterative deepening,
+ * with a quiescence search of captures at the leaves, a check
+ * extension, and the transposition table. The moves are tried in
+ * this order: the move of the transposition table, the captures
+ * by MVV-LVA (the most valuable victim first, and of those, the
+ * least valuable attacker first), promotions to a queen, the two
+ * killer moves of the ply, and then the rest as generated.
+ *
+ * Draws by repetition and by the 50-move rule are scored 0 inside
+ * the tree. A position that has come up once before counts as a
+ * draw there, as a repetition is in the hands of either side.
  *
  * Copyright (c) 2026 Michael Jørgensen. MIT license (see LICENSE).
  ***************************************************************/
 
 #include "internal.h"
 
-// Scores are in centipawns. A mate is worth far more than any material.
-#define MATE 30000
-#define INF  32000
+#define INF 32000
+
+// The order of the moves of a list, by the score of each.
+enum
+{
+    ORDER_TT      = 1 << 30,
+    ORDER_CAPTURE = 1 << 20,  // Plus MVV-LVA
+    ORDER_QUEEN   = 1 << 19,  // A promotion to a queen
+    ORDER_KILLER1 = 1 << 18,
+    ORDER_KILLER2 = 1 << 17
+};
+
+static int32_t order[MOVE_STACK_SIZE];         // Beside move_stack
+static move_t  killers[ENGINE_MAX_PLY][2];
+
+// The principal variation of each ply: pv_table[ply] is the best line
+// found so far from the node at ply, of pv_length[ply] moves.
+static move_t  pv_table[ENGINE_MAX_PLY][ENGINE_MAX_PV];
+static int32_t pv_length[ENGINE_MAX_PLY];
+
+static engine_limits_t limits;
+static uint32_t nodes;
+static int      stopped;
+
+static inline int iabs(int x) { return x < 0 ? -x : x; }
+
+/***************************************************************
+ * count_node
+ * Counts a node, and checks the limits. Returns true if the search
+ * is to stop.
+ ***************************************************************/
+static int count_node(void)
+{
+    ++nodes;
+    if (limits.nodes && nodes >= limits.nodes)
+        stopped = 1;
+    else if ((nodes & 1023) == 0 && limits.stop && limits.stop())
+        stopped = 1;
+    return stopped;
+} // end of count_node
+
+/***************************************************************
+ * score_moves
+ * Gives each move of a list its score for the order, in the same
+ * place of order[].
+ ***************************************************************/
+static void score_moves(const move_t *list, int n, int tt_move, int ply)
+{
+    int32_t *sc = order + (list - move_stack);
+    for (int i = 0; i < n; ++i)
+    {
+        move_t m = list[i];
+        int captured = move_captured(m);
+        int promoted = move_promoted(m);
+        int v = 0;
+        if (captured != EM)
+            v = ORDER_CAPTURE + 8*iabs(captured) - iabs(move_piece(m));
+        else if (m == killers[ply][0])
+            v = ORDER_KILLER1;
+        else if (m == killers[ply][1])
+            v = ORDER_KILLER2;
+        if (promoted == WQ || promoted == BQ)
+            v += ORDER_QUEEN;
+        sc[i] = v;
+    }
+    int t = tt_match(list, n, tt_move);
+    if (t >= 0)
+        sc[t] = ORDER_TT;
+} // end of score_moves
+
+/***************************************************************
+ * pick_move
+ * Brings the move of the highest score among list[i] to list[n-1]
+ * to list[i], and returns it.
+ ***************************************************************/
+static move_t pick_move(move_t *list, int i, int n)
+{
+    int32_t *sc = order + (list - move_stack);
+    int best = i;
+    for (int j = i + 1; j < n; ++j)
+        if (sc[j] > sc[best])
+            best = j;
+    move_t m = list[best];
+    int32_t s = sc[best];
+    list[best] = list[i];
+    sc[best]   = sc[i];
+    list[i] = m;
+    sc[i]   = s;
+    return m;
+} // end of pick_move
+
+/***************************************************************
+ * update_pv
+ * The line of ply is now m, and then the line of ply + 1.
+ ***************************************************************/
+static void update_pv(int ply, move_t m)
+{
+    int n = pv_length[ply + 1];
+    if (n > ENGINE_MAX_PV - 1)
+        n = ENGINE_MAX_PV - 1;
+    pv_table[ply][0] = m;
+    for (int i = 0; i < n; ++i)
+        pv_table[ply][i + 1] = pv_table[ply + 1][i];
+    pv_length[ply] = n + 1;
+} // end of update_pv
+
+/***************************************************************
+ * is_draw
+ * True if the position is a draw by the 50-move rule, or has come
+ * up before, as far back as a repetition can reach.
+ ***************************************************************/
+static int is_draw(void)
+{
+    if (pos.halfmove >= 100)
+        return 1;
+    int back = pos.halfmove < pos.ply ? pos.halfmove : pos.ply;
+    for (int i = 4; i <= back; i += 2)
+        if (hist[pos.ply - i].hash == pos.hash)
+            return 1;
+    return 0;
+} // end of is_draw
 
 /***************************************************************
  * quiescence
  *
- * Searches only captures, until the position is quiet. This avoids
- * evaluating positions in the middle of an exchange (the horizon
- * effect). The side to move may always decline to capture
- * ("stand pat").
+ * Searches only captures and promotions, until the position is
+ * quiet. This avoids evaluating positions in the middle of an
+ * exchange (the horizon effect). The side to move may always
+ * decline to capture ("stand pat").
  ***************************************************************/
-static int quiescence(int alpha, int beta)
+static int quiescence(int alpha, int beta, int ply)
 {
+    pv_length[ply] = 0;
+    if (count_node())
+        return 0;
+
     int best = evaluate();
-    if (best >= beta || !move_stack_room())
+    if (best >= beta || ply >= ENGINE_MAX_PLY - 1 || !move_stack_room())
         return best;
     if (best > alpha)
         alpha = best;
 
     move_t *list = move_stack + move_sp;
-    int n = gen_pseudo(list);
+    int n = gen_captures(list);
     move_sp += n;
+    score_moves(list, n, 0, ply);
 
     for (int i = 0; i < n; ++i)
     {
-        move_t m = list[i];
-        if (move_captured(m) == EM)
-            continue;
-
+        move_t m = pick_move(list, i, n);
         make_move(m);
         if (!move_was_legal())
         {
             undo_move();
             continue;
         }
-        int val = -quiescence(-beta, -alpha);
+        int val = -quiescence(-beta, -alpha, ply + 1);
         undo_move();
+        if (stopped)
+            break;
 
         if (val > best)
             best = val;
@@ -60,114 +194,184 @@ static int quiescence(int alpha, int beta)
 /***************************************************************
  * search
  *
- * A fail-soft negamax alpha-beta search of depth ply, followed by
- * the quiescence search. The value is from the point of view of
- * the side to move: -(MATE + depth) if it is mated, so that a
- * nearer mate counts more, and 0 if it is stalemated.
+ * Searches the position to depth ply, ply plies from the root, and
+ * returns its value, from the point of view of the side to move:
+ * -(ENGINE_MATE - ply) if it is mated, so that a nearer mate counts
+ * more, and 0 if it is stalemated or a draw.
  ***************************************************************/
-static int search(int alpha, int beta, int depth)
+static int search(int alpha, int beta, int depth, int ply)
 {
-    if (depth == 0 || !move_stack_room())
-        return quiescence(alpha, beta);
+    pv_length[ply] = 0;
+    int in_check = is_attacked(king_of(pos.side), pos.side);
+    if (in_check)
+        depth++;
+    if (depth <= 0)
+        return quiescence(alpha, beta, ply);
+
+    if (count_node())
+        return 0;
+    if (is_draw())
+        return 0;
+    if (ply >= ENGINE_MAX_PLY - 1 || !move_stack_room())
+        return evaluate();
+
+    int tt_depth, tt_value, tt_bound, tt_move = 0;
+    if (tt_probe(&tt_depth, &tt_value, &tt_bound, &tt_move, ply) && tt_depth >= depth)
+    {
+        if (tt_bound == TT_EXACT
+                || (tt_bound == TT_LOWER && tt_value >= beta)
+                || (tt_bound == TT_UPPER && tt_value <= alpha))
+            return tt_value;
+    }
 
     move_t *list = move_stack + move_sp;
     int n = gen_pseudo(list);
     move_sp += n;
+    score_moves(list, n, tt_move, ply);
 
+    int alpha0 = alpha;
     int best = -INF;
-    int any_legal = 0;
+    move_t best_move = 0;
 
     for (int i = 0; i < n; ++i)
     {
-        make_move(list[i]);
+        move_t m = pick_move(list, i, n);
+        make_move(m);
         if (!move_was_legal())
         {
             undo_move();
             continue;
         }
-        any_legal = 1;
-        int val = -search(-beta, -alpha, depth - 1);
+        int val = -search(-beta, -alpha, depth - 1, ply + 1);
         undo_move();
+        if (stopped)
+            break;
 
         if (val > best)
+        {
             best = val;
-        if (best > alpha)
-            alpha = best;
+            best_move = m;
+            if (val > alpha)
+            {
+                alpha = val;
+                update_pv(ply, m);
+            }
+        }
         if (alpha >= beta)
+        {
+            if (move_captured(m) == EM && m != killers[ply][0])
+            {
+                killers[ply][1] = killers[ply][0];
+                killers[ply][0] = m;
+            }
             break;
+        }
     }
 
     move_sp -= n;
+    if (stopped)
+        return 0;
 
-    if (!any_legal)
-        return is_attacked(king_of(pos.side), pos.side) ? -(MATE + depth) : 0;
+    if (best_move == 0)
+        return in_check ? -(ENGINE_MATE - ply) : 0;
+
+    tt_store(depth, best,
+             best <= alpha0 ? TT_UPPER : best >= beta ? TT_LOWER : TT_EXACT,
+             best_move, ply);
     return best;
 } // end of search
 
 /***************************************************************
  * engine_search
  *
- * Searches each legal move to depth - 1 with a full window, and
- * returns the first of the best.
+ * Iterative deepening: searches the root moves to depth 1, 2, 3,
+ * and so on, each time with the best move of the last iteration
+ * first. When a limit stops an iteration, the best move so far of
+ * that iteration is kept if it was searched to the end, as it was
+ * then better than the best move of the iteration before (which was
+ * searched first).
  ***************************************************************/
-move_t engine_search(int depth, engine_info_fn info)
+move_t engine_search(const engine_limits_t *lim, engine_info_fn info)
 {
+    limits   = *lim;
+    nodes    = 0;
+    stopped  = 0;
+    for (int i = 0; i < ENGINE_MAX_PLY; ++i)
+        killers[i][0] = killers[i][1] = 0;
+
     move_t *list = move_stack + move_sp;
     int n = gen_legal(list);
+    if (n == 0)
+        return 0;
     move_sp += n;
 
-    move_t best_move = 0;
-    int best = -INF;
+    int d, v, b, tt_move = 0;
+    tt_probe(&d, &v, &b, &tt_move, 0);
+    score_moves(list, n, tt_move, 0);
     for (int i = 0; i < n; ++i)
+        pick_move(list, i, n);
+
+    int max_depth = ENGINE_MAX_PLY - 1;
+    if (limits.depth > 0 && limits.depth < max_depth)
+        max_depth = limits.depth;
+
+    move_t best_move = list[0];
+    for (int depth = 1; depth <= max_depth; ++depth)
     {
-        make_move(list[i]);
-        int val = -search(-INF, INF, depth > 0 ? depth - 1 : 0);
-        undo_move();
-        if (info)
-            info(list[i], val);
-        if (val > best)
+        int alpha = -INF;
+        int best = -INF;
+        int best_index = -1;
+
+        for (int i = 0; i < n; ++i)
         {
-            best = val;
-            best_move = list[i];
+            make_move(list[i]);
+            int val = -search(-INF, -alpha, depth - 1, 1);
+            undo_move();
+            if (stopped)
+                break;
+            if (val > best)
+            {
+                best = val;
+                best_index = i;
+                alpha = val;
+                update_pv(0, list[i]);
+            }
         }
+
+        if (best_index < 0)
+            break;
+
+        // The best move to the front, and the rest in their order.
+        best_move = list[best_index];
+        for (int i = best_index; i > 0; --i)
+            list[i] = list[i - 1];
+        list[0] = best_move;
+
+        if (stopped)
+            break;
+
+        tt_store(depth, best, TT_EXACT, best_move, 0);
+        if (info)
+        {
+            engine_info_t in;
+            in.depth = depth;
+            in.score = best;
+            in.nodes = nodes;
+            in.pv_len = pv_length[0];
+            for (int i = 0; i < pv_length[0]; ++i)
+                in.pv[i] = pv_table[0][i];
+            if (info(&in))
+                break;
+        }
+
+        // Stop at one legal move, or at a mate that this depth sees in full.
+        if (n == 1)
+            break;
+        if ((best > ENGINE_MATE - ENGINE_MAX_PLY || best < -ENGINE_MATE + ENGINE_MAX_PLY)
+                && ENGINE_MATE - iabs(best) <= depth)
+            break;
     }
 
     move_sp -= n;
     return best_move;
 } // end of engine_search
-
-/***************************************************************
- * perft
- * At depth 1 it counts the legal moves, without making them twice.
- ***************************************************************/
-static uint32_t perft(int depth)
-{
-    assert(move_stack_room());
-    move_t *list = move_stack + move_sp;
-    int n = gen_pseudo(list);
-    move_sp += n;
-
-    uint32_t count = 0;
-    for (int i = 0; i < n; ++i)
-    {
-        make_move(list[i]);
-        if (move_was_legal())
-        {
-#ifdef CHECK_HASH
-            assert(pos.hash == board_compute_hash());
-#endif
-            count += (depth > 1) ? perft(depth - 1) : 1;
-        }
-        undo_move();
-    }
-
-    move_sp -= n;
-    return count;
-} // end of perft
-
-uint32_t engine_perft(int depth)
-{
-    if (depth <= 0)
-        return 1;
-    return perft(depth);
-} // end of engine_perft

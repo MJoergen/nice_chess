@@ -5,7 +5,8 @@
 # niceemu ($NICEEMU), and leaves its output in build/test/NAME.raw.
 # The lines that match a pattern of tests/CHECK.grep (with the digits
 # at the end of CHECK left out: perftsuite3 uses perftsuite.grep), after the
-# prompts "> " are taken off, and then "exit N" with main's result,
+# prompts "> " and the times of info lines (" time N") are taken off, and
+# then "exit N" with main's result,
 # must be tests/CHECK.expected. Prints PASS or FAIL, and exits with 1
 # on a failure.
 set -u
@@ -29,7 +30,7 @@ else
     status=$?
 fi
 
-{ sed 's/^\(> \)*//' $raw | grep -f tests/${check%%[0-9]*}.grep; echo "exit $status"; } > $out
+{ sed 's/^\(> \)*//; s/ time [0-9]*//' $raw | grep -f tests/${check%%[0-9]*}.grep; echo "exit $status"; } > $out
 if cmp -s $out tests/$check.expected; then
     echo "PASS $name"
 else

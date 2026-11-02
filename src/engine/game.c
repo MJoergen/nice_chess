@@ -40,7 +40,7 @@ uint32_t engine_hash_full(void)
  * engine_make_move
  * Keeps room in the history for the plies of a search.
  ***************************************************************/
-#define SEARCH_PLIES 64
+#define SEARCH_PLIES ENGINE_MAX_PLY
 
 int engine_make_move(move_t move)
 {

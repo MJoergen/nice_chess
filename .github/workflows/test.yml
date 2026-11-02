@@ -11,11 +11,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install clang, lld, and llvm
         run: sudo apt-get update && sudo apt-get install -y clang lld llvm
-      - name: Fetch nice_cpu, niceemu, and the perft suite
+      - name: Fetch nice_cpu, niceemu, and the test suites
         run: make deps
       - name: Test
         run: make test
       - name: Perft suite to depth 5
         run: make perft-deep
+      - name: Against random moves
+        run: make match-random
       - name: Size
         run: make size

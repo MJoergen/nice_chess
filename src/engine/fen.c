@@ -168,7 +168,8 @@ error:
  ***************************************************************/
 void engine_new_game(void)
 {
-    engine_set_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 0);
+    engine_set_fen(ENGINE_START_FEN, 0);
+    tt_clear();
 }
 
 // Writes a number, and returns the end of it.
