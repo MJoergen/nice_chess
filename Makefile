@@ -40,7 +40,7 @@ MCHESS2_SRC = main.cc CBoard.cc CMove.cc ai.cc CMoveList.cc CPerft.cc \
 # The MEGA65 gives a program under the monitor the words 0x8000 to
 # 0x1EFFF, 92K, for its image, its linear memory, and the NICE stack,
 # which the monitor's routines share and use at most 32 words of
-# (NiceMonMEGA65's branch dev-V1.2.1). The Nexys4DDR would give 28K.
+# (NiceMonMEGA65 V1.2.1). The Nexys4DDR would give 28K.
 BUDGET = 94176
 
 ENGINE = $(wildcard src/engine/*.c)

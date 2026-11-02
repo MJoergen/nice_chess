@@ -36,7 +36,7 @@ date in make and undo.
    test suites are fetched from it at commit `65e8855`.
 3. More RAM on the MEGA65 was requested from NiceMonMEGA65
    ([NiceMonMEGA65#68](https://github.com/MJoergen/NiceMonMEGA65/issues/68)).
-   Its branch `dev-V1.2.1` gave the MEGA65 128K words, and a program
+   Its release V1.2.1 gave the MEGA65 128K words, and a program
    under the monitor the words `0x8000` to `0x1EFFF`, 92K, before Phase 4,
    so the size work planned for 28K words was never needed.
 4. Coordinate notation (`e2e4`) only. SAN was postponed, as it costs
@@ -69,7 +69,7 @@ with moves by the cursor or typed, the search's info, a move list, and
 Esc to make the engine move now. `make screen-game` replays a full game
 of 75 moves by its keys in CI. Without `printf` it was 31224 words.
 
-**Phase 4** (`a2b6eb3`): the MEGA65 R6, with NiceMonMEGA65 `dev-V1.2.1`.
+**Phase 4** (`a2b6eb3`): the MEGA65 R6, with NiceMonMEGA65 V1.2.1.
 Both front ends fit the 92K words with about 59K to spare, `printf`
 included, so they were built as they were, at `0x8000` for the
 monitor. The engine runs about 54 million steps a second there (1.85

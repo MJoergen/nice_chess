@@ -43,7 +43,7 @@ the NICE build in niceemu, or on the board, as one of them.
 
 The builds in `build/mega65/` run on the MEGA65 under the monitor of
 [NiceMonMEGA65](https://github.com/MJoergen/NiceMonMEGA65), from its
-branch `dev-V1.2.1` on, which gives a program 92K words of RAM. They
+release V1.2.1 on, which gives a program 92K words of RAM. They
 are loaded over the board's Ethernet port or its debug UART with
 NiceMonMEGA65's tools, from a checkout of it (`NICEMON=DIR`,
 `../NiceMonMEGA65` by default), with `ETH=IP` or `PORT=/dev/ttyUSBn`:

@@ -4,7 +4,7 @@ Investigations made during the development (doc/HISTORY.md), newest first.
 
 ## 2026-11-02: The board's speed on the engine
 
-Phase 4's first runs on the MEGA65 R6 (NiceMonMEGA65 `dev-V1.2.1`,
+Phase 4's first runs on the MEGA65 R6 (NiceMonMEGA65 V1.2.1,
 100 MHz, the pipelined core), with the text front end under the
 monitor, against the same searches in niceemu V1.2. The `time` of the
 info lines is real milliseconds on the board, and steps in niceemu:
