@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """size.py - reports the size of a NICE program built by nicebuild.py.
 
-Usage: size.py [--emu NICEEMU --input FILE] [--budget WORDS [--check]] program.bin
+Usage: size.py [--emu NICEEMU --input FILE [--run FILE]] [--budget WORDS [--check]] program.bin
 
 Reads program.bin, and the program.sym and program.wasm that
-nicebuild.py --symbols --keep leaves beside it. Prints, in words:
+nicebuild.py --symbols --keep leaves beside it. The figures are from
+the lowest address of the .bin file, 0x8000 for a program built with
+--monitor. Prints, in words:
 
 - the code: the translated program, the runtime, and libc, most of
   which comes before ___wasm_memory, and some after the memory;
@@ -14,7 +16,8 @@ nicebuild.py --symbols --keep leaves beside it. Prints, in words:
   program with all of its linear memory.
 
 With --emu and --input, it runs the program in niceemu with that console
-input, and reads the peak use of the wasm stack and of the NICE stack
+input (or the file of --run, such as the program joined after a stand-in
+for a monitor), and reads the peak use of the wasm stack and of the NICE stack
 from the memory after the run: the wasm stack is cleared at the start,
 and niceemu's memory starts at 0, so the lowest word that is not 0 is the
 deepest the stack has gone. Words the program wrote as 0 are not seen,
@@ -104,14 +107,15 @@ def read_wasm(path: str) -> dict[str, int]:
     return info
 
 
-def read_bin(path: str) -> int:
-    """The end of the image: one past its highest address."""
-    top = 0
+def read_bin(path: str) -> tuple[int, int]:
+    """The image's lowest address, and one past its highest."""
+    low, top = 1 << 32, 0
     with open(path) as f:
         for line in f:
             if line.strip():
-                top = max(top, int(line.split()[0], 16) + 1)
-    return top
+                addr = int(line.split()[0], 16)
+                low, top = min(low, addr), max(top, addr + 1)
+    return low, top
 
 
 def read_sym(path: str, name: str) -> int:
@@ -146,19 +150,22 @@ def main() -> None:
     ap.add_argument("bin")
     ap.add_argument("--emu", help="niceemu, to measure the peak stacks")
     ap.add_argument("--input", help="the console input of the measuring run")
+    ap.add_argument("--run", help="the file to run in niceemu, if not program.bin itself")
     ap.add_argument("--budget", type=int, help="words for program, memory, and NICE stack")
     ap.add_argument("--check", action="store_true", help="exit with 1 if over the budget")
     args = ap.parse_args()
 
     base = args.bin[:-4] if args.bin.endswith(".bin") else args.bin
-    membase = read_sym(base + ".sym", "___wasm_memory")
-    image_end = read_bin(args.bin)
+    low, image_end = read_bin(args.bin)
+    membase = read_sym(base + ".sym", "___wasm_memory") - low
+    image_end -= low
     w = read_wasm(base + ".wasm")
     mem_words = w["pages"] * PAGE_WORDS
     data_words = (w["data_end"] - w["data_start"] + 3) // 4
     stack_words = w["stack"] // 4
 
     after = max(0, image_end - (membase + mem_words))  # Runtime placed after the memory
+    print(f"base address:     0x{low:08x}")
     print(f"code and runtime:     {membase + after:6d} words  "
           f"({membase} before ___wasm_memory, {after} after the memory)")
     print(f"linear memory:        {mem_words:6d} words  ({w['pages']} pages)")
@@ -172,10 +179,10 @@ def main() -> None:
 
     nice_peak = 0
     if args.emu and args.input:
-        mem = dump(args.emu, args.input, args.bin,
-                   [(membase, stack_words), (NICE_SP - NICE_STACK_SCAN, NICE_STACK_SCAN)])
-        low = next((k for k in range(stack_words) if mem.get(membase + k, 0)), stack_words)
-        print(f"peak wasm stack:      {stack_words - low:6d} words  (of {stack_words})")
+        mem = dump(args.emu, args.input, args.run or args.bin,
+                   [(low + membase, stack_words), (NICE_SP - NICE_STACK_SCAN, NICE_STACK_SCAN)])
+        unused = next((k for k in range(stack_words) if mem.get(low + membase + k, 0)), stack_words)
+        print(f"peak wasm stack:      {stack_words - unused:6d} words  (of {stack_words})")
         nlow = next((a for a in range(NICE_SP - NICE_STACK_SCAN, NICE_SP) if mem.get(a, 0)), NICE_SP)
         nice_peak = NICE_SP - nlow
         print(f"peak NICE stack:      {nice_peak:6d} words")

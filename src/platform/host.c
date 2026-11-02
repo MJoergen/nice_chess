@@ -16,7 +16,15 @@ uint32_t platform_micros(void)
     return (uint32_t) ts.tv_sec * 1000000u + (uint32_t) (ts.tv_nsec / 1000);
 }
 
-const uint32_t platform_move_time = 1000000; // 1 second
+uint32_t platform_move_time(void)
+{
+    return 1000000; // 1 second
+}
+
+int platform_on_board(void)
+{
+    return 0;
+}
 
 int platform_pollc(void)
 {

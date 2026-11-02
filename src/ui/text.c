@@ -56,6 +56,39 @@ static char *next_word(char **ps)
     return w;
 }
 
+/***************************************************************
+ * read_line
+ * Reads a line of the console into s, at most n - 1 characters, and
+ * drops the rest. A line ends at LF or CR, as a terminal on the
+ * board's line, and the board's keyboard, send CR, and a file LF; an
+ * LF right after a CR is the same end. Returns 0 at the end of the
+ * input.
+ ***************************************************************/
+static int read_line(char *s, int n)
+{
+    static int last;
+    int k = 0;
+    while (1)
+    {
+        int c = getchar();
+        if (c == EOF)
+        {
+            s[k] = '\0';
+            return k > 0;
+        }
+        int prev = last;
+        last = c;
+        if (c == '\n' && prev == '\r')
+            continue;
+        if (c == '\n' || c == '\r')
+            break;
+        if (k < n - 1)
+            s[k++] = (char) c;
+    }
+    s[k] = '\0';
+    return 1;
+}
+
 static void print_board(void)
 {
     for (int rank = 7; rank >= 0; --rank)
@@ -248,7 +281,7 @@ static move_t do_go(char *args)
     }
     else if (!limits.depth && !limits.nodes && !infinite)
     {
-        hard_time = platform_move_time;
+        hard_time = platform_move_time();
         soft_time = hard_time / 2;
     }
 
@@ -308,7 +341,7 @@ static void print_bestmove(move_t m)
 
 int main(void)
 {
-    char line[1024];
+    char line[2048]; // position startpos moves ... of a long game
 
     engine_new_game();
     printf("nice_chess. Type help for the commands.\n");
@@ -320,9 +353,8 @@ int main(void)
             printf("> ");
             fflush(stdout);
         }
-        if (fgets(line, sizeof(line), stdin) == NULL)
+        if (!read_line(line, sizeof line))
             break;
-        line[strcspn(line, "\r\n")] = '\0';
 
         char *arg = line;
         char *cmd = next_word(&arg);

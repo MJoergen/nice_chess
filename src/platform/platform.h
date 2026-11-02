@@ -18,8 +18,16 @@
 uint32_t platform_micros(void);
 
 // The time a move takes by default, in microseconds of
-// platform_micros.
-extern const uint32_t platform_move_time;
+// platform_micros: real time on a PC and on a board, and a number of
+// steps in niceemu, chosen so that the engine does about the same work
+// in both.
+uint32_t platform_move_time(void);
+
+// Whether the program runs on a board, such as the MEGA65, where the
+// clock is real and a read of the console returns at once when no
+// byte waits, and not in niceemu, where the clock counts steps and a
+// read from a file waits. On a PC, 0.
+int platform_on_board(void);
 
 // The next byte of the console's input, if one waits: 0 to 255, or
 // -2 if none waits yet, or -1 once the input has ended. From a file,

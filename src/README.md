@@ -16,11 +16,21 @@
   - `game.c`: the game as the front ends see it, and its result.
 - `platform/`: the clock, the default time of a move, and a poll of the
   console for a key: `nice.c` for NICE, `host.c` for a PC, behind
-  `platform.h`.
+  `platform.h`. On NICE the time of a move is 300 million steps in
+  niceemu and 5 seconds on a board, which `nice.c` tells apart by the
+  ratio of the cycle counter to the microsecond counter.
 - `ui/text.c`: the text front end, on the console, and UCI. `help` lists
   its commands.
 - `ui/screen.c`: the windowed front end, on the 80x25 screen, for NICE
   only. Its keys are listed at the top of the file and on the screen.
+  It writes its log of the moves to the console's register itself, so
+  that under the monitor on the MEGA65 the log goes to the line and
+  not to the screen.
+
+Both front ends are built twice for NICE: for niceemu, at address 0,
+and for the MEGA65 under NiceMonMEGA65's monitor, at `0x8000`
+(`nicebuild.py --monitor`), where the text front end's output goes to
+the screen and the line both, through the monitor.
 
 The engine started as `runtime/libc/test/mchess.c` of
 [nice_cpu](https://github.com/MJoergen/nice_cpu) at tag `V1.2`, by the

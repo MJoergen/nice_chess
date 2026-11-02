@@ -5,15 +5,24 @@
 # Decisions). make deps fetches them into deps/. NICE_CPU=DIR and
 # NICEEMU=PATH use local copies of nice_cpu and niceemu instead.
 #
-#   make             build the text front end, for NICE and for the host
+#   make             build both front ends, for niceemu, for the MEGA65, and for the host
 #   make test        the tests, on the host and in niceemu
 #   make perft-deep  the perft suite to depth 5 on the host (a minute)
 #   make screen-game a full game in the windowed front end, in niceemu (a minute)
 #   make match-random  the host build against random moves (20 games)
 #   make match-mchess2 the host build against mchess2 (20 games, 15 minutes)
-#   make size        the size of the NICE builds, against the board's budget
+#   make size        the size of the MEGA65 builds, against the board's budget
 #   make clean       remove build/
 #   make distclean   remove build/ and deps/
+#
+# On the MEGA65, under NiceMonMEGA65's monitor, with ETH=IP (the board's
+# Ethernet port) or PORT=/dev/ttyUSBn (its debug UART), and the tools of a
+# checkout of NiceMonMEGA65 (NICEMON=DIR, ../NiceMonMEGA65 by default):
+#   make board-text    load and run the text front end, then talk to it over the line
+#   make board-screen  load and run the windowed front end, for the screen and keyboard
+#   make board-test    the tests of both front ends, on the board
+#   make board-game    a full game in the windowed front end, on the board (a few minutes)
+#   make board-match   the text front end on the board against the host build, in UCI
 
 NICE_CPU_TAG    := V1.2
 NICEEMU_SHA256  := cb498a974cec1ae1f2e56441e6bb1f3ec20d593bb505ff32a566b7f4eade6e94
@@ -23,9 +32,15 @@ SEARCHSUITE_SHA256 := 291bd3110550fbb26f8c887e4ed23249200d044b52d912b573b1875351
 
 NICE_CPU ?= deps/nice_cpu
 NICEEMU  ?= deps/niceemu-$(NICE_CPU_TAG)-x86_64-linux/niceemu
+NICEMON  ?= ../NiceMonMEGA65
 PYTHON   ?= python3
 CC       ?= cc
-export NICEEMU
+export NICEEMU NICEMON
+
+# How to reach the board: ETH=IP or PORT=DEVICE, as NiceMonMEGA65's tools
+# take them. Only the board targets need one.
+BOARDLINK = $(if $(ETH),--eth $(ETH),$(if $(PORT),--port $(PORT),$(error ETH=IP or PORT=DEVICE names the board)))
+LEVEL ?= 2
 
 NICEBUILD  = $(PYTHON) $(NICE_CPU)/translator/nicebuild.py
 RELEASE_URL = https://github.com/MJoergen/nice_cpu/releases/download/$(NICE_CPU_TAG)
@@ -40,9 +55,11 @@ MCHESS2_SRC = main.cc CBoard.cc CMove.cc ai.cc CMoveList.cc CPerft.cc \
 	CBoard.h CHashEntry.h CHashTable.h CMove.h CMoveList.h CPerft.h \
 	CPerftSuite.h CSearchSuite.h CSquare.h CTime.h ai.h crc32.h trace.h
 
-# The board gives a program under the monitor 28K words, for its image,
-# its linear memory, and the NICE stack (doc/PORTING_PLAN.md, Memory).
-BUDGET = 28672
+# The MEGA65 gives a program under the monitor the words 0x8000 to
+# 0x1EFFF, 92K, for its image, its linear memory, and the NICE stack,
+# which the monitor's routines share and use at most 32 words of
+# (doc/PORTING_PLAN.md, Memory). The Nexys4DDR would give 28K.
+BUDGET = 94176
 
 ENGINE = $(wildcard src/engine/*.c)
 HEADERS = $(wildcard src/engine/*.h) src/platform/platform.h
@@ -51,13 +68,17 @@ HEADERS = $(wildcard src/engine/*.h) src/platform/platform.h
 # asserts. The engine keeps its move lists in its own data, so the wasm
 # stack is small, and all of the memory is one page.
 NICEFLAGS = -O s -D NDEBUG --stack 8192 --memory 65536 --symbols --keep
+# The MEGA65: the same, built for the monitor, which loads it at 0x8000.
+MONFLAGS = $(NICEFLAGS) --monitor
 
 # The host: with asserts, and a check of the Zobrist key and the
 # evaluation's sums at every node of perft.
 HOSTFLAGS = -O2 -W -Wall -Wextra -DCHECK_STATE
 
 .PHONY: all test host-test nice-test perft-deep screen-game match-random match-mchess2 size deps clean distclean
-all: build/nice/chess_text.bin build/nice/chess_screen.bin build/host/chess_text
+.PHONY: board-text board-screen board-test board-game board-match
+all: build/nice/chess_text.bin build/nice/chess_screen.bin build/host/chess_text \
+     build/mega65/chess_text.bin build/mega65/chess_screen.bin
 
 build/nice/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/nice.c | $(NICE_CPU)
 	@mkdir -p $(@D)
@@ -66,6 +87,25 @@ build/nice/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/nice.
 build/nice/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/platform/nice.c | $(NICE_CPU)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(NICEFLAGS) -o $@ $(ENGINE) src/ui/screen.c src/platform/nice.c
+
+build/mega65/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/nice.c | $(NICE_CPU)
+	@mkdir -p $(@D)
+	$(NICEBUILD) $(MONFLAGS) -o $@ $(ENGINE) src/ui/text.c src/platform/nice.c
+
+build/mega65/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/platform/nice.c | $(NICE_CPU)
+	@mkdir -p $(@D)
+	$(NICEBUILD) $(MONFLAGS) -o $@ $(ENGINE) src/ui/screen.c src/platform/nice.c
+
+# nice_cpu's stand-in for a monitor at 0, which runs a program at 0x8000
+# as the monitor does, so that the MEGA65 builds run in niceemu too,
+# joined after it (a .bin file is address and word pairs).
+build/nice/monstub.bin: $(NICE_CPU)/runtime/test/monitor.nasm | $(NICE_CPU)
+	@mkdir -p $(@D)
+	$(PYTHON) $(NICE_CPU)/assembler/niceasm.py -o $@ $<
+
+build/test/mon_%.bin: build/nice/monstub.bin build/mega65/%.bin
+	@mkdir -p $(@D)
+	cat $^ > $@
 
 build/nice/perftsuite.bin: $(ENGINE) $(HEADERS) tests/perftsuite.c | $(NICE_CPU)
 	@mkdir -p $(@D)
@@ -91,11 +131,15 @@ host-test: build/host/chess_text build/host/perftsuite build/host/searchsuite $(
 	@tools/runtest.sh host_perftsuite4 perftsuite4 $(PERFTSUITE) host build/host/perftsuite 4
 	@tools/runtest.sh host_searchsuite searchsuite $(SEARCHSUITE) host build/host/searchsuite 10000
 
-nice-test: build/nice/chess_text.bin build/nice/chess_screen.bin build/nice/perftsuite.bin $(PERFTSUITE) | $(NICEEMU)
+nice-test: build/nice/chess_text.bin build/nice/chess_screen.bin build/nice/perftsuite.bin $(PERFTSUITE) \
+           build/test/mon_chess_text.bin build/test/mon_chess_screen.bin | $(NICEEMU)
 	@tools/runtest.sh nice_screen screen tests/screen.keys screen build/nice/chess_screen.bin
 	@tools/runtest.sh nice_text text tests/text.input nice build/nice/chess_text.bin
 	@tools/runtest.sh nice_search search tests/search.input nice build/nice/chess_text.bin
 	@tools/runtest.sh nice_perftsuite3 perftsuite3 $(PERFTSUITE) nice build/nice/perftsuite.bin
+	@tools/runtest.sh mega65_screen screen tests/screen.keys screen build/test/mon_chess_screen.bin
+	@tools/runtest.sh mega65_text text tests/text.input nice build/test/mon_chess_text.bin
+	@tools/runtest.sh mega65_search search tests/search.input nice build/test/mon_chess_text.bin
 
 perft-deep: build/host/perftsuite $(PERFTSUITE)
 	@tools/runtest.sh host_perftsuite5 perftsuite5 $(PERFTSUITE) host build/host/perftsuite 5
@@ -121,9 +165,37 @@ deps/mchess2/src/%:
 	@mkdir -p $(@D)
 	curl -sSfL -o $@ $(MCHESS2_RAW)/$*
 
-size: build/nice/chess_text.bin build/nice/chess_screen.bin | $(NICEEMU)
-	$(PYTHON) tools/size.py --emu $(NICEEMU) --input tests/size.input --budget $(BUDGET) build/nice/chess_text.bin
-	$(PYTHON) tools/size.py --emu $(NICEEMU) --input tests/screen.keys --budget $(BUDGET) build/nice/chess_screen.bin
+size: build/mega65/chess_text.bin build/mega65/chess_screen.bin build/test/mon_chess_text.bin build/test/mon_chess_screen.bin | $(NICEEMU)
+	$(PYTHON) tools/size.py --emu $(NICEEMU) --input tests/size.input --run build/test/mon_chess_text.bin \
+	  --budget $(BUDGET) --check build/mega65/chess_text.bin
+	$(PYTHON) tools/size.py --emu $(NICEEMU) --input tests/screen.keys --run build/test/mon_chess_screen.bin \
+	  --budget $(BUDGET) --check build/mega65/chess_screen.bin
+
+# The board. load.py loads a program under the monitor and types r, which
+# runs it; what it prints then comes on the line, such as nc IP 4510 or
+# picocom -b 2000000 DEVICE (NiceMonMEGA65's tools/README.md).
+board-text: build/mega65/chess_text.bin
+	$(PYTHON) $(NICEMON)/tools/load.py $(BOARDLINK) --monitor $<
+
+board-screen: build/mega65/chess_screen.bin
+	$(PYTHON) $(NICEMON)/tools/load.py $(BOARDLINK) --monitor $<
+
+board-test: build/mega65/chess_text.bin build/mega65/chess_screen.bin
+	@BOARDLINK="$(BOARDLINK)" tools/runtest.sh board_text text tests/text.input board build/mega65/chess_text.bin
+	@BOARDLINK="$(BOARDLINK)" tools/runtest.sh board_search search tests/search.input board build/mega65/chess_text.bin
+	@BOARDLINK="$(BOARDLINK)" tools/runtest.sh board_screen screen tests/screen.keys board-screen build/mega65/chess_screen.bin
+
+# A game at LEVEL (2 by default) by the keys, white's moves from the host
+# build; the keys, and the screen at the end, go to build/mega65/.
+board-game: build/mega65/chess_screen.bin build/host/chess_text
+	$(PYTHON) tools/screen_game.py $(BOARDLINK) --level $(LEVEL) --dump build/mega65/game.dump \
+	  build/mega65/chess_screen.bin build/host/chess_text build/mega65/game.keys
+
+# Two games, one with each color, the board at its default time of a
+# move, 5 seconds, and the host build at 5000 nodes a move.
+board-match: build/mega65/chess_text.bin build/host/chess_text
+	$(PYTHON) tools/match.py $(BOARDLINK) --openings 1 --go1 "go nodes 5000" --go2 go \
+	  build/host/chess_text build/host/chess_text board:build/mega65/chess_text.bin
 
 deps: $(NICE_CPU) $(NICEEMU) $(PERFTSUITE) $(SEARCHSUITE)
 

@@ -2,6 +2,29 @@
 
 Investigations that inform the plan (doc/PORTING_PLAN.md), newest first.
 
+## 2026-11-02: The board's speed on the engine
+
+Phase 4's first runs on the MEGA65 R6 (NiceMonMEGA65 `dev-V1.2.1`,
+100 MHz, the pipelined core), with the text front end under the
+monitor, against the same searches in niceemu V1.2. The `time` of the
+info lines is real milliseconds on the board, and steps in niceemu:
+
+| Search, from the opening | Nodes | niceemu, steps | MEGA65 | Steps a second |
+|---|---|---|---|---|
+| `go depth 5` | 16782 | 45.5M | 0.84 s | 54M |
+| `go depth 6` | 99353 | 399.5M | 7.48 s | 53M |
+| `go depth 7` | 792753 | — | 46.0 s | — |
+
+So the engine runs about 54 million steps a second, 1.85 cycles per
+instruction, where nice_cpu's benchmark gives 1.43 and the plan
+assumed 70 million. The engine's code is loads, compares, and branches
+over the board, with few of the long runs of arithmetic that the
+benchmark has, which is where the pipeline's stalls would come from;
+this was not measured further. For the plan: a step budget from
+niceemu divides by 54 million, not 70, to give seconds on the board,
+and the default of 300 million steps a move is 5.6 seconds there.
+`platform_move_time()` gives the board 5 seconds.
+
 ## 2026-11-02: Speed and size, and what the system could do for them
 
 The question: could routines in the monitor's ROM, or new hardware

@@ -19,17 +19,18 @@
  *   R               rotate the board
  *   N               a new game
  *   + -             give the engine more or less time, levels 1 to 5
- *   Q               quit
+ *   Q               quit, and clear the screen
  * The letters of commands act only when no move is being typed.
  *
  * Each move is also written to the console, as "move e2e4", and the
- * end of the game as "result ...". The program halts on Q, or at the
- * end of the console's input.
+ * end of the game as "result ...". The program ends on Q, or at the
+ * end of the console's input, which leaves the screen as it is.
  *
- * The engine polls the keyboard during its search only once a read
- * of the console has found no byte waiting: that is, once the input
- * is a keyboard. Input from a file (niceemu -i, in the tests) is
- * then read only between moves, so a run is the same every time.
+ * The engine polls the keyboard during its search on a board, and in
+ * niceemu only once a read of the console has found no byte waiting:
+ * that is, once the input is a keyboard. Input from a file (niceemu
+ * -i, in the tests) is then read only between moves, so a run is the
+ * same every time.
  *
  * This front end is for NICE only. It does not use printf.
  *
@@ -393,6 +394,20 @@ static void draw_all(void)
 static int pushed_back = K_NONE;
 static int live;                   // The input is a keyboard (see the top)
 
+// The log goes to the console's register itself, not through
+// nice_putc: under the monitor on the board, nice_putc prints on the
+// screen too, where the board is (NiceMonMEGA65's monitor/README.md).
+static void console_putc(int c)
+{
+    nice_poke(NICE_CONSOLE, (unsigned) c);
+}
+
+static void console_print(const char *s)
+{
+    while (*s)
+        console_putc(*s++);
+}
+
 static int read_byte(void)
 {
     int c = pushed_back;
@@ -407,6 +422,17 @@ static int read_byte(void)
     return c;
 }
 
+// The byte after an ESC: the rest of a key's bytes may still be on
+// their way from a keyboard, so this waits up to 20 ms for one.
+static int read_byte_soon(void)
+{
+    uint32_t t0 = platform_micros();
+    int c;
+    while ((c = read_byte()) == K_NONE && platform_micros() - t0 < 20000)
+        ;
+    return c;
+}
+
 // The next key, K_NONE if none waits, or K_END.
 static int poll_key(void)
 {
@@ -416,15 +442,15 @@ static int poll_key(void)
     if (c != K_ESC)
         return c;
 
-    // Esc alone, or the start of the bytes of a key, which all come
-    // at once: ESC [ A for Up, ESC [ 1 5 ~ for F5, ESC O P for F1.
-    int d = read_byte();
+    // Esc alone, or the start of the bytes of a key: ESC [ A for Up,
+    // ESC [ 1 5 ~ for F5, ESC O P for F1.
+    int d = read_byte_soon();
     if (d != '[' && d != 'O')
     {
         pushed_back = d;
         return K_ESC;
     }
-    int e = read_byte();
+    int e = read_byte_soon();
     switch (e)
     {
         case 'A': return K_UP;
@@ -434,7 +460,7 @@ static int poll_key(void)
         default: break;
     }
     while (e >= '0' && e <= '9')
-        e = read_byte();
+        e = read_byte_soon();
     return K_OTHER;
 }
 
@@ -463,9 +489,9 @@ static void log_move(move_t m)
 {
     char buf[8];
     engine_move_to_str(m, buf);
-    nice_print("move ");
-    nice_print(buf);
-    nice_putc('\n');
+    console_print("move ");
+    console_print(buf);
+    console_putc('\n');
 }
 
 /***************************************************************
@@ -490,9 +516,9 @@ static void play(move_t m)
     int result = engine_result();
     if (result != ENGINE_PLAYING)
     {
-        nice_print("result ");
-        nice_print(status_text(result));
-        nice_putc('\n');
+        console_print("result ");
+        console_print(status_text(result));
+        console_putc('\n');
     }
 }
 
@@ -560,7 +586,7 @@ static void think(void)
     clear_selection();
     draw_all();
 
-    hard_time = platform_move_time / level_den[level - 1] * level_num[level - 1];
+    hard_time = platform_move_time() / level_den[level - 1] * level_num[level - 1];
     soft_time = hard_time / 2;
     engine_limits_t limits = {0, 0, stop_search};
     start_time = platform_micros();
@@ -698,7 +724,11 @@ static int handle_key(int k)
         message = "Type a move such as e2e4.";
     else switch (k)
     {
-        case 'q': return 0;
+        case 'q':
+            // Leave a blank screen, for the monitor on the board. The
+            // end of the input keeps the screen instead, for the tests.
+            nice_screen_clear();
+            return 0;
         case 'u': undo(); break;
         case 'n': new_game(); break;
         case 'r': flipped = !flipped; break;
@@ -719,6 +749,7 @@ int main(void)
     human = 1;
     cur_file = 4;
     cur_rank = 1;
+    live = platform_on_board();
     new_game();
 
     while (1)
@@ -733,7 +764,6 @@ int main(void)
         if (k == K_END || !handle_key(k))
             break;
     }
-    draw_all();
     set_cursor(0, 0, 0);
     return 0;
 }

@@ -14,14 +14,20 @@ are always typed.
 The front end writes each move to the console as "move e2e4", which is
 how this script learns black's moves. A second HOST_ENGINE, in its text
 mode, keeps the game and says when it has ended (as in match.py). Then,
-or after --max-moves moves, the script presses Q.
+or after --max-moves moves, the script ends the front end's input,
+which ends the program with the screen as it is.
 
 KEYS_OUT gets every key pressed, so that the same game can be played
 again from a file: niceemu -i KEYS_OUT SCREEN_BIN, or with --window.
 As niceemu's clock counts steps, the engine plays the same moves again.
 
+With --eth HOST or --port DEVICE, SCREEN_BIN (build/mega65/chess_screen.bin,
+built for the monitor) runs on the MEGA65 instead, through board.py,
+and --dump FILE saves the screen at the end for screenshot.py. The
+board's clock is real, so the engine's moves differ from run to run.
+
 Exits with 1 if the front end makes a move other than the one pressed,
-if a move is illegal, or if the front end does not halt at the end.
+if a move is illegal, or if the front end does not end normally.
 """
 
 from __future__ import annotations
@@ -31,7 +37,9 @@ import os
 import shlex
 import subprocess
 import sys
+import time
 
+from board import Board, dump_lines
 from match import Referee
 
 UP, DOWN, RIGHT, LEFT = "\x1b[A", "\x1b[B", "\x1b[C", "\x1b[D"
@@ -88,6 +96,50 @@ class Screen:
             if line.startswith(("move ", "result ")):
                 return line.strip()
 
+    def end(self, dump: str | None) -> bool:
+        """Ends the input, and returns whether the front end halted."""
+        self.p.stdin.close()
+        out = self.p.stdout.read()
+        self.p.wait()
+        if "Halted (HALT)" not in out:
+            print(out[-1000:], file=sys.stderr)
+        return "Halted (HALT)" in out
+
+
+class BoardScreen:
+    """The front end on the board, through board.py."""
+
+    def __init__(self, nicemon: str | None, link_args: list[str], binfile: str):
+        self.board = Board(nicemon, link_args, binfile)
+        self.keys: list[str] = []
+
+    def press(self, *keys: str) -> None:
+        self.keys += keys
+        self.board.write("".join(keys).encode("latin-1"))
+
+    def line(self) -> str:
+        while True:
+            line = self.board.readline(600)
+            if line is None:
+                raise RuntimeError("the front end on the board has quit, or is silent")
+            if line.startswith(("move ", "result ")):
+                return line
+
+    def end(self, dump: str | None) -> bool:
+        """Saves the screen, once the front end has drawn its last move,
+        ends the input, and returns whether the program returned to the
+        monitor."""
+        if dump:
+            end = time.monotonic() + 10
+            while not self.board.quiet(0.5) and time.monotonic() < end:
+                self.board.readline(0.5)
+            with open(dump, "w") as f:
+                f.write("\n".join(dump_lines(self.board.screen())) + "\n")
+        self.board.end_input()
+        self.board.wait_returned(10)
+        self.board.close()
+        return self.board.returned
+
 
 def square(s: str) -> tuple[int, int]:
     return ord(s[0]) - ord("a"), ord(s[1]) - ord("1")
@@ -106,12 +158,21 @@ def main() -> None:
     ap.add_argument("--emu", default=os.environ.get("NICEEMU", "niceemu"))
     ap.add_argument("--nodes", type=int, default=2000, help="white's nodes a move")
     ap.add_argument("--level", type=int, default=1, help="the engine's level, 1 to 5")
-    ap.add_argument("--max-moves", type=int, default=150, help="full moves before Q")
+    ap.add_argument("--max-moves", type=int, default=150, help="full moves before the end")
+    ap.add_argument("--eth", metavar="HOST[:PORT]", help="play on the board, over its Ethernet port")
+    ap.add_argument("--port", metavar="DEVICE", help="play on the board, over its debug UART")
+    ap.add_argument("--nicemon", help="a checkout of NiceMonMEGA65 (default $NICEMON)")
+    ap.add_argument("--dump", metavar="FILE", help="on the board, save the screen at the end")
     args = ap.parse_args()
 
     player = Player(args.host_engine, args.nodes)
     referee = Referee(args.host_engine)
-    screen = Screen(args.emu, args.screen_bin)
+    screen: Screen | BoardScreen
+    if args.eth or args.port:
+        link = ["--eth", args.eth] if args.eth else ["--port", args.port]
+        screen = BoardScreen(args.nicemon, link, args.screen_bin)
+    else:
+        screen = Screen(args.emu, args.screen_bin)
     screen.press(*(["-"] * (3 - args.level) + ["+"] * (args.level - 3)))
     cursor = (4, 1)  # e2, where the front end starts it
     moves: list[str] = []
@@ -145,18 +206,15 @@ def main() -> None:
             if result:
                 break
     finally:
-        screen.press("q")
         with open(args.keys_out, "w", encoding="latin-1", newline="") as f:
             f.write("".join(screen.keys))
-        screen.p.stdin.close()
-        out = screen.p.stdout.read()
-        screen.p.wait()
+        ended = screen.end(args.dump)
         player.send("quit")
         referee.close()
     print(" ".join(moves))
     print(result or f"no result after {args.max_moves} moves")
-    if "Halted (HALT)" not in out:
-        sys.exit("screen_game.py: the front end did not halt normally:\n" + out[-1000:])
+    if not ended:
+        sys.exit("screen_game.py: the front end did not end normally")
 
 
 if __name__ == "__main__":

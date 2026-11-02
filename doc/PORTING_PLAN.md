@@ -113,17 +113,20 @@ What its build says about the platform (from `runtime/libc/Makefile`):
 | Target | Room for the program | Notes |
 |---|---|---|
 | niceemu | Practically unlimited (2³² words) | It is easy to write a program here that never fits on the board. |
-| NiceMonMEGA65, under the monitor | `0x8000`–`0xEFFF`: **28K words**, for the image and the NICE stack | Loaded over the debug link (UART or Ethernet). The monitor cannot load programs from the board by itself yet. |
+| NiceMonMEGA65 V1.2, under the monitor | `0x8000`–`0xEFFF`: **28K words**, for the image and the NICE stack | Loaded over the debug link (UART or Ethernet). The monitor cannot load programs from the board by itself yet. |
+| NiceMonMEGA65 `dev-V1.2.1`, under the monitor | `0x8000`–`0x1EFFF`: **92K words** | The MEGA65 got 128K words of RAM on 2026-11-02 (NiceMonMEGA65#68, Decisions). Phase 4 targets this. |
 | NiceMonMEGA65, in the ROM | 32K words | A C program cannot be a ROM, because its data would be in ROM too. |
 
 Wasm linear memory is a whole number of 64 KB pages, and one page is 16K
-words. So on the board, **code, runtime, and libc must fit in about 12K
+words. So with 28K words, **code, runtime, and libc must fit in about 12K
 words minus the NICE stack**, with every byte of data in a single 64 KB
 page: the wasm stack, the board, the move stack, the transposition table,
 and the strings. For scale, nice_cpu's `primes.c` example with `printf`
 and `scanf` ends at word `0x631F` when loaded at 0. That is about 9K words
 beyond its one page. The first task of Phase 1 is to measure the
-real size of the engine.
+real size of the engine. The plan below was written for the 28K words,
+and Phases 1 to 3 kept to its rules, which is why the program fits the
+92K with room for a larger transposition table and `-O2`.
 
 So, from the start:
 
@@ -155,8 +158,10 @@ questions, and neither is needed for niceemu:
   keys at 32 bits.
 - The MEGA65 runs at 100 MHz. The pipelined core measures 1.43 cycles per
   instruction on nice_cpu's benchmark, so it runs about 70M steps per
-  second. In niceemu, a step is one microsecond of `clock()`, so time
-  controls in the emulator are counted in steps, not wall-clock time.
+  second. On the engine it measures 1.85 (Phase 4 below), so about 54M
+  steps per second. In niceemu, a step is one microsecond of `clock()`,
+  so time controls in the emulator are counted in steps, not wall-clock
+  time.
 - Use evaluation by material plus piece-square tables, updated in
   make/undo. Drop the mobility evaluation of mchess2. Use iterative
   deepening with a time or node budget, MVV-LVA capture ordering, the move
@@ -460,6 +465,89 @@ Phase 2.
   over the budget. The front end takes about 4200 of them (`main`, with
   the handling of the keys, 1494; `draw_info` 1358; `draw_all` 1323).
 
+**Phase 4** is done (2026-11-02), on a MEGA65 R6 with a bitstream of
+NiceMonMEGA65's branch `dev-V1.2.1` (`NiceMon V1.2-15-gf981eb3`), over
+its Ethernet port, and once over its debug UART:
+
+- The board has 128K words of RAM, and a program under the monitor
+  92K (Decisions, 3). So both front ends fit as they are, `printf`
+  included: the text front end needs 35421 words with its stack and
+  the windowed one 31385, which leaves about 59K. The size work that
+  the plan had for 28K words was not needed. `make size` measures the
+  MEGA65 builds against 94176 words, the 92K less the 32 that the
+  monitor's routines may push, and fails if they do not fit.
+- `build/mega65/chess_text.bin` and `chess_screen.bin` are the same
+  sources built with `nicebuild.py --monitor`, at `0x8000`, and
+  `make board-text` and `board-screen` load them with NiceMonMEGA65's
+  `load.py` (`ETH=IP` or `PORT=DEVICE`, and `NICEMON=DIR` for its
+  tools). In niceemu the same builds run behind nice_cpu's stand-in
+  for a monitor, `runtime/test/monitor.nasm`, in `make test`, with the
+  same expected outputs as the builds at 0.
+- Speed, measured: the engine runs about 54 million steps a second on
+  the board, 1.85 cycles per instruction at 100 MHz, not the 1.43 of
+  nice_cpu's benchmark. From the opening, `go depth 5` takes 0.84
+  seconds (45.5 million steps in niceemu), depth 6 takes 7.5 seconds,
+  and depth 7 takes 46. So niceemu's default of 300 million steps a
+  move is about 5.6 seconds on the board.
+- Time: `platform_move_time()` is 5 seconds on a board and 300 million
+  steps in niceemu. `nice.c` tells the two apart once, by the ratio of
+  the cycle counter to the microsecond counter over a millisecond: 1
+  in niceemu, where both count steps (also with `--window`), and 100 on
+  the board. The windowed front end's levels are then 0.56, 1.7, 5,
+  15, and 45 seconds a move on the board, and the default `go` of the
+  text front end reaches depth 5 from the opening, as in niceemu.
+- The text front end reads a line ended by CR as well as LF, as a
+  terminal on the line and the MEGA65's keyboard send CR, and its line
+  holds 2048 bytes, for the `position` of a long game in UCI. Under
+  the monitor its output goes to the screen and the line both.
+- The windowed front end writes its log of the moves to the console's
+  register itself, so that under the monitor it goes to the line only
+  and not over the board on the screen. Q clears the screen before it
+  returns to the monitor, which then prints `Returned` and its prompt;
+  the end of the input leaves the screen, for the tests. On a board the
+  search polls the keyboard from the start, since a read there returns
+  at once when no key waits; the first key of a run may already be
+  waiting, which the earlier rule, a read that finds nothing, missed,
+  so Esc did not stop the first search. After an ESC the rest of a
+  key's bytes are waited for, up to 20 ms. The keys of the MEGA65's
+  keyboard are those of niceemu's window (NiceMonMEGA65's SYSTEM.md).
+- Tools: `tools/board.py` loads a program under the monitor through
+  NiceMonMEGA65's `nicelink.py` and is its console, paced to the
+  board's input buffer, and reads the screen, with its colors as
+  `niceemu --color` prints them, so that a run on the board compares
+  with the same expected file as a run in niceemu. `screen_game.py
+  --eth` plays the windowed front end on the board by the keys, and
+  `match.py` takes `board:FILE.bin` as a UCI engine. `make board-test`
+  runs the text, search, and screen tests on the board; all pass, with
+  the rows of the screen that show a timed search's depth, nodes, and
+  variation left out of the comparison, as the board's clock is real.
+- A full game on the board, in the windowed front end (`make
+  board-game LEVEL=3`): white's moves came from the host build at
+  2000 nodes a move, typed and by the cursor in turn, through the link
+  into the board's input, and the engine, black at level 3, mated in
+  56 moves, in 4 minutes. `build/mega65/game.png`, drawn by
+  `screenshot.py` from the screen read over the link, shows the
+  mate. At level 2 an earlier game was a draw by repetition: the
+  engine, a queen up, had walked its king into a perpetual check by
+  two rooks, which the host build at depth 6 also scores 0.
+- The text front end on the board, in UCI (`make board-match`): two
+  games from 1. e4 e5 against the host build at 5000 nodes a move, the
+  board at its default 5 seconds a move. The board won as black by
+  checkmate, and drew as white by repetition: 1.5 of 2, with no
+  illegal move, in 10 minutes.
+- Esc during a search on the board makes the engine move within a
+  tenth of a second, and keys typed while it thinks wait for its move.
+- Not done, or not checked here: a game typed by hand on the MEGA65's
+  own keyboard. The keys of the games above went in over the link,
+  into the same input FIFO that the hardware feeds from the keyboard,
+  with the same bytes, so the front end cannot tell them apart; a
+  person at the board is still the real test of the exit criterion.
+  The debug UART was used for one run of `make board-test`
+  (`PORT=/dev/ttyUSB3`), which passed; the games went over Ethernet.
+  Clocks on the panel are still not shown (Phase 3).
+- Open, with 59K words free: a larger transposition table than 2048
+  entries, and `-O2` for its 16 to 19% of speed (LOG.md).
+
 ## Decisions
 
 These were open questions in the first version of this plan. They were
@@ -471,7 +559,10 @@ decided on 2026-11-02.
    repository is the reference, at commit `65e8855`.
 3. **More RAM on the MEGA65 is requested from NiceMonMEGA65**, in
    [NiceMonMEGA65#68](https://github.com/MJoergen/NiceMonMEGA65/issues/68). Until it exists, 28K words is the target, and the
-   size work of Phase 4 plans for it.
+   size work of Phase 4 plans for it. *It exists since 2026-11-02:*
+   NiceMonMEGA65's branch `dev-V1.2.1` gives the MEGA65 128K words, and
+   a program under the monitor 92K. Phase 4 targets that, so `printf`
+   stays, and `make size` checks the 92K.
 4. **Coordinate notation (`e2e4`) only, for now.** SAN (`Nf3`) is a
    nice-to-have, postponed until after Phase 4, because it costs code on
    the board.

@@ -8,7 +8,10 @@ which keeps the game: it checks each move, and says when the game has
 ended. So no chess library is needed.
 
 An ENGINE is a command line, such as "build/host/chess_text", or the
-word "random", which plays a random legal move.
+word "random", which plays a random legal move, or "board:FILE.bin",
+the text front end built for the monitor of the MEGA65
+(build/mega65/chess_text.bin), which --eth HOST or --port DEVICE loads
+into the board and plays there through board.py.
 
 Each opening of OPENINGS is played twice, with each engine as white once.
 The engines get a time control of --moves moves in --time seconds,
@@ -33,6 +36,8 @@ import shlex
 import subprocess
 import sys
 import time
+
+from board import Board
 
 OPENINGS = [
     "e2e4 e7e5", "d2d4 d7d5", "c2c4 e7e5", "e2e4 c7c5", "d2d4 g8f6",
@@ -84,46 +89,65 @@ class Referee:
 
 
 class Engine:
-    """A UCI engine, or random moves."""
+    """A UCI engine, or random moves, or the engine on the board."""
 
-    def __init__(self, cmd: str, rng: random.Random, go_cmd: str | None):
+    def __init__(self, cmd: str, rng: random.Random, go_cmd: str | None, args=None):
         self.name = cmd
         self.rng = rng
         self.go_cmd = go_cmd
         self.p = None
-        if cmd != "random":
+        self.board = None
+        if cmd.startswith("board:"):
+            if not (args.eth or args.port):
+                sys.exit("match.py: --eth HOST or --port DEVICE names the board")
+            link = ["--eth", args.eth] if args.eth else ["--port", args.port]
+            self.board = Board(args.nicemon, link, cmd[6:])
+        elif cmd != "random":
             self.p = subprocess.Popen(shlex.split(cmd), stdin=subprocess.PIPE,
                                       stdout=subprocess.PIPE, text=True, bufsize=1)
+        if self.p or self.board:
             self.send("uci")
             self.wait_for("uciok")
 
     def send(self, s: str):
+        if self.board:
+            self.board.write((s + "\n").encode("latin-1"))
+            return
         self.p.stdin.write(s + "\n")
         self.p.stdin.flush()
 
     def wait_for(self, word: str) -> str:
         while True:
-            line = self.p.stdout.readline()
-            if not line:
-                raise RuntimeError(f"{self.name} has quit")
+            if self.board:
+                line = self.board.readline(600)
+                if line is None:
+                    raise RuntimeError(f"{self.name} has quit, or is silent")
+            else:
+                line = self.p.stdout.readline()
+                if not line:
+                    raise RuntimeError(f"{self.name} has quit")
             if line.split()[:1] == [word]:
                 return line
 
     def new_game(self):
-        if self.p:
+        if self.p or self.board:
             self.send("ucinewgame")
             self.send("isready")
             self.wait_for("readyok")
 
     def go(self, moves: list[str], legal: list[str], wtime: int, btime: int, togo: int) -> str:
-        if not self.p:
+        if not (self.p or self.board):
             return self.rng.choice(legal)
         self.send("position startpos moves" + "".join(" " + m for m in moves))
         self.send(self.go_cmd or f"go wtime {wtime} btime {btime} movestogo {togo}")
         return self.wait_for("bestmove").split()[1]
 
     def close(self):
-        if self.p:
+        if self.board:
+            self.send("quit")
+            self.board.wait_returned(10)
+            self.board.close()
+        elif self.p:
             self.send("quit")
             self.p.stdin.close()
             self.p.wait()
@@ -180,12 +204,15 @@ def main() -> int:
     ap.add_argument("--min-score", type=float, default=0)
     ap.add_argument("--go1", help="the go command of ENGINE1, instead of the clock")
     ap.add_argument("--go2", help="the go command of ENGINE2, instead of the clock")
+    ap.add_argument("--eth", metavar="HOST[:PORT]", help="the board's Ethernet port, for board:")
+    ap.add_argument("--port", metavar="DEVICE", help="the board's debug UART, for board:")
+    ap.add_argument("--nicemon", help="a checkout of NiceMonMEGA65 (default $NICEMON)")
     args = ap.parse_args()
 
     rng = random.Random(args.seed)
     ref = Referee(args.referee)
-    e1 = Engine(args.engine1, rng, args.go1)
-    e2 = Engine(args.engine2, rng, args.go2)
+    e1 = Engine(args.engine1, rng, args.go1, args)
+    e2 = Engine(args.engine2, rng, args.go2, args)
     score = 0.0
     games = 0
     bad = False
