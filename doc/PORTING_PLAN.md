@@ -241,9 +241,16 @@ Each phase ends with something that runs and with tests in CI.
   first size figure against the 28K-word budget.
 
 **Phase 2: search, playable in text on niceemu.**
-- Iterative deepening, the transposition table, quiescence, move
-  ordering, a material plus piece-square table evaluation, a time or node
-  limit, and detection of repetition and the 50-move rule.
+- First, two changes that Phase 1's measurements call for (Progress below,
+  and [LOG.md](../LOG.md) of 2026-11-02):
+  1. Captures in the quiescence search ordered by MVV-LVA. In the order
+     they are generated, `go 1` on Kiwipete takes more than 2·10⁹ steps.
+  2. A material plus piece-square table evaluation in place of
+     mchess.c's mobility, which generates the moves of both sides at
+     every leaf: 79% of the steps of `go 3` are in `gen_pseudo`.
+- Then iterative deepening, the transposition table, the rest of the
+  move ordering, a time or node limit, and detection of repetition and
+  the 50-move rule.
 - The text front end with the board diagram, move input in coordinate
   notation, `go`, `undo`, and game end. Add UCI after that.
 - Run a subset of the search suite (fetched like the perft suite) on the
