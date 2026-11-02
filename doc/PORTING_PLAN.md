@@ -15,12 +15,12 @@ were measured for this plan.
 
 ## Summary
 
-1. **Copy, don't link.** Copy the mchess2 sources and test suites into
-   `nice_chess` by hand and leave mchess2 archived. Don't use `git subtree`:
-   mchess2's history carries a 29 MB `book.bin`, which no code reads, and a
-   Windows `mchess.exe`, and a subtree would bring both into this repository
-   forever. A provenance note naming commit `65e8855` is enough. The history
-   is only 13 commits.
+1. **Reference, don't copy.** mchess2 stays in its own repository,
+   archived, and nice_chess keeps no copy of it: no `git subtree` (its
+   history carries a 29 MB `book.bin`, which no code reads, and a Windows
+   `mchess.exe`) and no `ref/` directory. Where nice_chess needs something
+   from it, such as the test suites, it names commit `65e8855` and fetches
+   the file from there.
 2. **Rewrite in C, using `mchess.c` as the base.** The NICE toolchain
    compiles C through clang and wasm32, and it has no C++ standard library.
    mchess2 depends on `std::vector`, `std::string`, and iostreams
@@ -57,7 +57,7 @@ About 4300 lines of C++:
 | `CPerft*`, `CSearchSuite*` | Perft and search test drivers | Yes, as host-side tests |
 | `main.cc` | Console UI and UCI | Rewrite, as front ends |
 | `CTime.h`, `trace.h`, `crc32.h` | `clock()` wrapper, `TRACE` macro, CRC | Replace with small C equivalents |
-| `tests/perftsuite.epd` (126 positions), `tests/searchsuite.epd` (564), `tests/*.fen` | Test positions | Yes |
+| `tests/perftsuite.epd` (126 positions), `tests/searchsuite.epd` (564), `tests/*.fen` | Test positions | Fetched from `65e8855` by the tests, not copied |
 | `doc/` (UCI spec, theory PDF) | Reference | Link to them, don't copy |
 | `book.bin`, `mchess.exe` | Unused opening book, Windows binary | No |
 
@@ -75,7 +75,8 @@ Known weak spots, from its own TODO and the code:
 the same 10×12 board, alpha-beta at a fixed depth of 5 with quiescence, a
 console UI, and `perft`. It has no castling, en passant, transposition
 table, time control, or UCI. It is a test of nice_cpu's C library, so it
-will stay there. We copy it, and don't depend on it.
+will stay there. We copy it into `src/` as the start of our own code (it
+is MIT, by the same author), and don't depend on nice_cpu's copy.
 
 What its build says about the platform (from `runtime/libc/Makefile`):
 
@@ -188,7 +189,7 @@ questions, and neither is needed for niceemu:
 src/engine/   board.c  movegen.c  makemove.c  eval.c  search.c  tt.c  fen.c
               engine.h            (the core: no I/O, no clock, no malloc)
 src/platform/ nice.c   host.c     (time, poll for key, and output for the core)
-src/ui/       text.c              (console: board diagram, SAN/coordinate input, and UCI)
+src/ui/       text.c              (console: board diagram, coordinate input, and UCI)
               screen.c            (windowed: board on the 80x25 screen, keyboard cursor)
 tests/        perft and search suites, and the expected outputs of niceemu runs
 tools/        build scripts, and the size report
@@ -216,14 +217,13 @@ suites run in seconds there, and only a sample of them runs on niceemu.
 Each phase ends with something that runs and with tests in CI.
 
 **Phase 0: the repository (small).**
-- Copy the mchess2 sources and test suites into `ref/mchess2/`,
-  unchanged, with a `PROVENANCE.md` that names commit `65e8855` and the
-  license. Copy `mchess.c` from nice_cpu the same way. Mark mchess2 as
-  archived on GitHub.
-- Write a Makefile that fetches or points to a nice_cpu checkout (a path
-  variable such as `NICE_CPU ?= ../nice_cpu`, or a pinned release tag),
-  plus a GitHub Actions job that installs clang and lld, downloads niceemu
-  V1.2, and runs `make test`.
+- Copy `mchess.c` from nice_cpu V1.2 into `src/`, unchanged, and note
+  where it came from. Mark mchess2 as archived on GitHub.
+- Write a Makefile that clones nice_cpu at a pinned release tag
+  (`NICE_CPU_TAG = V1.2`) into `deps/`, and downloads niceemu of the same
+  release. `NICE_CPU=DIR` and `NICEEMU=PATH` point to local copies instead.
+  Add a GitHub Actions job that installs clang and lld and runs
+  `make test`.
 - Exit criterion: `mchess.c`, unchanged, builds and runs `perft 3` on niceemu
   in CI.
 
@@ -232,7 +232,7 @@ Each phase ends with something that runs and with tests in CI.
   global move stack, `int32_t` everywhere, and 32-bit Zobrist keys.
 - Add castling, en passant, under-promotion, and FEN input/output from
   mchess2's `CBoard.cc`.
-- Run the perft suite on the host (all 126 positions to depth 4 or 5), and
+- Fetch the perft suite from mchess2 at `65e8855`, and run it on the host (all 126 positions to depth 4 or 5), and
   a few positions to depth 3 on niceemu.
 - Add `make size`, and record code words, data bytes, and peak stack.
 - Exit criterion: perft matches on the host and on niceemu, and there is a
@@ -242,9 +242,11 @@ Each phase ends with something that runs and with tests in CI.
 - Iterative deepening, the transposition table, quiescence, move
   ordering, a material plus piece-square table evaluation, a time or node
   limit, and detection of repetition and the 50-move rule.
-- The text front end with the board diagram, move input, `go`, `undo`, and
+- The text front end with the board diagram, move input in coordinate
+  notation, `go`, `undo`, and
   game end. Add UCI after that.
-- Run a subset of the search suite on the host. On niceemu, run a few
+- Run a subset of the search suite (fetched like the perft suite) on the
+  host. On niceemu, run a few
   fixed-node searches whose best move and node count are checked.
 - Exit criterion: a full game against the engine in `niceemu`, in text,
   with each reply in a reasonable step budget, plus a host build that beats
@@ -264,8 +266,8 @@ Each phase ends with something that runs and with tests in CI.
 - Build with `nicebuild.py --monitor`, which loads at `0x8000`. Load and
   run over the debug link (`load.py` / `run.py` in NiceMonMEGA65).
 - Get it to fit: tune the table sizes, trim libc use, and if needed move
-  hot routines into hand-written NICE assembly or ask for more RAM in the
-  core.
+  hot routines into hand-written NICE assembly, or use more RAM if
+  NiceMonMEGA65 provides it by then (see Decisions).
 - Tune the time limits for the 100 MHz clock (`clock()` there is real
   microseconds).
 - Exit criterion: a full game on the MEGA65 screen and keyboard, and the
@@ -273,18 +275,22 @@ Each phase ends with something that runs and with tests in CI.
 
 **Later, optional.** An opening book small enough to compile in (a few
 hundred positions), a better evaluation (pawn structure, king safety),
-PVS or aspiration windows, a ROM-able build once there is a direct NICE C
+PVS or aspiration windows, SAN move input and output, a ROM-able build once there is a direct NICE C
 compiler or a monitor that loads from SD card, and custom chess glyphs if
 NiceMonMEGA65's font ever becomes programmable.
 
-## Open questions
+## Decisions
 
-1. Does nice_chess pin a nice_cpu release (V1.2 now), or track `main`? A
-   release pin is more reproducible. The proposal is a pin, raised by hand.
-2. Is it acceptable to keep `ref/mchess2/` in the repository, or should
-   the reference copy live only in mchess2's archived repo?
-3. Is more RAM on the MEGA65 (HyperRAM) an option in NiceMonMEGA65, or
-   is 28K words a fixed target? That decides how much effort goes into
-   size in Phase 4.
-4. Coordinate notation (`e2e4`) only, or SAN (`Nf3`) too? SAN costs code
-   on the board.
+These were open questions in the first version of this plan. They were
+decided on 2026-11-02.
+
+1. **nice_cpu is pinned to a release**, V1.2 now, and the pin is raised by
+   hand.
+2. **No copy of mchess2 in this repository.** The archived mchess2
+   repository is the reference, at commit `65e8855`.
+3. **More RAM on the MEGA65 is requested from NiceMonMEGA65**, in
+   [NiceMonMEGA65#68](https://github.com/MJoergen/NiceMonMEGA65/issues/68). Until it exists, 28K words is the target, and the
+   size work of Phase 4 plans for it.
+4. **Coordinate notation (`e2e4`) only, for now.** SAN (`Nf3`) is a
+   nice-to-have, postponed until after Phase 4, because it costs code on
+   the board.
