@@ -8,7 +8,7 @@ jobs:
   test:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install clang, lld, and llvm
         run: sudo apt-get update && sudo apt-get install -y clang lld llvm
       - name: Fetch nice_cpu, niceemu, and the test suites
