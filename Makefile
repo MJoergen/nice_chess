@@ -56,8 +56,22 @@ MONFLAGS = $(NICEFLAGS) --monitor
 # The host: with asserts, and a check of the Zobrist key and the
 # evaluation's sums at every node of perft.
 HOSTFLAGS = -O2 -W -Wall -Wextra -DCHECK_STATE
+# The host, for matches: without asserts and the check, which play the
+# same moves, only faster.
+FASTFLAGS = -O2 -W -Wall -Wextra -DNDEBUG
 
-.PHONY: help all test host-test nice-test perft-deep screen-game match-random match-mchess2 size deps clean distclean
+# A rating, by tools/rate.sh: cutechess-cli and Ordo, and the opponents.
+# The board's search at 5 seconds a move is about 83000 nodes (LOG.md).
+CUTECHESS ?= cutechess-cli
+ORDO      ?= ordo
+STOCKFISH ?= stockfish
+NODES     ?= 83000
+ELOS      ?= 1700 1900 2100
+GAMES     ?= 200
+CONCURRENCY ?= 4
+export CUTECHESS ORDO STOCKFISH NODES ELOS GAMES CONCURRENCY BOOK
+
+.PHONY: help all test host-test nice-test perft-deep screen-game match-random match-mchess2 rate size deps clean distclean
 .PHONY: board-text board-screen board-test board-game board-match
 help:
 	@echo "nice_chess: a chess engine for the NICE system"
@@ -70,6 +84,7 @@ help:
 	@echo "  make screen-game   a full game in the windowed front end, in niceemu (a minute)"
 	@echo "  make match-random  the host build against random moves (20 games)"
 	@echo "  make match-mchess2 the host build against mchess2 (20 games, 15 minutes)"
+	@echo "  make rate BOOK=F   a rating: cutechess-cli games against Stockfish's UCI_Elo levels, and Ordo"
 	@echo "  make size          the size of the MEGA65 builds, against the board's budget"
 	@echo "  make clean         remove build/"
 	@echo "  make distclean     remove build/ and deps/"
@@ -124,6 +139,10 @@ build/host/chess_text: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/host.c
 	@mkdir -p $(@D)
 	$(CC) $(HOSTFLAGS) -o $@ $(ENGINE) src/ui/text.c src/platform/host.c
 
+build/host/chess_fast: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/host.c
+	@mkdir -p $(@D)
+	$(CC) $(FASTFLAGS) -o $@ $(ENGINE) src/ui/text.c src/platform/host.c
+
 build/host/perftsuite: $(ENGINE) $(HEADERS) tests/perftsuite.c
 	@mkdir -p $(@D)
 	$(CC) $(HOSTFLAGS) -o $@ $(ENGINE) tests/perftsuite.c
@@ -165,6 +184,10 @@ match-random: build/host/chess_text
 # Against mchess2, at 40 moves in 20 seconds each.
 match-mchess2: build/host/chess_text build/host/mchess2
 	$(PYTHON) tools/match.py --time 20 build/host/chess_text build/host/chess_text build/host/mchess2
+
+# A rating of the board's engine at 5 seconds a move (tools/rate.sh).
+rate: build/host/chess_fast
+	tools/rate.sh
 
 build/host/mchess2: $(addprefix deps/mchess2/src/,$(MCHESS2_SRC))
 	@mkdir -p $(@D)

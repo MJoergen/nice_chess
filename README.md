@@ -38,6 +38,8 @@ the level, Q quit, and Esc to make the engine move now.
 The host build speaks UCI after `uci`, so a chess GUI can play it.
 `tools/match.py` plays two UCI engines against each other, and can run
 the NICE build in niceemu, or on the board, as one of them.
+`make rate` rates the engine at the board's speed against Stockfish's
+UCI_Elo levels, with cutechess-cli and Ordo (CONTRIBUTING.md).
 
 ## On the MEGA65
 

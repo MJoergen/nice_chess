@@ -23,6 +23,9 @@ to answer go counts. A game of more than --max-moves moves is a draw.
 counted. That is how to play an engine in niceemu, whose clock counts
 steps, not real time: "niceemu build/nice/chess_text.bin" with --go2 go.
 
+--opt1 and --opt2 NAME=VALUE set a UCI option of an engine, such as
+UCI_Elo=1500 of Stockfish, and may be repeated.
+
 Prints each game, and the score of ENGINE1. Exits with 1 if an engine
 makes an illegal move or loses on time by more than --grace seconds, or
 if ENGINE1 scores less than --min-score.
@@ -91,7 +94,8 @@ class Referee:
 class Engine:
     """A UCI engine, or random moves, or the engine on the board."""
 
-    def __init__(self, cmd: str, rng: random.Random, go_cmd: str | None, args=None):
+    def __init__(self, cmd: str, rng: random.Random, go_cmd: str | None, args=None,
+                 options: list[str] | None = None):
         self.name = cmd
         self.rng = rng
         self.go_cmd = go_cmd
@@ -108,6 +112,9 @@ class Engine:
         if self.p or self.board:
             self.send("uci")
             self.wait_for("uciok")
+            for opt in options or []:
+                name, _, value = opt.partition("=")
+                self.send(f"setoption name {name} value {value}")
 
     def send(self, s: str):
         if self.board:
@@ -204,6 +211,8 @@ def main() -> int:
     ap.add_argument("--min-score", type=float, default=0)
     ap.add_argument("--go1", help="the go command of ENGINE1, instead of the clock")
     ap.add_argument("--go2", help="the go command of ENGINE2, instead of the clock")
+    ap.add_argument("--opt1", action="append", metavar="NAME=VALUE", help="a UCI option of ENGINE1")
+    ap.add_argument("--opt2", action="append", metavar="NAME=VALUE", help="a UCI option of ENGINE2")
     ap.add_argument("--eth", metavar="HOST[:PORT]", help="the board's Ethernet port, for board:")
     ap.add_argument("--port", metavar="DEVICE", help="the board's debug UART, for board:")
     ap.add_argument("--nicemon", help="a checkout of NiceMonMEGA65 (default $NICEMON)")
@@ -211,8 +220,8 @@ def main() -> int:
 
     rng = random.Random(args.seed)
     ref = Referee(args.referee)
-    e1 = Engine(args.engine1, rng, args.go1, args)
-    e2 = Engine(args.engine2, rng, args.go2, args)
+    e1 = Engine(args.engine1, rng, args.go1, args, args.opt1)
+    e2 = Engine(args.engine2, rng, args.go2, args, args.opt2)
     score = 0.0
     games = 0
     bad = False

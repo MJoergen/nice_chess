@@ -2,6 +2,52 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-03: The board's nodes a move, and a first rating
+
+To rate the engine as it plays on the MEGA65, the host build plays at
+the board's number of nodes a move.
+
+The nodes: 48 positions of mchess2's search suite, every 11th, each
+with `go movetime 270000` in niceemu V1.2 (270 million
+steps, 5 seconds on the board). From the last info line of each, where
+the search had run more than 20 million steps, a node takes:
+
+| | Steps a node |
+|---|---|
+| min | 2714 |
+| 25% | 2911 |
+| median | 3245 |
+| 75% | 3498 |
+| max | 5591 |
+
+So the board searches about 16600 nodes a second, and 5 seconds a move
+is about 83000 nodes. The opening is slower, 2700 steps a node at depth
+5 and 4000 at depth 6 (the entry of 2026-11-02), which gives 13000
+nodes a second there.
+
+The same moves: 8 of these positions with `go nodes 83000` gave the
+same info lines and the same best move in niceemu and on the host, both
+with `build/host/chess_text` and with `build/host/chess_fast` (without
+asserts and `CHECK_STATE`). The host takes about 25 ms for it.
+
+A first rating, before cutechess-cli was at hand: `tools/match.py`,
+`build/host/chess_fast` at `go nodes 83000` against Stockfish 16
+(Ubuntu's package) with `UCI_LimitStrength` and one thread, at 40 moves
+in 40 seconds, 20 games each from match.py's 10 openings:
+
+| Stockfish UCI_Elo | nice_chess's score |
+|---|---|
+| 1320 | 19 of 20 |
+| 1600 | 15 of 20 |
+| 1900 | 8.5 of 20 |
+
+The rating that fits all three best is 1824, with 1714 to 1939 at 95%
+(likelihood ratio). Stockfish's UCI_Elo is fitted at 60+0.6 to CCRL
+40/4, and here it had less time, and the openings were few, so this is
+a range to aim the real gauntlet at, not a rating. All but one game
+ended by checkmate. `make rate` plays at 1700, 1900, and 2100 by
+default because of this.
+
 ## 2026-11-02: The board's speed on the engine
 
 Phase 4's first runs on the MEGA65 R6 (NiceMonMEGA65 V1.2.1,
