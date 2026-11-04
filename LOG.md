@@ -2,6 +2,43 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-04: Principal variation search
+
+Issue #4. Each node searches its first move with the full window, and
+the others with a null window, again with the full window when one
+turns out better; the root does the same. Steps in niceemu V1.2, the
+text front end at `-O 2`:
+
+| Run | Alpha-beta | PVS |
+|---|---|---|
+| 24 Bratko-Kopec positions, `go depth 4` | 1872.5M | 1457.4M (−22%) |
+| `go` from the opening, to depth 6 | 264M, 77961 nodes | 212M, 65942 nodes (−20%) |
+| `tests/search.input` | 192.7M | 187.2M (−3%) |
+
+The steps a node stay the same, 2668 and 2682 on the Bratko-Kopec
+positions. The 300 WAC positions at `go depth 5`, on the host, take
+19.8% fewer nodes (33.59M to 26.95M), with fewer in 263 of them. In
+all 324 positions the move and the score are the same. The fixed
+searches of `tests/search.input` are shallow, so there the
+re-searches cost about what the null windows save. At 10000 nodes a
+position, the search suite solves 244 of 548, against 237. The MEGA65
+builds need 75239 and 74112 words, 65 and 67 more.
+
+Games of the host build against the build before, both at 93000
+nodes a move (the board's 5 seconds), from 8moves_v3.pgn, each opening
+with both colors, cutechess-cli 1.5.1:
+
+| Games | PVS wins, losses, draws | Score | Elo |
+|---|---|---|---|
+| 400 | 165, 150, 85 | 51.9% | +13 ± 30 |
+| 2000 | 806, 713, 481 | 52.3% | +16 ± 13 (LOS 99.1%) |
+
+At equal nodes the gain is from the depth that the nodes saved buy.
+The game of `tests/screen_game.keys`, recorded again with
+`tools/screen_game.py`'s defaults, is now won by white, the host build
+at 2000 nodes a move, where the engine at level 1 won before: one game,
+against the matches above.
+
 ## 2026-11-04: A transposition table of 16384 entries, and the board's nodes a move
 
 Issue #6. Steps in niceemu V1.2, the text front end at `-O 2`, by

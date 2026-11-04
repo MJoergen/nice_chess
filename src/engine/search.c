@@ -2,12 +2,15 @@
  * search.c: the search.
  *
  * A negamax alpha-beta search, fail-soft, by iterative deepening,
- * with a quiescence search of captures at the leaves, a check
- * extension, and the transposition table. The moves are tried in
- * this order: the move of the transposition table, the captures
- * by MVV-LVA (the most valuable victim first, and of those, the
- * least valuable attacker first), promotions to a queen, the two
- * killer moves of the ply, and then the rest as generated.
+ * as a principal variation search: the first move of a node with the
+ * full window, and the others with a null window, searched again
+ * with the full window if one turns out better. It has a quiescence
+ * search of captures at the leaves, a check extension, and the
+ * transposition table. The moves are tried in this order: the move
+ * of the transposition table, the captures by MVV-LVA (the most
+ * valuable victim first, and of those, the least valuable attacker
+ * first), promotions to a queen, the two killer moves of the ply, and
+ * then the rest as generated.
  *
  * Draws by repetition and by the 50-move rule are scored 0 inside
  * the tree. A position that has come up once before counts as a
@@ -232,6 +235,7 @@ static int search(int alpha, int beta, int depth, int ply)
     int alpha0 = alpha;
     int best = -INF;
     move_t best_move = 0;
+    int searched = 0;
 
     for (int i = 0; i < n; ++i)
     {
@@ -242,7 +246,17 @@ static int search(int alpha, int beta, int depth, int ply)
             undo_move();
             continue;
         }
-        int val = -search(-beta, -alpha, depth - 1, ply + 1);
+        // The first move with the full window, the rest with a null
+        // window, and again with the full window if one is better.
+        int val;
+        if (searched++ == 0)
+            val = -search(-beta, -alpha, depth - 1, ply + 1);
+        else
+        {
+            val = -search(-alpha - 1, -alpha, depth - 1, ply + 1);
+            if (val > alpha && val < beta && !stopped)
+                val = -search(-beta, -alpha, depth - 1, ply + 1);
+        }
         undo_move();
         if (stopped)
             break;
@@ -325,7 +339,15 @@ move_t engine_search(const engine_limits_t *lim, engine_info_fn info)
         for (int i = 0; i < n; ++i)
         {
             make_move(list[i]);
-            int val = -search(-INF, -alpha, depth - 1, 1);
+            int val;
+            if (i == 0)
+                val = -search(-INF, -alpha, depth - 1, 1);
+            else
+            {
+                val = -search(-alpha - 1, -alpha, depth - 1, 1);
+                if (val > alpha && !stopped)
+                    val = -search(-INF, -alpha, depth - 1, 1);
+            }
             undo_move();
             if (stopped)
                 break;
