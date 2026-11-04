@@ -103,6 +103,16 @@ extern history_t hist[MAX_HISTORY];
 
 static inline int king_of(int side) { return pos.king[side > 0]; }
 
+// p*side, for side 1 or -1, without a multiplication. NICE has no
+// multiply instruction: the translator multiplies by a variable, or
+// by some negative constants, on the math unit, which costs about
+// six instructions.
+static inline int for_side(int p, int side)
+{
+    int m = -(side < 0);
+    return (p ^ m) - m;
+}
+
 // board.c
 extern uint32_t zob_piece[13][64];      // By piece + 6 and sq64
 extern uint32_t zob_castle[16];

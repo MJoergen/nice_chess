@@ -52,12 +52,13 @@ int gen_moves(move_t *list, int quiet)
     for (int i = A1; i <= H8; ++i)
     {
         int piece = bd[i];
+        int own = for_side(piece, s); // WP to WK for our pieces
         int first, last, slide;
 
-        if (piece * s <= 0 || piece == IV) // Off the board, empty, or the opponent's
+        if (own <= 0 || piece == IV) // Off the board, empty, or the opponent's
             continue;
 
-        switch (piece * s)
+        switch (own)
         {
             case WP :
             {
@@ -76,7 +77,7 @@ int gen_moves(move_t *list, int quiet)
                 for (int d = -1; d <= 1; d += 2)
                 {
                     j = i + N*s + d;
-                    if (bd[j] != IV && bd[j]*s < 0)
+                    if (bd[j] != IV && for_side(bd[j], s) < 0)
                         n = add_pawn_moves(list, n, s, i, j, bd[j], promotes);
                     else if (j == pos.ep)
                         list[n++] = move_new(i, j, piece, -s*WP, EM, MK_EP);
@@ -100,7 +101,7 @@ int gen_moves(move_t *list, int quiet)
             {
                 j += d;
                 int target = bd[j];
-                if (target == IV || target*s > 0) // Off the board, or our own piece
+                if (target == IV || for_side(target, s) > 0) // Off the board, or our own piece
                     break;
                 if (quiet || target != EM)
                     list[n++] = move_new(i, j, piece, target, EM, MK_NORMAL);

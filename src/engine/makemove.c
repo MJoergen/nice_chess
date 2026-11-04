@@ -91,7 +91,7 @@ void make_move(move_t m)
 
     if (captured != EM)
     {
-        int csq = (kind == MK_EP) ? to - N*pos.side : to;
+        int csq = (kind == MK_EP) ? to + for_side(S, pos.side) : to;
         pos.board[csq] = EM;
         h ^= zob(captured, csq);
     }
@@ -164,7 +164,7 @@ void undo_move(void)
     pos.board[from] = piece;
     pos.board[to]   = EM;
     if (captured != EM)
-        pos.board[(kind == MK_EP) ? to - N*pos.side : to] = captured;
+        pos.board[(kind == MK_EP) ? to + for_side(S, pos.side) : to] = captured;
 
     if (kind == MK_CASTLE)
     {

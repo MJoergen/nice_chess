@@ -2,6 +2,48 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-04: Where the steps go, and the multiplications by the side
+
+A trace (`niceemu -t`) of the text front end at `-O 2`, with the steps
+counted by function through the `.sym` file, after the history table
+and LMR (01eec53):
+
+| Function | `go depth 6` from the opening, 55.2M steps | Kiwipete `go depth 5`, 304.4M steps |
+|---|---|---|
+| `gen_moves` | 59.1% | 41.6% |
+| `is_attacked` | 9.7% | 14.3% |
+| `make_move` and `undo_move` | 8.2% | 18.4% |
+| `score_moves` | 8.7% | 6.6% |
+| `search` and `quiescence` | 10.1% | 14.2% |
+| `W.cload4` and `W.load4` (the runtime's loads) | 2.2% | 2.7% |
+| everything else | 2.0% | 2.2% |
+
+The evaluation is now 0.5% to 1.1%; in Phase 1 the move generation
+of its mobility took most of the steps. The ray loop of `gen_moves`
+takes about 45 instructions a square: the bounds checks and the shifts
+of wasm's memory model, locals kept on the stack, a boolean made and
+tested again, and the products `target*s`, which the translator makes
+on the math unit, as it does any product by a variable, and by -6 and
+-10.
+
+`for_side(p, side)` (internal.h) gives `p*side` by an XOR and a
+subtraction, and takes the place of those products in `gen_moves`,
+`has_pieces`, `is_attacked` (`e*WK`), and the square of an en passant
+capture in `make_move` and `undo_move`. A product on the math unit
+takes 3 instructions, two stores and a load, so each saves one:
+
+| Run | Before | `for_side` |
+|---|---|---|
+| `go depth 6` from the opening | 55.22M | 53.76M (−2.6%) |
+| Kiwipete `go depth 5` | 304.40M | 297.67M (−2.2%) |
+| Kiwipete `perft 3` | 73.30M | 72.87M (−0.6%) |
+
+The nodes and the moves are the same. In `psqt_delta`, it stopped
+clang from inlining the function into `make_move` and `undo_move`, and
+perft took 7% more steps, so that product stays. The MEGA65 builds
+need 6 words more. In `tests/screen.keys` level 1 plays e2e4 at depth
+6 again, which it now reaches within its time.
+
 ## 2026-11-04: A history table, and late move reductions
 
 The quiet moves after the killers are tried by their history, where

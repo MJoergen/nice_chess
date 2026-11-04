@@ -211,7 +211,7 @@ static int has_pieces(void)
     const int s = pos.side;
     for (int sq = A1; sq <= H8; ++sq)
     {
-        int p = bd[sq] * s;
+        int p = for_side(bd[sq], s);
         if (p >= WN && p <= WQ)
             return 1;
     }

@@ -151,6 +151,7 @@ int is_attacked(int sq, int side)
     static const int32_t line_dirs[4]   = {N, S, E, W};
     const int32_t *bd = pos.board;
     const int e = -side; // The sign of the attacking pieces
+    const int king = for_side(WK, e);
 
     // Pawns: an enemy pawn attacks sq from one rank ahead of it
     if (bd[sq + 10*side + 1] == e*WP || bd[sq + 10*side - 1] == e*WP)
@@ -164,7 +165,7 @@ int is_attacked(int sq, int side)
     {
         int d = diag_dirs[k];
         int p = bd[sq + d];
-        if (p == e*WK)
+        if (p == king)
             return 1;
         int s2 = sq + d;
         while (p == EM)
@@ -180,7 +181,7 @@ int is_attacked(int sq, int side)
     {
         int d = line_dirs[k];
         int p = bd[sq + d];
-        if (p == e*WK)
+        if (p == king)
             return 1;
         int s2 = sq + d;
         while (p == EM)
