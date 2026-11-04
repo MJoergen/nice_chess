@@ -71,7 +71,8 @@ the screen and returns to the monitor.
 against Stockfish (`STOCKFISH`) at UCI_Elo `ELO` (1800) and a second a
 move, by its keys, through `tools/screen_game.py`; the board's screen
 shows the game as it is played. Stockfish is white, or black with
-`BLACK=1`. The moves are written on the host too.
+`BLACK=1`. The host prints each move, with the score of a second
+Stockfish, at its full strength, from white's side.
 
 `tools/board_uci.py --eth IP build/mega65/chess_text.bin` loads the
 text front end into the board and is then a UCI engine on the host, so

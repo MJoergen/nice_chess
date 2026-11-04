@@ -26,6 +26,12 @@ and R, so that white stays at the bottom, and then types each of
 black's moves. So, with --eth, the board's
 screen shows a game of the engine against another, as it is played.
 
+--eval CMD scores the position after each move with CMD, a UCI
+engine at its full strength, such as stockfish, for --eval-time MS
+(500) a move, and prints each move with the score, in pawns from
+white's side, or as "mate N" (N moves, + if white mates). It thinks
+while the front end does, after the opponent's move.
+
 KEYS_OUT gets every key pressed, so that the same game can be played
 again from a file: niceemu -i KEYS_OUT SCREEN_BIN, or with --window.
 As niceemu's clock counts steps, the engine plays the same moves again.
@@ -85,6 +91,24 @@ class Player:
         self.send("position startpos" + (" moves " + " ".join(moves) if moves else ""))
         self.send(self.go)
         return self.wait("bestmove").split()[1]
+
+    def score(self, moves: list[str]) -> str:
+        """The score of the position after moves, from white's side."""
+        self.send("position startpos" + (" moves " + " ".join(moves) if moves else ""))
+        self.send(self.go)
+        score = "?"
+        while True:
+            line = self.p.stdout.readline()
+            if not line:
+                raise RuntimeError("the engine that scores has quit")
+            w = line.split()
+            if w[:1] == ["bestmove"]:
+                return score
+            if "score" in w:
+                kind, n = w[w.index("score") + 1], int(w[w.index("score") + 2])
+                if len(moves) % 2:
+                    n = -n  # Black is to move
+                score = f"{n / 100:+.2f}" if kind == "cp" else f"mate {n:+d}"
 
 
 class Screen:
@@ -181,10 +205,13 @@ def main() -> None:
     ap.add_argument("--opt", action="append", metavar="NAME=VALUE", help="a UCI option of it")
     ap.add_argument("--movetime", type=int, metavar="MS", help="its time a move, not --nodes")
     ap.add_argument("--black", action="store_true", help="the opponent plays black")
+    ap.add_argument("--eval", metavar="CMD", help="a UCI engine that scores each move")
+    ap.add_argument("--eval-time", type=int, default=500, metavar="MS", help="its time a move")
     args = ap.parse_args()
 
     go = f"go movetime {args.movetime}" if args.movetime else f"go nodes {args.nodes}"
     player = Player(args.opponent or args.host_engine, go, args.opt)
+    judge = Player(args.eval, f"go movetime {args.eval_time}") if args.eval else None
     referee = Referee(args.host_engine)
     screen: Screen | BoardScreen
     if args.eth or args.port:
@@ -219,11 +246,16 @@ def main() -> None:
                     sys.exit(f"screen_game.py: the front end says: {line}")
                 m = line.split()[1]
             moves.append(m)
-            if side == "black":
-                print(f"{len(moves) // 2:3d}. {moves[-2]} {moves[-1]}", flush=True)
             result = referee.move(m)
             if result == "illegal":
                 sys.exit(f"screen_game.py: {side}'s move {m} is illegal")
+            if judge:
+                number = f"{(len(moves) + 1) // 2:3d}." + ("" if side == "white" else "..")
+                score = result or judge.score(moves)
+                who = "nice_chess" if (side == "black") != args.black else "opponent"
+                print(f"{number:6} {m:6} {who:11} {score}", flush=True)
+            elif side == "black":
+                print(f"{len(moves) // 2:3d}. {moves[-2]} {moves[-1]}", flush=True)
             if result:
                 break
     finally:
@@ -231,6 +263,8 @@ def main() -> None:
             f.write("".join(screen.keys))
         ended = screen.end(args.dump)
         player.send("quit")
+        if judge:
+            judge.send("quit")
         referee.close()
     print(" ".join(moves))
     print(result or f"no result after {args.max_moves} moves")

@@ -249,10 +249,12 @@ board-test: build/mega65/chess_text.bin build/mega65/chess_screen.bin
 # A game in the windowed front end on the board, against Stockfish at
 # UCI_Elo $(ELO) and a second a move, white unless BLACK=1; the board's
 # screen shows it as it is played. The engine has its level 3, 5 seconds.
+# The host prints each move with Stockfish's score, at full strength.
 ELO ?= 1800
 board-stockfish: build/mega65/chess_screen.bin build/host/chess_text
 	$(PYTHON) tools/screen_game.py $(BOARDLINK) --level 3 --opponent "$(STOCKFISH)" \
 	  --opt UCI_LimitStrength=true --opt UCI_Elo=$(ELO) --movetime 1000 $(if $(BLACK),--black) \
+	  --eval "$(STOCKFISH)" \
 	  build/mega65/chess_screen.bin build/host/chess_text build/mega65/stockfish.keys
 
 board-game: build/mega65/chess_screen.bin build/host/chess_text
