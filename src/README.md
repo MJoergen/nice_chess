@@ -10,7 +10,8 @@
   - `fen.c`: FEN input and output, and moves in coordinate notation.
   - `eval.c`: the evaluation, by material and piece-square tables.
   - `search.c`: the search, by iterative deepening, with a principal
-    variation search, null-move pruning, quiescence, and move ordering.
+    variation search, null-move pruning, late move reductions,
+    quiescence, and move ordering with a history table.
   - `tt.c`: the transposition table.
   - `perft.c`: perft.
   - `game.c`: the game as the front ends see it, and its result.

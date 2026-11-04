@@ -6,11 +6,13 @@
  * full window, and the others with a null window, searched again
  * with the full window if one turns out better. It has a quiescence
  * search of captures at the leaves, a check extension, the
- * transposition table, and null-move pruning. The moves are tried
- * in this order: the move of the transposition table, the captures
- * by MVV-LVA (the most valuable victim first, and of those, the
- * least valuable attacker first), promotions to a queen, the two
- * killer moves of the ply, and then the rest as generated.
+ * transposition table, null-move pruning, and late move reductions.
+ * The moves are tried in this order: the move of the transposition
+ * table, the captures by MVV-LVA (the most valuable victim first,
+ * and of those, the least valuable attacker first), promotions to a
+ * queen, the two killer moves of the ply, and then the rest by their
+ * history: how often, and how deep, the same piece to the same
+ * square has cut a node before.
  *
  * Draws by repetition and by the 50-move rule are scored 0 inside
  * the tree. A position that has come up once before counts as a
@@ -32,6 +34,23 @@
 #define NULL_MIN_DEPTH 2
 #endif
 
+// Late move reductions: a quiet move after the first LMR_MIN_MOVES
+// moves of a node, at depth LMR_MIN_DEPTH or more, is searched
+// LMR_R plies shallower, and again at the full depth if it turns out
+// better than alpha.
+#ifndef LMR_R
+#define LMR_R 1
+#endif
+#ifndef LMR_MIN_DEPTH
+#define LMR_MIN_DEPTH 3
+#endif
+#ifndef LMR_MIN_MOVES
+#define LMR_MIN_MOVES 3
+#endif
+
+// The history of a quiet move is at most this, below ORDER_KILLER2.
+#define HISTORY_MAX (1 << 16)
+
 // The order of the moves of a list, by the score of each.
 enum
 {
@@ -44,6 +63,7 @@ enum
 
 static int32_t order[MOVE_STACK_SIZE];         // Beside move_stack
 static move_t  killers[ENGINE_MAX_PLY][2];
+static int32_t history[13][64];                // By piece + 6 and sq64 of to
 
 // The principal variation of each ply: pv_table[ply] is the best line
 // found so far from the node at ply, of pv_length[ply] moves.
@@ -91,6 +111,8 @@ static void score_moves(const move_t *list, int n, int tt_move, int ply)
             v = ORDER_KILLER1;
         else if (m == killers[ply][1])
             v = ORDER_KILLER2;
+        else
+            v = history[move_piece(m) + 6][sq64[move_to(m)]];
         if (promoted == WQ || promoted == BQ)
             v += ORDER_QUEEN;
         sc[i] = v;
@@ -120,6 +142,31 @@ static move_t pick_move(move_t *list, int i, int n)
     sc[i]   = s;
     return m;
 } // end of pick_move
+
+/***************************************************************
+ * shift_history
+ * Divides each history by 1 << shift: by 2 with 1, and to 0 with
+ * 31. One loop, for both, keeps the code small on NICE.
+ ***************************************************************/
+static void shift_history(int shift)
+{
+    int32_t *h = &history[0][0];
+    for (int i = 0; i < 13*64; ++i)
+        h[i] >>= shift;
+} // end of shift_history
+
+/***************************************************************
+ * add_history
+ * A quiet move m cut a node at depth: its history goes up by
+ * depth * depth. When one reaches HISTORY_MAX, all are halved.
+ ***************************************************************/
+static void add_history(move_t m, int depth)
+{
+    int32_t *h = &history[move_piece(m) + 6][sq64[move_to(m)]];
+    *h += depth * depth;
+    if (*h >= HISTORY_MAX)
+        shift_history(1);
+} // end of add_history
 
 /***************************************************************
  * update_pv
@@ -296,13 +343,24 @@ static int search(int alpha, int beta, int depth, int ply)
             continue;
         }
         // The first move with the full window, the rest with a null
-        // window, and again with the full window if one is better.
+        // window, and again with the full window if one is better. A
+        // late quiet move that gives no check, out of check, is first
+        // searched shallower, and again at the full depth if it beats
+        // alpha.
         int val;
         if (searched++ == 0)
             val = -search(-beta, -alpha, depth - 1, ply + 1);
         else
         {
-            val = -search(-alpha - 1, -alpha, depth - 1, ply + 1);
+            int r = 0;
+            if (depth >= LMR_MIN_DEPTH && searched > LMR_MIN_MOVES && !in_check
+                    && move_captured(m) == EM && move_promoted(m) == EM
+                    && m != killers[ply][0] && m != killers[ply][1]
+                    && !is_attacked(king_of(pos.side), pos.side))
+                r = LMR_R;
+            val = -search(-alpha - 1, -alpha, depth - 1 - r, ply + 1);
+            if (r && val > alpha && !stopped)
+                val = -search(-alpha - 1, -alpha, depth - 1, ply + 1);
             if (val > alpha && val < beta && !stopped)
                 val = -search(-beta, -alpha, depth - 1, ply + 1);
         }
@@ -322,10 +380,14 @@ static int search(int alpha, int beta, int depth, int ply)
         }
         if (alpha >= beta)
         {
-            if (move_captured(m) == EM && m != killers[ply][0])
+            if (move_captured(m) == EM)
             {
-                killers[ply][1] = killers[ply][0];
-                killers[ply][0] = m;
+                add_history(m, depth);
+                if (m != killers[ply][0])
+                {
+                    killers[ply][1] = killers[ply][0];
+                    killers[ply][0] = m;
+                }
             }
             break;
         }
@@ -361,6 +423,7 @@ move_t engine_search(const engine_limits_t *lim, engine_info_fn info)
     stopped  = 0;
     for (int i = 0; i < ENGINE_MAX_PLY; ++i)
         killers[i][0] = killers[i][1] = 0;
+    shift_history(31);
 
     move_t *list = move_stack + move_sp;
     int n = gen_legal(list);

@@ -2,6 +2,59 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-04: A history table, and late move reductions
+
+The quiet moves after the killers are tried by their history, where
+they were in the order generated: a table by piece and target square,
+to which a quiet move that cuts a node adds depth * depth. All are
+halved when one reaches 65536, and cleared at each search, as the
+killers are. A late move reduction searches a quiet move one ply
+shallower (`LMR_R`) when it comes after the first three moves of a
+node (`LMR_MIN_MOVES`), at depth 3 or more (`LMR_MIN_DEPTH`), out of
+check, is not a killer, and does not give check. If it beats alpha,
+it is searched again at the full depth.
+
+Steps in niceemu V1.2, the text front end at `-O 2`:
+
+| Run | Null move | History and LMR |
+|---|---|---|
+| 24 Bratko-Kopec positions, `go depth 4` | 1091.6M | 954.9M (−13%) |
+| 24 Bratko-Kopec positions, `go depth 5` | 3518.2M | 2207.3M (−37%) |
+| `go` from the opening, to depth 7 | 286M, 91073 nodes | 174M, 44334 nodes |
+
+The steps a node are 2.6% more, 2759 against 2690 on the Bratko-Kopec
+positions at depth 4: the order by the history, and the test for a
+check of each late move. The 300 WAC positions on the host, in nodes:
+
+| Run | Null move | History | History and LMR |
+|---|---|---|---|
+| `go depth 5` | 10.61M | 10.13M (−4.5%) | 7.12M (−33%) |
+| `go depth 6` | 28.90M | 27.08M (−6.3%) | 17.68M (−39%) |
+
+With LMR, the move is the same in 276 and 281 of them. The search
+suite solves, at 93000 nodes a position, 317, 319, and 320 of 548
+(WAC 229, 228, and 236; sbd 70, 71, and 62), and at 10000 nodes 249,
+against 242. The MEGA65 builds need 76641 and 75215 words, 631 and
+648 more, all of it code: the table is in the linear memory, which is
+there already. Clearing the table with nested loops cost 1500 words
+more, as they were unrolled; one loop over it, which also halves it,
+does not.
+
+Games of the host builds against the build before, both at 93000
+nodes a move, from 8moves_v3.pgn, each opening with both colors,
+cutechess-cli 1.5.1:
+
+| Build | Games | Wins, losses, draws | Score | Elo |
+|---|---|---|---|---|
+| History | 2000 | 778, 630, 592 | 53.7% | +26 ± 13 |
+| History and LMR | 2000 | 882, 590, 528 | 57.3% | +51 ± 13 |
+
+The game of `tests/screen_game.keys`, recorded again with
+`tools/screen_game.py`'s defaults, is again won by the engine at level
+1, against the host build at 2000 nodes a move. In `tests/screen.keys`
+level 1 now plays b1c3 at depth 5, where it played e2e4 at depth 6:
+there, it does not reach depth 6 within the time of level 1.
+
 ## 2026-11-04: Null-move pruning
 
 Before the moves of a node, the side to move passes, and the other side
