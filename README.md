@@ -59,12 +59,19 @@ NiceMonMEGA65's tools, from a checkout of it (`NICEMON=DIR`,
     make board-test ETH=192.168.1.65     # the tests of both front ends, on the board
     make board-game ETH=192.168.1.65     # a full game by the keys, through the link (a few minutes)
     make board-match ETH=192.168.1.65    # two UCI games against the host build (about 15 minutes)
+    make board-stockfish ETH=192.168.1.65  # a game on the board's screen against Stockfish
 
 On the board the engine takes 5 seconds for a move at level 3, where it
 reaches depth 5 from the opening; the board runs about 54 million steps
 of the engine a second. The keys are those of the window, on the
 MEGA65's keyboard: the cursor keys, RETURN, INST/DEL, and ESC. Q clears
 the screen and returns to the monitor.
+
+`make board-stockfish` plays the windowed front end on the board
+against Stockfish (`STOCKFISH`) at UCI_Elo `ELO` (1800) and a second a
+move, by its keys, through `tools/screen_game.py`; the board's screen
+shows the game as it is played. Stockfish is white, or black with
+`BLACK=1`. The moves are written on the host too.
 
 `tools/board_uci.py --eth IP build/mega65/chess_text.bin` loads the
 text front end into the board and is then a UCI engine on the host, so

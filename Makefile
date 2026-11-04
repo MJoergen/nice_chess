@@ -80,7 +80,7 @@ BOOK      ?= deps/books/8moves_v3.pgn
 export CUTECHESS ORDO STOCKFISH NODES ELOS GAMES CONCURRENCY BOOK
 
 .PHONY: help all test host-test nice-test perft-deep screen-game match-random match-mchess2 rate openings size deps clean distclean
-.PHONY: board-text board-screen board-test board-game board-match
+.PHONY: board-text board-screen board-test board-game board-match board-stockfish
 help:
 	@echo "nice_chess: a chess engine for the NICE system"
 	@echo ""
@@ -107,6 +107,7 @@ help:
 	@echo "  make board-test    the tests of both front ends, on the board"
 	@echo "  make board-game    a full game in the windowed front end, on the board (a few minutes)"
 	@echo "  make board-match   the text front end on the board against the host build, in UCI"
+	@echo "  make board-stockfish  a game on the board's screen against Stockfish (ELO=1800, BLACK=1: it is black)"
 	@echo ""
 	@echo "NICE_CPU=DIR and NICEEMU=PATH use local copies of nice_cpu and niceemu."
 
@@ -245,6 +246,15 @@ board-test: build/mega65/chess_text.bin build/mega65/chess_screen.bin
 
 # A game at LEVEL (2 by default) by the keys, white's moves from the host
 # build; the keys, and the screen at the end, go to build/mega65/.
+# A game in the windowed front end on the board, against Stockfish at
+# UCI_Elo $(ELO) and a second a move, white unless BLACK=1; the board's
+# screen shows it as it is played. The engine has its level 3, 5 seconds.
+ELO ?= 1800
+board-stockfish: build/mega65/chess_screen.bin build/host/chess_text
+	$(PYTHON) tools/screen_game.py $(BOARDLINK) --level 3 --opponent "$(STOCKFISH)" \
+	  --opt UCI_LimitStrength=true --opt UCI_Elo=$(ELO) --movetime 1000 $(if $(BLACK),--black) \
+	  build/mega65/chess_screen.bin build/host/chess_text build/mega65/stockfish.keys
+
 board-game: build/mega65/chess_screen.bin build/host/chess_text
 	$(PYTHON) tools/screen_game.py $(BOARDLINK) --level $(LEVEL) --dump build/mega65/game.dump \
 	  build/mega65/chess_screen.bin build/host/chess_text build/mega65/game.keys

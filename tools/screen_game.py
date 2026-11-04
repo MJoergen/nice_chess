@@ -17,6 +17,15 @@ mode, keeps the game and says when it has ended (as in match.py). Then,
 or after --max-moves moves, the script ends the front end's input,
 which ends the program with the screen as it is.
 
+--opponent CMD plays CMD, a UCI engine such as stockfish, instead of
+HOST_ENGINE, which then only keeps the game; --opt NAME=VALUE sets
+its options, such as UCI_Elo=1800, and --movetime MS gives it a time
+a move instead of --nodes. --black has the opponent play black: the
+script presses S first, so that the front end's engine plays white,
+and R, so that white stays at the bottom, and then types each of
+black's moves. So, with --eth, the board's
+screen shows a game of the engine against another, as it is played.
+
 KEYS_OUT gets every key pressed, so that the same game can be played
 again from a file: niceemu -i KEYS_OUT SCREEN_BIN, or with --window.
 As niceemu's clock counts steps, the engine plays the same moves again.
@@ -48,12 +57,17 @@ UP, DOWN, RIGHT, LEFT = "\x1b[A", "\x1b[B", "\x1b[C", "\x1b[D"
 class Player:
     """The host engine, in UCI."""
 
-    def __init__(self, cmd: str, nodes: int):
+    def __init__(self, cmd: str, go: str, options: list[str] | None = None):
         self.p = subprocess.Popen(shlex.split(cmd), stdin=subprocess.PIPE,
                                   stdout=subprocess.PIPE, text=True, bufsize=1)
-        self.nodes = nodes
+        self.go = go
         self.send("uci")
         self.wait("uciok")
+        for opt in options or []:
+            name, _, value = opt.partition("=")
+            self.send(f"setoption name {name} value {value}")
+        self.send("isready")
+        self.wait("readyok")
 
     def send(self, s: str) -> None:
         self.p.stdin.write(s + "\n")
@@ -69,7 +83,7 @@ class Player:
 
     def best(self, moves: list[str]) -> str:
         self.send("position startpos" + (" moves " + " ".join(moves) if moves else ""))
-        self.send(f"go nodes {self.nodes}")
+        self.send(self.go)
         return self.wait("bestmove").split()[1]
 
 
@@ -163,9 +177,14 @@ def main() -> None:
     ap.add_argument("--port", metavar="DEVICE", help="play on the board, over its debug UART")
     ap.add_argument("--nicemon", help="a checkout of NiceMonMEGA65 (default $NICEMON)")
     ap.add_argument("--dump", metavar="FILE", help="on the board, save the screen at the end")
+    ap.add_argument("--opponent", metavar="CMD", help="the UCI engine that plays the front end")
+    ap.add_argument("--opt", action="append", metavar="NAME=VALUE", help="a UCI option of it")
+    ap.add_argument("--movetime", type=int, metavar="MS", help="its time a move, not --nodes")
+    ap.add_argument("--black", action="store_true", help="the opponent plays black")
     args = ap.parse_args()
 
-    player = Player(args.host_engine, args.nodes)
+    go = f"go movetime {args.movetime}" if args.movetime else f"go nodes {args.nodes}"
+    player = Player(args.opponent or args.host_engine, go, args.opt)
     referee = Referee(args.host_engine)
     screen: Screen | BoardScreen
     if args.eth or args.port:
@@ -174,35 +193,37 @@ def main() -> None:
     else:
         screen = Screen(args.emu, args.screen_bin)
     screen.press(*(["-"] * (3 - args.level) + ["+"] * (args.level - 3)))
+    if args.black:
+        screen.press("s", "r")  # The front end's engine plays white, and white is at the bottom
     cursor = (4, 1)  # e2, where the front end starts it
     moves: list[str] = []
     result = None
     try:
         while len(moves) < 2 * args.max_moves:
-            m = player.best(moves)
-            if len(moves) % 4 == 0 or len(m) == 5:
-                screen.press(*m, "\n")
+            side = ("white", "black")[len(moves) % 2]
+            if (side == "black") == args.black:
+                m = player.best(moves)
+                # With the board turned, the arrows turn too, so black types.
+                if args.black or len(moves) % 4 == 0 or len(m) == 5:
+                    screen.press(*m, "\n")
+                else:
+                    frm, to = square(m[:2]), square(m[2:4])
+                    screen.press(*arrows(cursor, frm), "\n", *arrows(frm, to), "\n")
+                    cursor = to
+                line = screen.line()
+                if line != f"move {m}":
+                    sys.exit(f"screen_game.py: {side} played {m}, the front end says: {line}")
             else:
-                frm, to = square(m[:2]), square(m[2:4])
-                screen.press(*arrows(cursor, frm), "\n", *arrows(frm, to), "\n")
-                cursor = to
-            line = screen.line()
-            if line != f"move {m}":
-                sys.exit(f"screen_game.py: white played {m}, the front end says: {line}")
+                line = screen.line()
+                if not line.startswith("move "):
+                    sys.exit(f"screen_game.py: the front end says: {line}")
+                m = line.split()[1]
             moves.append(m)
+            if side == "black":
+                print(f"{len(moves) // 2:3d}. {moves[-2]} {moves[-1]}", flush=True)
             result = referee.move(m)
             if result == "illegal":
-                sys.exit(f"screen_game.py: white's move {m} is illegal")
-            if result:
-                break
-            line = screen.line()
-            if not line.startswith("move "):
-                sys.exit(f"screen_game.py: the front end says: {line}")
-            moves.append(line.split()[1])
-            print(f"{len(moves) // 2:3d}. {moves[-2]} {moves[-1]}", flush=True)
-            result = referee.move(moves[-1])
-            if result == "illegal":
-                sys.exit(f"screen_game.py: black's move {moves[-1]} is illegal")
+                sys.exit(f"screen_game.py: {side}'s move {m} is illegal")
             if result:
                 break
     finally:
