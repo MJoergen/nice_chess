@@ -6,11 +6,11 @@
   - `board.c`: the position, the Zobrist keys, and attacks.
   - `movegen.c`: move generation, and the global move stack.
   - `makemove.c`: make and undo, which keep the evaluation's sums, the
-    king squares, and the Zobrist key up to date.
+    king squares, and the Zobrist key up to date, and the null move.
   - `fen.c`: FEN input and output, and moves in coordinate notation.
   - `eval.c`: the evaluation, by material and piece-square tables.
   - `search.c`: the search, by iterative deepening, with a principal
-    variation search, quiescence, and move ordering.
+    variation search, null-move pruning, quiescence, and move ordering.
   - `tt.c`: the transposition table.
   - `perft.c`: perft.
   - `game.c`: the game as the front ends see it, and its result.

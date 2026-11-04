@@ -186,6 +186,42 @@ void undo_move(void)
 } // end of undo_move
 
 /***************************************************************
+ * make_null_move
+ * Passes the move to the other side, for the search's null move.
+ * It is in the history as move 0. The 50-move count starts again,
+ * so that no repetition is looked for across it.
+ ***************************************************************/
+void make_null_move(void)
+{
+    assert(pos.ply < MAX_HISTORY);
+    history_t *hs = &hist[pos.ply++];
+    hs->move  = 0;
+    hs->state = pos.castle | pos.ep << 4 | pos.halfmove << 11;
+    hs->hash  = pos.hash;
+
+    if (pos.ep)
+        pos.hash ^= zob_ep[file_of(pos.ep)];
+    pos.ep = 0;
+    pos.halfmove = 0;
+    pos.side = -pos.side;
+    pos.hash ^= zob_side;
+} // end of make_null_move
+
+/***************************************************************
+ * undo_null_move
+ * Takes back make_null_move.
+ ***************************************************************/
+void undo_null_move(void)
+{
+    assert(pos.ply > 0 && hist[pos.ply - 1].move == 0);
+    history_t *hs = &hist[--pos.ply];
+    pos.side     = -pos.side;
+    pos.ep       = (hs->state >> 4) & 0x7F;
+    pos.halfmove = hs->state >> 11;
+    pos.hash     = hs->hash;
+} // end of undo_null_move
+
+/***************************************************************
  * move_was_legal
  * After make_move: true if the king of the side that moved is not
  * attacked.

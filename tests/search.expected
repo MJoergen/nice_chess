@@ -1,8 +1,8 @@
 info depth 1 score cp 50 nodes 20 pv b1c3
 info depth 2 score cp 0 nodes 108 pv b1c3 b8c6
-info depth 3 score cp 50 nodes 637 pv b1c3 b8c6 g1f3
-info depth 4 score cp 0 nodes 2542 pv b1c3 b8c6 g1f3 g8f6
-info depth 5 score cp 40 nodes 14425 pv b1c3 b8c6 g1f3 g8f6 d2d4
+info depth 3 score cp 50 nodes 214 pv b1c3 b8c6 g1f3
+info depth 4 score cp 0 nodes 1025 pv b1c3 b8c6 g1f3 g8f6
+info depth 5 score cp 40 nodes 2556 pv b1c3 b8c6 g1f3 g8f6 d2d4
 bestmove b1c3
 info depth 1 score cp 59 nodes 3248 pv e2a6
 info depth 2 score cp 59 nodes 6541 pv e2a6 b4c3
@@ -10,7 +10,7 @@ info depth 3 score cp 40 nodes 19694 pv e2a6 e6d5 e4d5
 bestmove e2a6
 info depth 1 score cp -632 nodes 297 pv e5f7
 info depth 2 score mate 2 nodes 961 pv d5f6 g7f6 c4f7
-info depth 3 score mate 2 nodes 4065 pv d5f6 g7f6 c4f7
+info depth 3 score mate 2 nodes 2150 pv d5f6 g7f6 c4f7
 bestmove d5f6
 info depth 1 score cp 868 nodes 38 pv e1f2
 info depth 2 score cp 873 nodes 223 pv d1e2 e5d5 e1f2
@@ -23,7 +23,7 @@ info depth 3 score cp 905 nodes 225 pv e1d2 a2b3 f7f8q
 bestmove e1d2
 info depth 1 score cp -246 nodes 596 pv f6g4
 info depth 2 score cp -246 nodes 1518 pv f6g4 d6c7
-info depth 3 score mate 2 nodes 10165 pv g3g6 d6d7 g6h7
+info depth 3 score mate 2 nodes 9213 pv g3g6 d6d7 g6h7
 bestmove g3g6
 Stalemate
 exit 0

@@ -2,6 +2,47 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-04: Null-move pruning
+
+Before the moves of a node, the side to move passes, and the other side
+searches the position with a null window around beta, two plies
+shallower than the moves would be (`NULL_R`). If that is still at
+least beta, the node is cut. It is not tried in check, right after a
+null move, at depth 1, with a full window (the principal variation),
+when the evaluation is below beta, or when the side to move has only
+its king and pawns, where zugzwang is common. A cut by a mate score
+returns beta, as a mate after a pass is not a proven one.
+
+Steps in niceemu V1.2, the text front end at `-O 2`:
+
+| Run | PVS | Null move |
+|---|---|---|
+| 24 Bratko-Kopec positions, `go depth 4` | 1457.4M | 1091.6M (−25%) |
+| 24 Bratko-Kopec positions, `go depth 5` | 5914.4M | 3518.2M (−41%) |
+| `go` from the opening, to depth 6 | 211M, 65942 nodes | 48M, 13233 nodes |
+
+From the opening, the default time of a move (300M steps) now reaches
+depth 7. The steps a node stay the same, 2682 and 2690 on the
+Bratko-Kopec positions at depth 4. The 300 WAC positions on the host
+take 61% fewer nodes at `go depth 5` (26.95M to 10.61M) and 77% fewer
+at `go depth 6` (126.1M to 28.9M), with the same move in 282 of them
+at either depth. At 93000 nodes a position the search suite solves 317
+of 548, against 308 (WAC 229 against 223), but the zugzwang positions
+1 of 5, against 2. At 10000 nodes it solves 242, against 244. The
+MEGA65 builds need 76010 and 74567 words, 442 and 455 more.
+
+Games of the host build against the build before, both at 93000 nodes
+a move, from 8moves_v3.pgn, each opening with both colors,
+cutechess-cli 1.5.1:
+
+| Games | Null move wins, losses, draws | Score | Elo |
+|---|---|---|---|
+| 2000 | 963, 560, 477 | 60.1% | +71 ± 14 (LOS 100%) |
+
+The game of `tests/screen_game.keys`, recorded again with
+`tools/screen_game.py`'s defaults, is now won by the engine at level 1,
+against the host build at 2000 nodes a move.
+
 ## 2026-11-04: Principal variation search
 
 Issue #4. Each node searches its first move with the full window, and

@@ -5,12 +5,12 @@
  * as a principal variation search: the first move of a node with the
  * full window, and the others with a null window, searched again
  * with the full window if one turns out better. It has a quiescence
- * search of captures at the leaves, a check extension, and the
- * transposition table. The moves are tried in this order: the move
- * of the transposition table, the captures by MVV-LVA (the most
- * valuable victim first, and of those, the least valuable attacker
- * first), promotions to a queen, the two killer moves of the ply, and
- * then the rest as generated.
+ * search of captures at the leaves, a check extension, the
+ * transposition table, and null-move pruning. The moves are tried
+ * in this order: the move of the transposition table, the captures
+ * by MVV-LVA (the most valuable victim first, and of those, the
+ * least valuable attacker first), promotions to a queen, the two
+ * killer moves of the ply, and then the rest as generated.
  *
  * Draws by repetition and by the 50-move rule are scored 0 inside
  * the tree. A position that has come up once before counts as a
@@ -22,6 +22,15 @@
 #include "internal.h"
 
 #define INF 32000
+
+// Null-move pruning: the depth that the null move takes off, besides
+// its own ply, and the least depth at which it is tried.
+#ifndef NULL_R
+#define NULL_R 2
+#endif
+#ifndef NULL_MIN_DEPTH
+#define NULL_MIN_DEPTH 2
+#endif
 
 // The order of the moves of a list, by the score of each.
 enum
@@ -144,6 +153,25 @@ static int is_draw(void)
 } // end of is_draw
 
 /***************************************************************
+ * has_pieces
+ * True if the side to move has a piece other than its king and
+ * pawns. Without one, zugzwang is common, and the null move is
+ * not tried.
+ ***************************************************************/
+static int has_pieces(void)
+{
+    const int32_t *bd = pos.board;
+    const int s = pos.side;
+    for (int sq = A1; sq <= H8; ++sq)
+    {
+        int p = bd[sq] * s;
+        if (p >= WN && p <= WQ)
+            return 1;
+    }
+    return 0;
+} // end of has_pieces
+
+/***************************************************************
  * quiescence
  *
  * Searches only captures and promotions, until the position is
@@ -225,6 +253,27 @@ static int search(int alpha, int beta, int depth, int ply)
                 || (tt_bound == TT_LOWER && tt_value >= beta)
                 || (tt_bound == TT_UPPER && tt_value <= alpha))
             return tt_value;
+    }
+
+    // Null-move pruning: if the side to move, after passing, still
+    // scores at least beta in a shallower search, then a move would
+    // too, and the node is cut. Not in check, not after a null move,
+    // not in the principal variation (a full window), and not without
+    // pieces, where zugzwang makes passing better than any move.
+    if (!in_check && depth >= NULL_MIN_DEPTH && beta - alpha == 1
+            && hist[pos.ply - 1].move != 0
+            && evaluate() >= beta && has_pieces())
+    {
+        make_null_move();
+#ifdef CHECK_STATE
+        assert(board_consistent());
+#endif
+        int val = -search(-beta, -beta + 1, depth - 1 - NULL_R, ply + 1);
+        undo_null_move();
+        if (stopped)
+            return 0;
+        if (val >= beta)
+            return val > ENGINE_MATE - ENGINE_MAX_PLY ? beta : val;
     }
 
     move_t *list = move_stack + move_sp;

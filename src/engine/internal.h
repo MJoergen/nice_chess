@@ -147,6 +147,8 @@ static inline int gen_captures(move_t *list) { return gen_moves(list, 0); }
 void make_move(move_t m);
 void undo_move(void);
 int  move_was_legal(void);              // After make_move: the mover's king is safe
+void make_null_move(void);              // Passes the move (the search's null move)
+void undo_null_move(void);
 
 // eval.c
 extern int32_t psqt[13][64];            // By piece + 6 and sq64, packed and signed
