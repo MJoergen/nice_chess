@@ -110,13 +110,19 @@ d2d4 g8f6 g1f3 d7d5 g2g3 c7c5 c2c4 d5c4                      #   +6 D02 Queen's 
 
 # 1.c4
 c2c4 c7c5 b1c3 b8c6 g2g3 g7g6 f1g2 f8g7                      #  +24 A36 English Opening: Symmetrical Variation, Ultra-Symmetrical Variation
+c2c4 c7c5 b1c3 g8f6 g1f3 d7d5 c4d5 f6d5                      #  +26 A34 English Opening: Symmetrical Variation, Three Knights Variation
+c2c4 c7c5 b1c3 g8f6 g2g3 d7d5 c4d5 f6d5                      #  +35 A34 English Opening: Symmetrical Variation, Fianchetto Variation
+c2c4 c7c5 g1f3 g8f6 d2d4 c5d4 f3d4 e7e6                      #  +25 A32 English Opening: Symmetrical Variation, Anti-Benoni Variation, Spielmann Defense
 c2c4 c7c6 g1f3 d7d5 e2e3 g8f6 b1c3 e7e6                      #  +32 A11 Réti Opening: Anglo-Slav Variation, Gurevich System
 c2c4 e7e5 b1c3 b8c6 g2g3 g7g6 f1g2 f8g7                      #  +27 A25 English Opening: King's English Variation, Taimanov Variation
 c2c4 e7e5 b1c3 g8f6 g1f3 b8c6 g2g3 d7d5                      #  +16 A29 English Opening: King's English Variation, Four Knights Variation, Fianchetto Line
 c2c4 e7e5 g2g3 g8f6 f1g2 d7d5 c4d5 f6d5                      #  +30 A20 English Opening: King's English Variation
+c2c4 e7e6 b1c3 d7d5 d2d4 f8e7 c4d5 e6d5                      #  +29 D31 Queen's Gambit Declined: Charousek Variation
 c2c4 e7e6 b1c3 d7d5 d2d4 g8f6 g1f3 c7c6                      #  +41 D43 Semi-Slav Defense
+c2c4 g8f6 b1c3 e7e5 g1f3 b8c6 g2g3 f8b4                      #   -3 A29 English Opening: King's English Variation, Four Knights Variation, Fianchetto Line
 c2c4 g8f6 b1c3 e7e6 e2e4 d7d5 e4e5 d5d4                      #  +17 A18 English Opening: Mikenas-Carls Variation
 c2c4 g8f6 b1c3 g7g6 e2e4 d7d6 d2d4 f8g7                      #  +69 E70 King's Indian Defense: Normal Variation
+c2c4 g8f6 g1f3 e7e6 g2g3 d7d5 f1g2 f8e7                      #  +37 A13 English Opening: Neo-Catalan Declined
 c2c4 g8f6 g1f3 g7g6 g2g3 f8g7 f1g2 e8g8                      #  +23 A15 English Opening: Anglo-Indian Defense, King's Indian Formation
 
 # 1.Nf3
@@ -125,14 +131,8 @@ g1f3 d7d5 c2c4 e7e6 g2g3 g8f6 f1g2 f8e7                      #  +22 A13 English 
 g1f3 d7d5 d2d4 e7e6 c2c4 b8d7 g2g3 g8f6                      #  +47 D02 Queen's Pawn Game: Zukertort Variation
 g1f3 d7d5 d2d4 e7e6 g2g3 c7c5 f1g2 c5d4                      #  +10 D02 Queen's Pawn Game: Zukertort Variation
 g1f3 d7d5 d2d4 g8f6 c2c4 c7c6 c4d5 c6d5                      #  +32 D13 Slav Defense: Exchange Variation
-g1f3 e7e6 c2c4 c7c5 b1c3 b8c6 d2d4 c5d4                      #  +26 A13 English Opening: Agincourt Defense
-g1f3 e7e6 c2c4 c7c5 g2g3 d7d5 c4d5 e6d5                      #  +41 A13 English Opening: Agincourt Defense, Catalan Defense
-g1f3 e7e6 c2c4 d7d5 c4d5 e6d5 d2d4 c7c6                      #  +11 A13 English Opening: Agincourt Defense
 g1f3 e7e6 c2c4 d7d5 d2d4 g8f6 g2g3 d5c4                      #  +37 A13 English Opening: Agincourt Defense
 g1f3 e7e6 d2d4 d7d5 c1f4 c7c5 e2e3 g8f6                      #  +25 D02 Queen's Pawn Game: London System, with e6
-g1f3 e7e6 d2d4 d7d5 c2c4 g8f6 g2g3 f8b4                      #  +29 A04 Zukertort Opening: Queen's Gambit Invitation
 g1f3 e7e6 d2d4 g8f6 c2c4 d7d5 b1c3 f8b4                      #  +27 D38 Queen's Gambit Declined: Ragozin Defense
-g1f3 g8f6 c2c4 c7c5 b1c3 d7d5 c4d5 f6d5                      #  +22 A34 English Opening: Symmetrical Variation, Three Knights Variation
 g1f3 g8f6 c2c4 c7c5 d2d4 c5d4 f3d4 e7e6                      #  +17 A32 English Opening: Symmetrical Variation, Anti-Benoni Variation, Spielmann Defense
-g1f3 g8f6 c2c4 c7c6 b1c3 d7d5 c4d5 c6d5                      #  +32 A15 English Opening: Anglo-Indian Defense, King's Knight Variation
 g1f3 g8f6 d2d4 d7d5 c2c4 c7c6 e2e3 c8g4                      #  +36 D11 Slav Defense: Quiet Variation, Pin Defense
