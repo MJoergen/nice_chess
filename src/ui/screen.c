@@ -19,6 +19,7 @@
  *   R               rotate the board
  *   N               a new game
  *   + -             give the engine more or less time, levels 1 to 5
+ *   O               the opening book on or off (on at first)
  *   Q               quit, and clear the screen
  * The letters of commands act only when no move is being typed.
  *
@@ -104,10 +105,11 @@ static char   msg_buf[24];
 static const uint8_t level_num[5] = {1, 1, 1, 3, 9};
 static const uint8_t level_den[5] = {9, 3, 1, 1, 1};
 static int    level = 3;
+static int    book = 1;            // The engine plays from its opening book
 
 // What the engine thought about its last move.
 static engine_info_t info;
-static int    have_info;
+static int    have_info;           // 1 if info is set, 2 if the move was the book's
 static int    thinking;
 
 /***************************************************************
@@ -274,8 +276,9 @@ static void draw_status(void)
 
 static void draw_level(void)
 {
-    char buf[16];
-    fmt_str(fmt_uint(fmt_str(buf, "Level "), (uint32_t) level), " of 5");
+    char buf[32];
+    fmt_str(fmt_str(fmt_uint(fmt_str(buf, "Level "), (uint32_t) level), " of 5"),
+            book ? ", book on" : ", book off");
     draw_line(ROW_LEVEL, COLOR(PANEL, DIM), buf);
 }
 
@@ -301,7 +304,9 @@ static void draw_info(void)
     char buf[48];
     char *p = buf;
     *p = '\0';
-    if (have_info)
+    if (have_info == 2)
+        fmt_str(p, "A move of the book.");
+    if (have_info == 1)
     {
         p = fmt_uint(fmt_str(p, "Depth "), (uint32_t) info.depth);
         p = fmt_score(fmt_str(p, "  Score "), info.score);
@@ -311,9 +316,9 @@ static void draw_info(void)
 
     // The principal variation, in as many moves as fit on two rows.
     int col = PX, row = ROW_PV;
-    if (have_info)
+    if (have_info == 1)
         col = put_str(col, row, COLOR(PANEL, DIM), "PV");
-    for (int i = 0; have_info && i < info.pv_len; ++i)
+    for (int i = 0; have_info == 1 && i < info.pv_len; ++i)
     {
         char m[8];
         engine_move_to_str(info.pv[i], m);
@@ -385,7 +390,7 @@ static void draw_all(void)
     draw_input();
     draw_line(ROW_HELP,     COLOR(PANEL, DIM), "Arrows, Enter: move. Or type e2e4.");
     draw_line(ROW_HELP + 1, COLOR(PANEL, DIM), "U undo  S switch  R rotate  N new");
-    draw_line(ROW_HELP + 2, COLOR(PANEL, DIM), "+/- level  Q quit  Esc cancel/stop");
+    draw_line(ROW_HELP + 2, COLOR(PANEL, DIM), "+/- level  O book  Q quit  Esc stop");
 }
 
 /***************************************************************
@@ -581,16 +586,23 @@ static int on_info(const engine_info_t *in)
 
 static void think(void)
 {
-    thinking = 1;
     have_info = 0;
     clear_selection();
+    move_t m = book ? engine_book_move() : 0;
+    if (m)
+    {
+        have_info = 2;
+        play(m);
+        return;
+    }
+    thinking = 1;
     draw_all();
 
     hard_time = platform_move_time() / level_den[level - 1] * level_num[level - 1];
     soft_time = hard_time / 2;
     engine_limits_t limits = {0, 0, stop_search};
     start_time = platform_micros();
-    move_t m = engine_search(&limits, on_info);
+    m = engine_search(&limits, on_info);
 
     thinking = 0;
     if (m)
@@ -739,6 +751,7 @@ static int handle_key(int k)
             break;
         case '+': level += level < 5; break;
         case '-': level -= level > 1; break;
+        case 'o': book = !book; break;
         default: break;
     }
     return 1;
@@ -750,6 +763,7 @@ int main(void)
     cur_file = 4;
     cur_rank = 1;
     live = platform_on_board();
+    engine_book_seed(platform_seed());
     new_game();
 
     while (1)

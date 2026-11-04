@@ -105,6 +105,23 @@ uint32_t engine_hash(void);
 uint32_t engine_hash_full(void);
 
 /***************************************************************
+ * The opening book (book.c, and the lines of book.txt)
+ ***************************************************************/
+
+// Writes the moves the book has for the position to moves, and their
+// weights to weights, at least ENGINE_MAX_MOVES entries each, and
+// returns their number: 0 if the position is not in the book.
+int engine_book_moves(move_t *moves, uint32_t *weights);
+
+// A move of the book for the position, chosen at random in proportion
+// to the weights, or 0 if the position is not in the book.
+move_t engine_book_move(void);
+
+// Seeds the random choice of engine_book_move. The same seed gives the
+// same choices.
+void engine_book_seed(uint32_t seed);
+
+/***************************************************************
  * The search
  ***************************************************************/
 

@@ -29,6 +29,11 @@ uint32_t platform_move_time(void);
 // read from a file waits. On a PC, 0.
 int platform_on_board(void);
 
+// A seed for a choice at random, such as that of the opening book:
+// from the clock on a PC and on a board, and always the same in
+// niceemu, so that a run there is the same every time.
+uint32_t platform_seed(void);
+
 // The next byte of the console's input, if one waits: 0 to 255, or
 // -2 if none waits yet, or -1 once the input has ended. From a file,
 // or from stdin in niceemu, it waits for the next byte, and never

@@ -1,0 +1,12 @@
+Book: g1f3 10 c2c4 15 d2d4 46 e2e4 51
+Book: c5d4 3
+info string book move
+bestmove c5d4
+Book: f3d4 3
+Book: none
+bestmove e1f2
+option name OwnBook type check default false
+info string book move
+bestmove c5d4
+bestmove g8f6
+exit 0

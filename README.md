@@ -21,7 +21,8 @@ To play in the emulator:
 Type `help` for the commands. Moves are in coordinate notation, such as
 `e2e4`, and `go` makes the engine move. In niceemu, `go` takes 300 million
 steps, about 7 seconds in the emulator and 4 on the board; `go depth 4`
-or `go nodes 20000` are quicker.
+or `go nodes 20000` are quicker. `book on` makes `go` play from the
+opening book, where the position is in it, and `book` lists its moves.
 
 The windowed front end shows the board on the 80×25 screen. It needs
 the window build of niceemu, `niceemu-window-V1.2-x86_64-linux.tar.gz`
@@ -33,9 +34,12 @@ from the [V1.2 release](https://github.com/MJoergen/nice_cpu/releases/tag/V1.2):
 step per microsecond, a move takes the engine five minutes. Move with
 the arrows and Enter, or type a move such as `e2e4` and Enter. The keys
 are on the screen: U undo, S switch sides, R rotate, N new game, + and −
-the level, Q quit, and Esc to make the engine move now.
+the level, O the opening book on or off, Q quit, and Esc to make the
+engine move now. The book is on at first, and the engine's first moves
+come from it, at random by their weights.
 
 The host build speaks UCI after `uci`, so a chess GUI can play it.
+Its option `OwnBook` turns the book on; it is off at first.
 `tools/match.py` plays two UCI engines against each other, and can run
 the NICE build in niceemu, or on the board, as one of them.
 `make rate` rates the engine at the board's speed against Stockfish's

@@ -46,7 +46,11 @@ MCHESS2_SRC = main.cc CBoard.cc CMove.cc ai.cc CMoveList.cc CPerft.cc \
 # (NiceMonMEGA65 V1.2.1). The Nexys4DDR would give 28K.
 BUDGET = 94176
 
-ENGINE = $(wildcard src/engine/*.c)
+# The engine, and the table of its opening book, which tools/mkbook.c
+# makes from src/engine/book.txt with the engine's own keys.
+BOOKDATA = build/gen/book_data.c
+CORE = $(wildcard src/engine/*.c)
+ENGINE = $(CORE) $(BOOKDATA)
 HEADERS = $(wildcard src/engine/*.h) src/platform/platform.h
 
 # NICE: optimized for size, which costs about 20% in speed, and without
@@ -140,6 +144,15 @@ build/nice/perftsuite.bin: $(ENGINE) $(HEADERS) tests/perftsuite.c | $(NICE_CPU)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(NICEFLAGS) -D PERFT_MAX_DEPTH=3 -o $@ $(ENGINE) tests/perftsuite.c
 
+build/host/mkbook: $(CORE) $(HEADERS) tools/mkbook.c
+	@mkdir -p $(@D)
+	$(CC) $(HOSTFLAGS) -o $@ $(CORE) tools/mkbook.c
+
+$(BOOKDATA): build/host/mkbook src/engine/book.txt
+	@mkdir -p $(@D)
+	build/host/mkbook < src/engine/book.txt > $@.tmp
+	mv $@.tmp $@
+
 build/host/chess_text: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/host.c
 	@mkdir -p $(@D)
 	$(CC) $(HOSTFLAGS) -o $@ $(ENGINE) src/ui/text.c src/platform/host.c
@@ -161,18 +174,23 @@ test: host-test nice-test
 host-test: build/host/chess_text build/host/perftsuite build/host/searchsuite $(PERFTSUITE) $(SEARCHSUITE)
 	@tools/runtest.sh host_text text tests/text.input host build/host/chess_text
 	@tools/runtest.sh host_search search tests/search.input host build/host/chess_text
+	@tools/runtest.sh host_book book tests/book.input host build/host/chess_text
 	@tools/runtest.sh host_perftsuite4 perftsuite4 $(PERFTSUITE) host build/host/perftsuite 4
 	@tools/runtest.sh host_searchsuite searchsuite $(SEARCHSUITE) host build/host/searchsuite 10000
 
 nice-test: build/nice/chess_text.bin build/nice/chess_screen.bin build/nice/perftsuite.bin $(PERFTSUITE) \
            build/test/mon_chess_text.bin build/test/mon_chess_screen.bin | $(NICEEMU)
 	@tools/runtest.sh nice_screen screen tests/screen.keys screen build/nice/chess_screen.bin
+	@tools/runtest.sh nice_screen_book screen_book tests/screen_book.keys screen build/nice/chess_screen.bin
 	@tools/runtest.sh nice_text text tests/text.input nice build/nice/chess_text.bin
 	@tools/runtest.sh nice_search search tests/search.input nice build/nice/chess_text.bin
+	@tools/runtest.sh nice_book book tests/book.input nice build/nice/chess_text.bin
 	@tools/runtest.sh nice_perftsuite3 perftsuite3 $(PERFTSUITE) nice build/nice/perftsuite.bin
 	@tools/runtest.sh mega65_screen screen tests/screen.keys screen build/test/mon_chess_screen.bin
+	@tools/runtest.sh mega65_screen_book screen_book tests/screen_book.keys screen build/test/mon_chess_screen.bin
 	@tools/runtest.sh mega65_text text tests/text.input nice build/test/mon_chess_text.bin
 	@tools/runtest.sh mega65_search search tests/search.input nice build/test/mon_chess_text.bin
+	@tools/runtest.sh mega65_book book tests/book.input nice build/test/mon_chess_text.bin
 
 perft-deep: build/host/perftsuite $(PERFTSUITE)
 	@tools/runtest.sh host_perftsuite5 perftsuite5 $(PERFTSUITE) host build/host/perftsuite 5
@@ -222,6 +240,7 @@ board-screen: build/mega65/chess_screen.bin
 board-test: build/mega65/chess_text.bin build/mega65/chess_screen.bin
 	@BOARDLINK="$(BOARDLINK)" tools/runtest.sh board_text text tests/text.input board build/mega65/chess_text.bin
 	@BOARDLINK="$(BOARDLINK)" tools/runtest.sh board_search search tests/search.input board build/mega65/chess_text.bin
+	@BOARDLINK="$(BOARDLINK)" tools/runtest.sh board_book book tests/book.input board build/mega65/chess_text.bin
 	@BOARDLINK="$(BOARDLINK)" tools/runtest.sh board_screen screen tests/screen.keys board-screen build/mega65/chess_screen.bin
 
 # A game at LEVEL (2 by default) by the keys, white's moves from the host

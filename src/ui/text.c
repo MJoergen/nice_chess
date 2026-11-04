@@ -11,6 +11,8 @@
  *   go [LIMITS]     the engine moves (see below)
  *   perft N         count the leaf nodes of the move tree of depth N
  *   divide N        perft N, for each legal move
+ *   book            the moves of the opening book for the position
+ *   book on|off     whether go plays a move of the book (off at first)
  *   uci             switch to UCI (see below)
  *   help
  *   quit
@@ -20,8 +22,13 @@
  * A number alone is a depth. With none, the engine takes
  * platform_move_time.
  *
+ * With the book on, go plays a move of the book when the position is
+ * in it, chosen at random by the weights, and prints "info string book
+ * move" before it.
+ *
  * After uci, the commands are those of the UCI protocol: uci,
- * isready, ucinewgame, position, go, and quit. There is no prompt,
+ * isready, ucinewgame, position, go, setoption, and quit. The one
+ * option is OwnBook, the book, false at first. There is no prompt,
  * go does not make the move, and stop is not heard during a search.
  *
  * Copyright (c) 2026 Michael Jørgensen. MIT license (see LICENSE).
@@ -36,6 +43,7 @@
 static const char piece_chars[] = "kqrbnp.PNBRQK";
 
 static int uci_mode = 0;
+static int own_book = 0;
 
 /***************************************************************
  * next_word
@@ -164,6 +172,35 @@ static int looks_like_move(const char *s)
         && (s[4] == '\0' || (strchr("qrbnQRBN", s[4]) && s[5] == '\0'));
 }
 
+static void print_book(void)
+{
+    move_t moves[ENGINE_MAX_MOVES];
+    uint32_t weights[ENGINE_MAX_MOVES];
+    int n = engine_book_moves(moves, weights);
+    if (!n)
+    {
+        printf("Book: none\n");
+        return;
+    }
+    printf("Book:");
+    for (int i = 0; i < n; ++i)
+    {
+        char buf[8];
+        engine_move_to_str(moves[i], buf);
+        printf(" %s %u", buf, (unsigned) weights[i]);
+    }
+    printf("\n");
+}
+
+// UCI: setoption name OwnBook value true|false
+static void do_setoption(char *args)
+{
+    if (strcmp(next_word(&args), "name") || strcmp(next_word(&args), "OwnBook")
+        || strcmp(next_word(&args), "value"))
+        return;
+    own_book = !strcmp(next_word(&args), "true");
+}
+
 static void do_divide(int depth)
 {
     move_t moves[ENGINE_MAX_MOVES];
@@ -285,6 +322,16 @@ static move_t do_go(char *args)
         soft_time = hard_time / 2;
     }
 
+    if (own_book)
+    {
+        move_t m = engine_book_move();
+        if (m)
+        {
+            printf("info string book move\n");
+            return m;
+        }
+    }
+
     start_time = platform_micros();
     return engine_search(&limits, print_info);
 }
@@ -344,6 +391,7 @@ int main(void)
     char line[2048]; // position startpos moves ... of a long game
 
     engine_new_game();
+    engine_book_seed(platform_seed());
     printf("nice_chess. Type help for the commands.\n");
 
     while (1)
@@ -368,7 +416,8 @@ int main(void)
         else if (!strcmp(cmd, "uci"))
         {
             uci_mode = 1;
-            printf("id name nice_chess\nid author Michael Jorgensen\nuciok\n");
+            printf("id name nice_chess\nid author Michael Jorgensen\n"
+                   "option name OwnBook type check default false\nuciok\n");
             fflush(stdout);
         }
         else if (!strcmp(cmd, "isready"))
@@ -399,8 +448,10 @@ int main(void)
                 print_result();
             }
         }
+        else if (!strcmp(cmd, "setoption"))
+            do_setoption(arg);
         else if (uci_mode)
-            continue; // stop, setoption, ponderhit, and the rest
+            continue; // stop, ponderhit, and the rest
         else if (!strcmp(cmd, "fen"))
         {
             if (engine_set_fen(arg, NULL))
@@ -424,10 +475,17 @@ int main(void)
         }
         else if (!strcmp(cmd, "divide"))
             do_divide(atoi(arg));
+        else if (!strcmp(cmd, "book"))
+        {
+            if (!strcmp(arg, "on") || !strcmp(arg, "off"))
+                own_book = !strcmp(arg, "on");
+            else
+                print_book();
+        }
         else if (!strcmp(cmd, "help"))
             printf("Commands: new, fen FEN, show, moves, move M (or just M), undo,\n"
                    "go [depth N | nodes N | movetime MS | ...], perft N, divide N,\n"
-                   "uci, help, quit\n");
+                   "book [on | off], uci, help, quit\n");
         else if (looks_like_move(cmd))
             do_move(cmd);
         else

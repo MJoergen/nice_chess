@@ -16,6 +16,7 @@ chess GUI, or lichess-bot can play the board as it plays any engine:
 
 cutechess-cli runs an engine in the directory of its cmd, so dir=.
 keeps the path of PROG.bin relative to the current directory.
+option.OwnBook=true plays the first moves from the engine's book.
 
 The board's clock is real, and its time management is its own, from
 wtime and btime. The time a move takes on the link counts against it,

@@ -26,6 +26,13 @@ int platform_on_board(void)
     return 0;
 }
 
+uint32_t platform_seed(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    return (uint32_t) ts.tv_sec ^ (uint32_t) ts.tv_nsec;
+}
+
 int platform_pollc(void)
 {
     struct pollfd p = {0, POLLIN, 0};

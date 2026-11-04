@@ -14,6 +14,9 @@
   - `tt.c`: the transposition table.
   - `perft.c`: perft.
   - `game.c`: the game as the front ends see it, and its result.
+  - `book.c`: the opening book, a table sorted by the Zobrist key.
+    `book.txt` has its lines, from which `tools/mkbook.c` makes the
+    table, `build/gen/book_data.c`, with the engine's own keys.
 - `platform/`: the clock, the default time of a move, and a poll of the
   console for a key: `nice.c` for NICE, `host.c` for a PC, behind
   `platform.h`. On NICE the time of a move is 300 million steps in

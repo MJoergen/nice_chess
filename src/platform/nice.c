@@ -43,6 +43,13 @@ uint32_t platform_move_time(void)
     return platform_on_board() ? 5000000 : 300000000;
 }
 
+// On a board, the clock and the cycle counter at the first call, which
+// the time the player took to load and start the program sets.
+uint32_t platform_seed(void)
+{
+    return platform_on_board() ? (uint32_t) nice_micros() ^ (uint32_t) nice_cycles() : 1;
+}
+
 int platform_pollc(void)
 {
     return nice_pollc();
