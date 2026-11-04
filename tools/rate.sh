@@ -16,7 +16,7 @@
 # CONCURRENCY. The games go to build/rate/games.pgn, and the rating to
 # build/rate/ratings.txt. A new run starts a new games.pgn.
 set -eu
-: "${BOOK:?BOOK=FILE names the openings, a .pgn or .epd file}"
+: "${BOOK:=deps/books/8moves_v3.pgn}"
 : "${CUTECHESS:=cutechess-cli}" "${ORDO:=ordo}" "${STOCKFISH:=stockfish}"
 : "${NODES:=83000}" "${ELOS:=1700 1900 2100}" "${GAMES:=200}" "${CONCURRENCY:=4}"
 

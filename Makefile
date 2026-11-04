@@ -11,6 +11,9 @@ NICEEMU_SHA256  := cb498a974cec1ae1f2e56441e6bb1f3ec20d593bb505ff32a566b7f4eade6
 MCHESS2_COMMIT  := 65e88554b20e06079301ef2314f6559fab06d062
 PERFTSUITE_SHA256 := 363e5205dfff3205fc50b376fb1770f9156464456282372c8c0a0e5b45a0bf07
 SEARCHSUITE_SHA256 := 291bd3110550fbb26f8c887e4ed23249200d044b52d912b573b1875351b83b0a
+# The openings of make rate: 8moves_v3.pgn of fishtest's books.
+BOOKS_COMMIT    := 2ec69181c0b1367c5c58bcf5304a79c7b198b655
+BOOK_ZIP_SHA256 := 7e1e9dd118b4bb97d8a8b5b8a790c86e21f8509d59a27d2883767d94477be02e
 
 NICE_CPU ?= deps/nice_cpu
 NICEEMU  ?= deps/niceemu-$(NICE_CPU_TAG)-x86_64-linux/niceemu
@@ -69,9 +72,10 @@ NODES     ?= 83000
 ELOS      ?= 1700 1900 2100
 GAMES     ?= 200
 CONCURRENCY ?= 4
+BOOK      ?= deps/books/8moves_v3.pgn
 export CUTECHESS ORDO STOCKFISH NODES ELOS GAMES CONCURRENCY BOOK
 
-.PHONY: help all test host-test nice-test perft-deep screen-game match-random match-mchess2 rate size deps clean distclean
+.PHONY: help all test host-test nice-test perft-deep screen-game match-random match-mchess2 rate book size deps clean distclean
 .PHONY: board-text board-screen board-test board-game board-match
 help:
 	@echo "nice_chess: a chess engine for the NICE system"
@@ -84,7 +88,8 @@ help:
 	@echo "  make screen-game   a full game in the windowed front end, in niceemu (a minute)"
 	@echo "  make match-random  the host build against random moves (20 games)"
 	@echo "  make match-mchess2 the host build against mchess2 (20 games, 15 minutes)"
-	@echo "  make rate BOOK=F   a rating: cutechess-cli games against Stockfish's UCI_Elo levels, and Ordo"
+	@echo "  make book          fetch the openings of make rate, 8moves_v3.pgn, into deps/books/"
+	@echo "  make rate          a rating: cutechess-cli games against Stockfish's UCI_Elo levels, and Ordo"
 	@echo "  make size          the size of the MEGA65 builds, against the board's budget"
 	@echo "  make clean         remove build/"
 	@echo "  make distclean     remove build/ and deps/"
@@ -186,8 +191,10 @@ match-mchess2: build/host/chess_text build/host/mchess2
 	$(PYTHON) tools/match.py --time 20 build/host/chess_text build/host/chess_text build/host/mchess2
 
 # A rating of the board's engine at 5 seconds a move (tools/rate.sh).
-rate: build/host/chess_fast
+rate: build/host/chess_fast $(BOOK)
 	tools/rate.sh
+
+book: deps/books/8moves_v3.pgn
 
 build/host/mchess2: $(addprefix deps/mchess2/src/,$(MCHESS2_SRC))
 	@mkdir -p $(@D)
@@ -254,6 +261,14 @@ $(SEARCHSUITE):
 	curl -sSfL -o $@.tmp $(MCHESS2_RAW)/tests/searchsuite.epd
 	echo "$(SEARCHSUITE_SHA256)  $@.tmp" | sha256sum -c --quiet
 	mv $@.tmp $@
+
+deps/books/8moves_v3.pgn:
+	@mkdir -p $(@D)
+	curl -sSfL -o $@.zip https://raw.githubusercontent.com/official-stockfish/books/$(BOOKS_COMMIT)/8moves_v3.pgn.zip
+	echo "$(BOOK_ZIP_SHA256)  $@.zip" | sha256sum -c --quiet
+	$(PYTHON) -m zipfile -e $@.zip $(@D)
+	rm $@.zip
+	@touch $@
 
 clean:
 	rm -rf build

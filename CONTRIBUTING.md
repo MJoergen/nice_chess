@@ -16,15 +16,17 @@ a C compiler for the host, `git`, and `curl`.
     make screen-game # a full game in the windowed front end, in niceemu (a minute)
     make match-random   # the host build against random moves
     make match-mchess2  # the host build against mchess2 (about 15 minutes)
-    make rate BOOK=FILE # a rating against Stockfish's UCI_Elo levels (hours; see below)
+    make book        # the openings of make rate, 8moves_v3.pgn, into deps/books/
+    make rate        # a rating against Stockfish's UCI_Elo levels (hours; see below)
     make size        # the size of the MEGA65 builds, against the 92K words the monitor leaves them
 
 To use local copies of nice_cpu and niceemu instead, pass `NICE_CPU=DIR`
 and `NICEEMU=PATH` to make.
 
 `make rate` needs cutechess-cli, Ordo, and Stockfish (`CUTECHESS`,
-`ORDO`, `STOCKFISH`), and openings in `BOOK`, a .pgn or .epd file such
-as 8moves_v3.pgn. It plays `build/host/chess_fast`, the host build
+`ORDO`, `STOCKFISH`). Its openings are `BOOK`, a .pgn or .epd file:
+by default `deps/books/8moves_v3.pgn`, from fishtest's books at a
+pinned commit, which it fetches (`make book`). It plays `build/host/chess_fast`, the host build
 without asserts, at `NODES` nodes a move, 83000 by default, which is
 about 5 seconds a move on the MEGA65. At the same nodes the host and
 NICE builds play the same moves. The opponents are Stockfish at each
