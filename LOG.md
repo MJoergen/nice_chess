@@ -2,6 +2,23 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-04: -O 2
+
+Issue #7. Steps in niceemu V1.2, the text front end, with the
+transposition table of 2048 entries:
+
+| Run | `-O s` | `-O 2` |
+|---|---|---|
+| `tests/search.input` | 232.3M | 197.1M (−15%) |
+| `go 5` from the opening | 45.7M | 38.2M (−16%) |
+| Kiwipete `perft 3` | 91.3M | 73.2M (−20%) |
+| Code, text front end, words | 20154 | 25805 |
+| Code, windowed front end, words | 16477 | 24495 |
+
+The code grows by 5651 and 8018 words, more than the 2900 measured
+before Phase 2. The MEGA65 builds then need 42406 and 41239 words,
+with 51770 and 52937 to spare.
+
 ## 2026-11-04: A rating at the board's speed
 
 `make rate` with its defaults and `CONCURRENCY=8`: `build/host/chess_fast`

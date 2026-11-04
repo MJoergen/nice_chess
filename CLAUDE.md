@@ -50,7 +50,7 @@ only when the user asks, or when a change is for the board.
   has asserts and `-DCHECK_STATE`, which checks the incremental state
   (Zobrist key, evaluation sums) at every perft node, so it catches
   engine bugs that the NICE builds, without asserts, do not.
-- NICE builds are `-O s -D NDEBUG`. Size counts: `make size` must pass.
+- NICE builds are `-O 2 -D NDEBUG`. Size counts: `make size` must pass.
 - Speed is measured in niceemu steps, which are deterministic. Report
   figures as steps, and as seconds on the board at about 54 million
   steps a second.

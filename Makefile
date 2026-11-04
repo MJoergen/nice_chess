@@ -51,12 +51,14 @@ BUDGET = 94176
 BOOKDATA = build/gen/book_data.c
 CORE = $(wildcard src/engine/*.c)
 ENGINE = $(CORE) $(BOOKDATA)
-HEADERS = $(wildcard src/engine/*.h) src/platform/platform.h
+# The headers, and the Makefile, whose flags every build takes, so that
+# a change of the flags rebuilds.
+HEADERS = $(wildcard src/engine/*.h) src/platform/platform.h Makefile
 
-# NICE: optimized for size, which costs about 20% in speed, and without
-# asserts. The engine keeps its move lists in its own data, so the wasm
-# stack is small, and all of the memory is one page.
-NICEFLAGS = -O s -D NDEBUG --stack 8192 --memory 65536 --symbols --keep
+# NICE: optimized for speed, and without asserts. The engine keeps its
+# move lists in its own data, so the wasm stack is small, and all of the
+# memory is one page.
+NICEFLAGS = -O 2 -D NDEBUG --stack 8192 --memory 65536 --symbols --keep
 # The MEGA65: the same, built for the monitor, which loads it at 0x8000.
 MONFLAGS = $(NICEFLAGS) --monitor
 
