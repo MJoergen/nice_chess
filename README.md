@@ -38,6 +38,12 @@ the level, O the opening book on or off, Q quit, and Esc to make the
 engine move now. The book is on at first, and the engine's first moves
 come from it, at random by their weights.
 
+Each side has a clock, which counts up the time it has taken; there is
+no time control, and N sets both to 0. On the board the clocks show
+real time. In niceemu they count steps, at 54 million a second, the
+board's rate, so they show the time the board would take: with
+`--speed 0`, a little slower than real time while you think.
+
 The host build speaks UCI after `uci`, so a chess GUI can play it.
 Its option `OwnBook` turns the book on; it is off at first.
 `tools/match.py` plays two UCI engines against each other, and can run

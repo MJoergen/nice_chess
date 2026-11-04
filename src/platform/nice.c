@@ -43,6 +43,12 @@ uint32_t platform_move_time(void)
     return platform_on_board() ? 5000000 : 300000000;
 }
 
+// The MEGA65 runs about 54 million steps a second of this program.
+uint32_t platform_clock_second(void)
+{
+    return platform_on_board() ? 1000000 : 54000000;
+}
+
 // On a board, the clock and the cycle counter at the first call, which
 // the time the player took to load and start the program sets.
 uint32_t platform_seed(void)

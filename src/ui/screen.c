@@ -3,7 +3,8 @@
  *
  * The board takes the left half of the screen: 8x8 squares of 5
  * columns and 3 rows each, with the ranks in column 0 and the files
- * in row 24. The right half has the players, the state of the game,
+ * in row 24. The right half has the players and their clocks, the
+ * state of the game,
  * what the engine is thinking, the moves, the move being typed, and
  * the keys.
  *
@@ -26,6 +27,11 @@
  * Each move is also written to the console, as "move e2e4", and the
  * end of the game as "result ...". The program ends on Q, or at the
  * end of the console's input, which leaves the screen as it is.
+ *
+ * Each side's clock counts up the time it has taken, while the game
+ * goes on; there is no time control. N sets both to 0. In niceemu the
+ * clock counts steps, at 54 million a second, the MEGA65's rate, so
+ * the engine's time there is what it would take on the board.
  *
  * The engine polls the keyboard during its search on a board, and in
  * niceemu only once a read of the console has found no byte waiting:
@@ -68,7 +74,8 @@ enum
 // The rows of the right half.
 enum
 {
-    ROW_TITLE = 0, ROW_PLAYERS = 1, ROW_STATUS = 3, ROW_LEVEL = 4,
+    ROW_TITLE = 0, ROW_PLAYERS = 1,           // Players: white, then black
+    ROW_STATUS = 3, ROW_LEVEL = 4,
     ROW_INFO = 6, ROW_PV = 7,                 // PV: two rows
     ROW_MOVES = 10, MOVE_ROWS = 9,            // Two columns of 9 moves
     ROW_INPUT = 20, ROW_MSG = 21, ROW_HELP = 22 // Help: three rows
@@ -111,6 +118,13 @@ static int    book = 1;            // The engine plays from its opening book
 static engine_info_t info;
 static int    have_info;           // 1 if info is set, 2 if the move was the book's
 static int    thinking;
+
+// The clocks: for white [0] and black [1], the seconds taken, and the
+// counts of platform_micros beyond them.
+static uint32_t clock_secs[2], clock_rest[2];
+static uint32_t clock_last;        // platform_micros at the last tick
+static int    clock_side;          // The side the clock runs for: 0 white, 1 black
+static int    clock_on;            // The game goes on, and so does the clock
 
 /***************************************************************
  * Writing to the screen
@@ -242,11 +256,66 @@ static void draw_line(int row, uint32_t color, const char *s)
     clear_to_end(put_str(PX, row, color, s), row);
 }
 
+// A player and their clock: "White  you          0:12", the side whose
+// clock runs bright.
+static void draw_player(int side)
+{
+    char buf[40];
+    char *p = fmt_str(buf, side ? "Black  " : "White  ");
+    p = fmt_str(p, (human > 0) == !side ? "you" : "nice_chess");
+    while (p < buf + 20)
+        *p++ = ' ';
+    uint32_t s = clock_secs[side];
+    if (s >= 3600)
+    {
+        p = fmt_uint(p, s / 3600);
+        *p++ = ':';
+        *p++ = (char) ('0' + s / 600 % 6);
+        *p++ = (char) ('0' + s / 60 % 10);
+    }
+    else
+        p = fmt_uint(p, s / 60);
+    *p++ = ':';
+    *p++ = (char) ('0' + s / 10 % 6);
+    *p++ = (char) ('0' + s % 10);
+    *p = '\0';
+    draw_line(ROW_PLAYERS + side, COLOR(PANEL, clock_on && side == clock_side ? BRIGHT : TEXT), buf);
+}
+
 static void draw_players(void)
 {
-    draw_line(ROW_PLAYERS, COLOR(PANEL, TEXT),
-              human > 0 ? "White: you      Black: nice_chess"
-                        : "White: nice_chess   Black: you");
+    draw_player(0);
+    draw_player(1);
+}
+
+// Charges the time since the last tick to the side the clock runs
+// for, and draws its clock when a second has passed. The engine's
+// search calls it too, so it does not ask the engine whose move it is.
+static void clock_tick(void)
+{
+    uint32_t now = platform_micros();
+    uint32_t d = now - clock_last;
+    clock_last = now;
+    if (!clock_on)
+        return;
+    uint32_t second = platform_clock_second();
+    uint32_t rest = clock_rest[clock_side] + d;
+    if (rest >= second)
+    {
+        clock_secs[clock_side] += rest / second;
+        rest %= second;
+        draw_player(clock_side);
+    }
+    clock_rest[clock_side] = rest;
+}
+
+// Charges the clock, then runs it for the side to move, if the game
+// goes on. Called after each change to the game.
+static void clock_switch(void)
+{
+    clock_tick();
+    clock_side = engine_side_to_move() < 0;
+    clock_on = engine_result() == ENGINE_PLAYING;
 }
 
 static const char *status_text(int result)
@@ -380,7 +449,6 @@ static void draw_all(void)
     draw_board();
     draw_line(ROW_TITLE, COLOR(PANEL, BRIGHT), "nice_chess");
     draw_players();
-    draw_line(2, COLOR(PANEL, TEXT), "");
     draw_status();
     draw_level();
     draw_line(5, COLOR(PANEL, TEXT), "");
@@ -486,7 +554,7 @@ static int wait_key(void)
     }
     int k;
     while ((k = poll_key()) == K_NONE)
-        ;
+        clock_tick();
     return k;
 }
 
@@ -531,6 +599,9 @@ static void new_game(void)
 {
     engine_new_game();
     n_played = 0;
+    for (int i = 0; i < 2; ++i)
+        clock_secs[i] = clock_rest[i] = 0;
+    clock_last = platform_micros();
     have_info = 0;
     clear_selection();
 }
@@ -564,6 +635,7 @@ static uint32_t elapsed(void)
 
 static int stop_search(void)
 {
+    clock_tick();
     if (elapsed() >= hard_time)
         return 1;
     if (!live)
@@ -768,6 +840,7 @@ int main(void)
 
     while (1)
     {
+        clock_switch();
         draw_all();
         if (engine_result() == ENGINE_PLAYING && engine_side_to_move() != human)
         {

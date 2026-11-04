@@ -14,6 +14,7 @@
 # at the end of CHECK left out: perftsuite3 uses perftsuite.grep), after the
 # prompts "> " and the times of info lines (" time N") are taken off, and
 # then "exit N" with main's result,
+# with the figures of the players' clocks on the screen as m:ss,
 # must be tests/CHECK.expected. Prints PASS or FAIL, and exits with 1
 # on a failure.
 set -u
@@ -50,7 +51,8 @@ else
 fi
 
 expected=tests/$check.expected
-{ sed 's/^\(> \)*//; s/ time [0-9]*//' $raw | grep -f tests/${check%%[0-9]*}.grep; echo "exit $status"; } > $out
+clocks='/m\(White\|Black\)  /s/[0-9][0-9:]*:[0-9][0-9]/m:ss/'
+{ sed 's/^\(> \)*//; s/ time [0-9]*//' $raw | grep -f tests/${check%%[0-9]*}.grep | sed "$clocks"; echo "exit $status"; } > $out
 if [ "$kind" = board-screen ]; then
     timed='/mDepth [0-9]*  Score /d; /mPV /d'
     expected=$dir/$name.expected

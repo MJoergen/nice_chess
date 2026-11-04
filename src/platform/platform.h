@@ -23,6 +23,12 @@ uint32_t platform_micros(void);
 // in both.
 uint32_t platform_move_time(void);
 
+// The counts of platform_micros in a second of the players' clocks: a
+// million on a PC and on a board, where the clock is real, and in
+// niceemu 54 million steps, which the MEGA65 runs in a second, so that
+// the clocks there show the time the board would take.
+uint32_t platform_clock_second(void);
+
 // Whether the program runs on a board, such as the MEGA65, where the
 // clock is real and a read of the console returns at once when no
 // byte waits, and not in niceemu, where the clock counts steps and a
