@@ -61,3 +61,9 @@ reaches depth 5 from the opening; the board runs about 54 million steps
 of the engine a second. The keys are those of the window, on the
 MEGA65's keyboard: the cursor keys, RETURN, INST/DEL, and ESC. Q clears
 the screen and returns to the monitor.
+
+`tools/board_uci.py --eth IP build/mega65/chess_text.bin` loads the
+text front end into the board and is then a UCI engine on the host, so
+cutechess-cli, a chess GUI, or lichess-bot can play the board against
+other engines. Its docstring has a cutechess-cli example. The board's
+clock is real, and one board plays one game at a time.

@@ -44,5 +44,13 @@ done
     -resign movecount=3 score=1000 -draw movenumber=40 movecount=8 score=10 \
     -maxmoves 200 -pgnout $dir/games.pgn
 
-"$ORDO" -p $dir/games.pgn -m $dir/anchors.csv -W -D -s 1000 -o $dir/ratings.txt
+# Ordo 1.2.6 does not fix the rating of an anchor of -m when it is the
+# only one, so one anchor is given by -A and -a.
+set -- $ELOS
+if [ $# -eq 1 ]; then
+    anchors="-A sf$1 -a $1"
+else
+    anchors="-m $dir/anchors.csv"
+fi
+"$ORDO" -p $dir/games.pgn $anchors -W -D -s 1000 -o $dir/ratings.txt
 cat $dir/ratings.txt

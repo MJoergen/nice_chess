@@ -11,12 +11,13 @@ monitor, and on the host. See README.md.
   files build for NICE and for the host. `src/platform/` (clock, key
   poll) and `src/ui/` (`text.c`, `screen.c`) are around it.
 - `tests/`: the inputs of the tests, `*.grep` (the lines of the output
-  that are compared) and `*.expected`. `tools/runtest.sh` runs one
-  test, and `tools/rate.sh` a rating by cutechess-cli (`make rate`).
+  that are compared) and `*.expected`. `tools/runtest.sh` runs one test.
 - `tools/`: Python 3. `match.py` plays UCI engines against each other,
-  `board.py` runs a program on the board, `screen_game.py` plays a game
+  `board.py` runs a program on the board, `board_uci.py` is the board's
+  engine as a UCI engine of the host, `screen_game.py` plays a game
   through the keys, `size.py` checks the size, `screenshot.py` draws a
-  screen dump as a PNG.
+  screen dump as a PNG. `rate.sh` (shell) is a rating by cutechess-cli
+  and Ordo (`make rate`).
 - `doc/HISTORY.md`: how the port was done, by phases, and the
   decisions, after the fact. It says only what happened; plans and
   open items are GitHub issues, not files or TODO comments.
