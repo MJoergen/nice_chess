@@ -60,3 +60,8 @@ int platform_pollc(void)
 {
     return nice_pollc();
 }
+
+int platform_getc(void)
+{
+    return nice_getc();
+}

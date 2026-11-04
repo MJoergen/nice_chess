@@ -18,14 +18,16 @@
     `book.txt` has its lines, from which `tools/mkbook.c` makes the
     table, `build/gen/book_data.c`, with the engine's own keys.
 - `platform/`: the clock, the default time of a move, the rate of the
-  players' clocks, and a poll of the console for a key: `nice.c` for
-  NICE, `host.c` for a PC, behind `platform.h`. On NICE the time of a
+  players' clocks, and reads of the console, a byte at a time, which
+  wait or not: `nice.c` for NICE, `host.c` for a PC, behind
+  `platform.h`. On NICE the time of a
   move is 300 million steps in niceemu and 5 seconds on a board, which
   `nice.c` tells apart by the ratio of the cycle counter to the
   microsecond counter. The players' clocks count 54 million steps as a
   second in niceemu, the MEGA65's rate, and real time on a board.
 - `ui/text.c`: the text front end, on the console, and UCI. `help` lists
-  its commands.
+  its commands. During a search it reads the console, every 1024 nodes,
+  for stop.
 - `ui/screen.c`: the windowed front end, on the 80x25 screen, for NICE
   only. Its keys are listed at the top of the file and on the screen.
   It writes its log of the moves to the console's register itself, so

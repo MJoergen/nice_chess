@@ -29,7 +29,11 @@
  * After uci, the commands are those of the UCI protocol: uci,
  * isready, ucinewgame, position, go, setoption, and quit. The one
  * option is OwnBook, the book, false at first. There is no prompt,
- * go does not make the move, and stop is not heard during a search.
+ * and go does not make the move.
+ *
+ * During a search, in both modes, the line stop stops it, and the
+ * line isready is answered with readyok. Any other line waits until
+ * the search ends.
  *
  * Copyright (c) 2026 Michael Jørgensen. MIT license (see LICENSE).
  ***************************************************************/
@@ -65,36 +69,97 @@ static char *next_word(char **ps)
 }
 
 /***************************************************************
- * read_line
- * Reads a line of the console into s, at most n - 1 characters, and
- * drops the rest. A line ends at LF or CR, as a terminal on the
- * board's line, and the board's keyboard, send CR, and a file LF; an
- * LF right after a CR is the same end. Returns 0 at the end of the
- * input.
+ * The console's input, by lines
+ *
+ * A line ends at LF or CR, as a terminal on the board's line, and the
+ * board's keyboard, send CR, and a file LF; an LF right after a CR is
+ * the same end. A line longer than the buffer loses the rest.
+ *
+ * The search reads the input too, through poll_input, to hear stop.
+ * The bytes it reads of another line wait in in_line for read_line.
  ***************************************************************/
-static int read_line(char *s, int n)
+static char in_line[2048]; // position startpos moves ... of a long game
+static int in_len;         // The bytes in in_line
+static int in_ready;       // Whether in_line holds a whole line
+static int in_last;        // The byte before
+
+// Adds the byte c to in_line. Returns 1 when it ends the line.
+static int add_byte(int c)
 {
-    static int last;
-    int k = 0;
-    while (1)
+    int prev = in_last;
+    in_last = c;
+    if (c == '\n' && prev == '\r')
+        return 0;
+    if (c == '\n' || c == '\r')
     {
-        int c = getchar();
-        if (c == EOF)
-        {
-            s[k] = '\0';
-            return k > 0;
-        }
-        int prev = last;
-        last = c;
-        if (c == '\n' && prev == '\r')
-            continue;
-        if (c == '\n' || c == '\r')
-            break;
-        if (k < n - 1)
-            s[k++] = (char) c;
+        in_line[in_len] = '\0';
+        in_ready = 1;
+        return 1;
     }
-    s[k] = '\0';
+    if (in_len < (int) sizeof in_line - 1)
+        in_line[in_len++] = (char) c;
+    return 0;
+}
+
+/***************************************************************
+ * read_line
+ * Reads a line of the console into s, which has the size of in_line.
+ * Returns 0 at the end of the input.
+ ***************************************************************/
+static int read_line(char *s)
+{
+    while (!in_ready)
+    {
+        int c = platform_getc();
+        if (c < 0)
+        {
+            if (!in_len)
+                return 0;
+            in_line[in_len] = '\0';
+            break;
+        }
+        add_byte(c);
+    }
+    strcpy(s, in_line);
+    in_len = in_ready = 0;
     return 1;
+}
+
+/***************************************************************
+ * poll_input
+ * Reads the bytes of the console that wait, during a search, up to
+ * the end of a line. Returns 1 for the line stop, which it drops. It
+ * answers isready, and drops it too. Any other line it leaves for
+ * read_line, and then reads no more. From a file, where a read waits,
+ * the next line is read at once.
+ ***************************************************************/
+static int poll_input(void)
+{
+    while (!in_ready)
+    {
+        int c = platform_pollc();
+        if (c < 0)
+            return 0;
+        if (!add_byte(c))
+            continue;
+        char *w = in_line;
+        while (*w == ' ' || *w == '\t')
+            w++;
+        int stop = !strncmp(w, "stop", 4);
+        int ready = !strncmp(w, "isready", 7);
+        if (!stop && !ready)
+            return 0;
+        for (w += stop ? 4 : 7; *w == ' ' || *w == '\t'; w++)
+            ;
+        if (*w)
+            return 0; // Such as "stopper"
+        in_len = in_ready = 0;
+        if (stop)
+            return 1;
+        printf("readyok\n");
+        fflush(stdout);
+    }
+    return 0;
 }
 
 static void print_board(void)
@@ -236,7 +301,7 @@ static uint32_t elapsed(void)
 
 static int stop_search(void)
 {
-    return hard_time && elapsed() >= hard_time;
+    return (hard_time && elapsed() >= hard_time) || poll_input();
 }
 
 static int print_info(const engine_info_t *in)
@@ -388,7 +453,7 @@ static void print_bestmove(move_t m)
 
 int main(void)
 {
-    char line[2048]; // position startpos moves ... of a long game
+    static char line[sizeof in_line];
 
     engine_new_game();
     engine_book_seed(platform_seed());
@@ -401,7 +466,7 @@ int main(void)
             printf("> ");
             fflush(stdout);
         }
-        if (!read_line(line, sizeof line))
+        if (!read_line(line))
             break;
 
         char *arg = line;
@@ -450,8 +515,8 @@ int main(void)
         }
         else if (!strcmp(cmd, "setoption"))
             do_setoption(arg);
-        else if (uci_mode)
-            continue; // stop, ponderhit, and the rest
+        else if (uci_mode || !strcmp(cmd, "stop"))
+            continue; // stop after a search, ponderhit, and the rest
         else if (!strcmp(cmd, "fen"))
         {
             if (engine_set_fen(arg, NULL))

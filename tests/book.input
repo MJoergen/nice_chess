@@ -20,4 +20,7 @@ go depth 1
 setoption name OwnBook value false
 position startpos moves e2e4 c7c5 g1f3 b8c6 d2d4
 go depth 1
+position fen k7/8/8/8/8/8/6P1/r6K w - - 0 1
+go infinite
+stop
 quit

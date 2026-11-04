@@ -9,4 +9,5 @@ option name OwnBook type check default false
 info string book move
 bestmove c5d4
 bestmove g8f6
+bestmove h1h2
 exit 0

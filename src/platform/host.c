@@ -46,3 +46,9 @@ int platform_pollc(void)
     unsigned char c;
     return read(0, &c, 1) == 1 ? c : -1;
 }
+
+int platform_getc(void)
+{
+    unsigned char c;
+    return read(0, &c, 1) == 1 ? c : -1;
+}

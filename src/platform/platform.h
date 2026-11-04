@@ -47,4 +47,9 @@ uint32_t platform_seed(void);
 // and keyboard) it does not wait.
 int platform_pollc(void);
 
+// The next byte of the console's input: 0 to 255, or -1 once the
+// input has ended. It waits for the byte. It reads no more than the
+// byte, so that platform_pollc sees the bytes after it.
+int platform_getc(void);
+
 #endif // PLATFORM_H
