@@ -2,6 +2,44 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-04: The NICE builds without bounds checks
+
+With `--no-bounds-checks` (nicewasm, through nicebuild.py), an access
+to the linear memory has no compare and branch against its end; an
+access out of bounds then reads or writes whatever NICE memory the
+address reaches, where it trapped with code 2. `--trust-alignment`,
+which would also drop the test of the alignment, is not in nice_cpu
+V1.2. `--no-trap-report` was left out: it saves about 280 words and
+no steps, and a trap of another kind still reports itself.
+
+Steps in niceemu V1.2, the text front end at `-O 2`, against the
+build before (piece lists). The nodes are the same:
+
+| Run | Bounds checks | `--no-bounds-checks` |
+|---|---|---|
+| 24 Bratko-Kopec positions, `go nodes 3000` | 168.65M | 162.25M (−3.8%) |
+| 24 Bratko-Kopec positions, `go depth 5` | 1985.0M | 1910.1M (−3.8%) |
+| `go depth 6` from the opening | 30.02M | 28.66M (−4.5%) |
+| Kiwipete `go depth 5` | 262.49M | 252.77M (−3.7%) |
+| Kiwipete `perft 3` | 76.20M | 70.06M (−8.1%) |
+
+The MEGA65 builds need 73520 and 72181 words, 3873 and 3829 fewer. As
+a check that the engine makes no access out of bounds, the host build
+with `-fsanitize=address,undefined` and `-DCHECK_STATE` ran the text,
+search, and book tests, the perft suite to depth 4, the search suite
+at 10000 nodes, and the 24 positions at depth 5, with no report.
+
+With the three changes of today (`for_side`, the piece lists, and
+this), the 24 positions at 3000 nodes take 16.0% fewer steps than
+after the history table and LMR (193.16M to 162.25M, from about 2680
+to 2250 steps a node), so the board searches about 19% more nodes
+in the same time.
+
+In `tests/screen.keys` level 1 now plays d2d4, which it finds within
+depth 6 in its time, where it played e2e4 at depth 6.
+`tests/screen_game.keys` is a new game, recorded again by
+`tools/screen_game.py`; the engine at level 1 wins it.
+
 ## 2026-11-04: Piece lists
 
 `gen_moves` costs about 2870 steps a call, of which the scan of the 78

@@ -55,10 +55,12 @@ ENGINE = $(CORE) $(BOOKDATA)
 # a change of the flags rebuilds.
 HEADERS = $(wildcard src/engine/*.h) src/platform/platform.h Makefile
 
-# NICE: optimized for speed, and without asserts. The engine keeps its
+# NICE: optimized for speed, without asserts, and without the bounds
+# checks of wasm's memory accesses, which the host builds' asserts and
+# CHECK_STATE stand in for (LOG.md, 2026-11-04). The engine keeps its
 # move lists in its own data, so the wasm stack is small. The memory is
 # three pages, 192 KB, for the transposition table's 128 KB (TT_BITS).
-NICEFLAGS = -O 2 -D NDEBUG --stack 8192 --memory 196608 --symbols --keep
+NICEFLAGS = -O 2 -D NDEBUG --no-bounds-checks --stack 8192 --memory 196608 --symbols --keep
 # The MEGA65: the same, built for the monitor, which loads it at 0x8000.
 MONFLAGS = $(NICEFLAGS) --monitor
 
