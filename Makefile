@@ -79,7 +79,7 @@ CONCURRENCY ?= 4
 BOOK      ?= deps/books/8moves_v3.pgn
 export CUTECHESS ORDO STOCKFISH NODES ELOS GAMES CONCURRENCY BOOK
 
-.PHONY: help all test host-test nice-test perft-deep screen-game match-random match-mchess2 rate book size deps clean distclean
+.PHONY: help all test host-test nice-test perft-deep screen-game match-random match-mchess2 rate openings size deps clean distclean
 .PHONY: board-text board-screen board-test board-game board-match
 help:
 	@echo "nice_chess: a chess engine for the NICE system"
@@ -92,7 +92,7 @@ help:
 	@echo "  make screen-game   a full game in the windowed front end, in niceemu (a minute)"
 	@echo "  make match-random  the host build against random moves (20 games)"
 	@echo "  make match-mchess2 the host build against mchess2 (20 games, 15 minutes)"
-	@echo "  make book          fetch the openings of make rate, 8moves_v3.pgn, into deps/books/"
+	@echo "  make openings      fetch the openings of make rate, 8moves_v3.pgn, into deps/books/"
 	@echo "  make rate          a rating: cutechess-cli games against Stockfish's UCI_Elo levels, and Ordo"
 	@echo "  make size          the size of the MEGA65 builds, against the board's budget"
 	@echo "  make clean         remove build/"
@@ -212,7 +212,7 @@ match-mchess2: build/host/chess_text build/host/mchess2
 rate: build/host/chess_fast $(BOOK)
 	tools/rate.sh
 
-book: deps/books/8moves_v3.pgn
+openings: deps/books/8moves_v3.pgn
 
 build/host/mchess2: $(addprefix deps/mchess2/src/,$(MCHESS2_SRC))
 	@mkdir -p $(@D)
