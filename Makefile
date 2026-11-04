@@ -56,9 +56,9 @@ ENGINE = $(CORE) $(BOOKDATA)
 HEADERS = $(wildcard src/engine/*.h) src/platform/platform.h Makefile
 
 # NICE: optimized for speed, and without asserts. The engine keeps its
-# move lists in its own data, so the wasm stack is small, and all of the
-# memory is one page.
-NICEFLAGS = -O 2 -D NDEBUG --stack 8192 --memory 65536 --symbols --keep
+# move lists in its own data, so the wasm stack is small. The memory is
+# three pages, 192 KB, for the transposition table's 128 KB (TT_BITS).
+NICEFLAGS = -O 2 -D NDEBUG --stack 8192 --memory 196608 --symbols --keep
 # The MEGA65: the same, built for the monitor, which loads it at 0x8000.
 MONFLAGS = $(NICEFLAGS) --monitor
 
@@ -70,11 +70,11 @@ HOSTFLAGS = -O2 -W -Wall -Wextra -DCHECK_STATE
 FASTFLAGS = -O2 -W -Wall -Wextra -DNDEBUG
 
 # A rating, by tools/rate.sh: cutechess-cli and Ordo, and the opponents.
-# The board's search at 5 seconds a move is about 83000 nodes (LOG.md).
+# The board's search at 5 seconds a move is about 93000 nodes (LOG.md).
 CUTECHESS ?= cutechess-cli
 ORDO      ?= ordo
 STOCKFISH ?= stockfish
-NODES     ?= 83000
+NODES     ?= 93000
 ELOS      ?= 1700 1900 2100
 GAMES     ?= 200
 CONCURRENCY ?= 4

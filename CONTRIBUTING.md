@@ -27,7 +27,7 @@ and `NICEEMU=PATH` to make.
 `ORDO`, `STOCKFISH`). Its openings are `BOOK`, a .pgn or .epd file:
 by default `deps/books/8moves_v3.pgn`, from fishtest's books at a
 pinned commit, which it fetches (`make openings`). It plays `build/host/chess_fast`, the host build
-without asserts, at `NODES` nodes a move, 83000 by default, which is
+without asserts, at `NODES` nodes a move, 93000 by default, which is
 about 5 seconds a move on the MEGA65. At the same nodes the host and
 NICE builds play the same moves. The opponents are Stockfish at each
 UCI_Elo of `ELOS` (1700 1900 2100), at 60+0.6, `GAMES` (200) games

@@ -2,6 +2,58 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-04: A transposition table of 16384 entries, and the board's nodes a move
+
+Issue #6. Steps in niceemu V1.2, the text front end at `-O 2`, by
+`TT_BITS`: the 24 Bratko-Kopec positions, each from a cleared table,
+at the default time of a move, 300M steps. The time to a depth is
+summed over the positions that reach it with every size.
+
+| `TT_BITS` | Entries | To depth 4 (23 positions) | To depth 5 (9) | Mean depth |
+|---|---|---|---|---|
+| 11 | 2048 | 100% | 100% | 4.46 |
+| 12 | 4096 | 96.8% | 85.8% | 4.54 |
+| 13 | 8192 | 92.8% | 76.1% | 4.67 |
+| 14 | 16384 | 91.0% | 74.7% | 4.67 |
+| 15 | 32768 | 89.7% | 71.8% | 4.71 |
+
+A game of the engine against itself, 30 moves at the default time,
+was also played with each size, but the games part at the second or
+third move, so their figures do not compare.
+
+15 (256 KB) does not fit the 92K words with the code. 14 (128 KB) needs
+three pages of linear memory: the MEGA65 builds then need 75174 and
+74045 words, with 19002 and 20131 to spare. The board's loader clears
+the memory before it writes the program, and `tt_clear` clears the
+table on each new position, so the larger table, all zeros, adds
+nothing to the `.bin` file.
+
+With `-O 2` and this table, a move from the opening at the default
+time completes depth 6 (77961 nodes, 264M steps), where it completed
+depth 5 before. The fixed searches of `tests/search.input` find the
+same moves and scores with up to 27% fewer nodes. At 10000 nodes a
+position, the search suite solves 237 of 548, against 239.
+
+The nodes of 5 seconds, measured on the board this time: every 11th
+position of mchess2's search suite, 50, each with `go movetime 5000`
+on the MEGA65 R6 (NiceMonMEGA65 V1.2.1, over Ethernet). From the last
+info line of each, where the search had run more than 370 ms (48):
+
+| | Nodes a second |
+|---|---|
+| min | 11729 |
+| 25% | 17329 |
+| median | 18559 |
+| 75% | 20947 |
+| max | 24323 |
+
+So 5 seconds a move is about 93000 nodes, against 83000 before
+(`make rate`'s `NODES`). The same positions in niceemu, with `go
+movetime 270000`, take 2723 steps a node at the median (3245 before)
+and end at the same depth in 49 of 50. Paired by position, the board
+runs 51.9M steps a second of the `-O 2` program (50.5M to 53.2M for the
+middle half), a little under the 54M of the `-O s` program.
+
 ## 2026-11-04: -O 2
 
 Issue #7. Steps in niceemu V1.2, the text front end, with the

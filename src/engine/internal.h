@@ -154,9 +154,10 @@ extern const int32_t phase_value[13];   // By piece + 6
 void eval_init(void);
 int  evaluate(void);                    // From the point of view of the side to move
 
-// tt.c: the transposition table, of 1 << TT_BITS entries of 8 bytes.
+// tt.c: the transposition table, of 1 << TT_BITS entries of 8 bytes,
+// 128 KB. The NICE builds' linear memory (NICEFLAGS) must hold it.
 #ifndef TT_BITS
-#define TT_BITS 11
+#define TT_BITS 14
 #endif
 
 enum { TT_UPPER = 1, TT_LOWER = 2, TT_EXACT = 3 }; // The kind of bound

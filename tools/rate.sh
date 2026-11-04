@@ -7,7 +7,7 @@
 # Then Ordo rates the engine, with each Stockfish anchored at its UCI_Elo.
 #
 # The engine gets "go nodes $NODES" for each move. It plays the same
-# moves as the NICE builds at the same nodes, and 83000 nodes is about
+# moves as the NICE builds at the same nodes, and 93000 nodes is about
 # 5 seconds a move on the MEGA65 (LOG.md). Stockfish gets 60+0.6, the
 # time control its UCI_Elo was fitted at, to CCRL 40/4.
 #
@@ -18,7 +18,7 @@
 set -eu
 : "${BOOK:=deps/books/8moves_v3.pgn}"
 : "${CUTECHESS:=cutechess-cli}" "${ORDO:=ordo}" "${STOCKFISH:=stockfish}"
-: "${NODES:=83000}" "${ELOS:=1700 1900 2100}" "${GAMES:=200}" "${CONCURRENCY:=4}"
+: "${NODES:=93000}" "${ELOS:=1700 1900 2100}" "${GAMES:=200}" "${CONCURRENCY:=4}"
 
 case "$BOOK" in
     *.epd) format=epd ;;
