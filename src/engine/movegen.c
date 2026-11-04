@@ -47,18 +47,17 @@ int gen_moves(move_t *list, int quiet)
 
     const int32_t *bd = pos.board;
     const int s = pos.side;
+    const int32_t *pieces = pos.pieces[s > 0];
+    const int count = pos.count[s > 0];
     int n = 0;
 
-    for (int i = A1; i <= H8; ++i)
+    for (int p = 0; p < count; ++p)
     {
+        int i = pieces[p];
         int piece = bd[i];
-        int own = for_side(piece, s); // WP to WK for our pieces
         int first, last, slide;
 
-        if (own <= 0 || piece == IV) // Off the board, empty, or the opponent's
-            continue;
-
-        switch (own)
+        switch (for_side(piece, s)) // WP to WK, or +-IV if captured (square 0)
         {
             case WP :
             {

@@ -83,15 +83,22 @@ void board_clear(void)
     pos.king[1]  = 0;
     pos.ply      = 0;
     pos.hash     = 0;
+    pos.count[0] = 0;
+    pos.count[1] = 0;
 } // end of board_clear
 
 /***************************************************************
  * board_put
  * Puts a piece on an empty square, while setting up a position.
- * The hash is computed afterwards, by board_compute_hash.
+ * Its side must have fewer than 16 pieces. The hash is computed
+ * afterwards, by board_compute_hash.
  ***************************************************************/
 void board_put(int sq, int piece)
 {
+    int c = piece > 0;
+    assert(pos.count[c] < 16);
+    pos.index[sq] = pos.count[c];
+    pos.pieces[c][pos.count[c]++] = sq;
     pos.board[sq] = piece;
     pos.psqt  += psqt[piece + 6][sq64[sq]];
     pos.phase += phase_value[piece + 6];
@@ -121,13 +128,13 @@ uint32_t board_compute_hash(void)
 
 /***************************************************************
  * board_consistent
- * True if the sums that make and undo keep up to date, the Zobrist
- * key and those of the evaluation, are those of the position. For
- * the tests.
+ * True if what make and undo keep up to date, the Zobrist key, the
+ * sums of the evaluation, and the piece lists, agree with the board.
+ * For the tests.
  ***************************************************************/
 int board_consistent(void)
 {
-    int32_t s = 0, phase = 0;
+    int32_t s = 0, phase = 0, n[2] = {0, 0};
     for (int sq = A1; sq <= H8; ++sq)
     {
         int p = pos.board[sq];
@@ -135,7 +142,23 @@ int board_consistent(void)
         {
             s     += psqt[p + 6][sq64[sq]];
             phase += phase_value[p + 6];
+            n[p > 0]++;
         }
+    }
+    for (int c = 0; c < 2; ++c)
+    {
+        for (int i = 0; i < pos.count[c]; ++i)
+        {
+            int sq = pos.pieces[c][i];
+            int p = pos.board[sq];
+            if (sq == 0)
+                continue; // Captured
+            if (p == IV || p == EM || (p > 0) != c || pos.index[sq] != i)
+                return 0;
+            n[c]--;
+        }
+        if (n[c] != 0)
+            return 0;
     }
     return s == pos.psqt && phase == pos.phase && board_compute_hash() == pos.hash;
 } // end of board_consistent

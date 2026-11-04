@@ -3,7 +3,7 @@ search suite CCR: 5 of 25
 search suite position: 0 of 25
 search suite LCTII: 1 of 35
 search suite zugzwang: 1 of 5
-search suite sbd: 70 of 134
+search suite sbd: 68 of 134
 search suite WAC: 166 of 300
-search suite at 10000 nodes: 249 of 548
+search suite at 10000 nodes: 247 of 548
 exit 0

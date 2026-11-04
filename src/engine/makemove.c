@@ -89,9 +89,13 @@ void make_move(move_t m)
     hs->state = pos.castle | pos.ep << 4 | pos.halfmove << 11;
     hs->hash  = h;
 
+    int us = pos.side > 0;
     if (captured != EM)
     {
         int csq = (kind == MK_EP) ? to + for_side(S, pos.side) : to;
+        int slot = pos.index[csq];
+        pos.pieces[!us][slot] = 0;
+        hs->slot = slot;
         pos.board[csq] = EM;
         h ^= zob(captured, csq);
     }
@@ -99,6 +103,8 @@ void make_move(move_t m)
     int arrives = (promoted != EM) ? promoted : piece;
     pos.board[from] = EM;
     pos.board[to]   = arrives;
+    pos.index[to]   = pos.index[from];
+    pos.pieces[us][pos.index[to]] = to;
     h ^= zob(piece, from) ^ zob(arrives, to);
 
     if (kind == MK_CASTLE)
@@ -108,6 +114,8 @@ void make_move(move_t m)
         int rto   = (to > from) ? to - 1 : to + 1;
         pos.board[rfrom] = EM;
         pos.board[rto]   = rook;
+        pos.index[rto]   = pos.index[rfrom];
+        pos.pieces[us][pos.index[rto]] = rto;
         h ^= zob(rook, rfrom) ^ zob(rook, rto);
     }
 
@@ -161,10 +169,19 @@ void undo_move(void)
     if (pos.side < 0)
         pos.fullmove--;
 
+    int us = pos.side > 0;
     pos.board[from] = piece;
     pos.board[to]   = EM;
+    pos.index[from] = pos.index[to];
+    pos.pieces[us][pos.index[from]] = from;
     if (captured != EM)
-        pos.board[(kind == MK_EP) ? to + for_side(S, pos.side) : to] = captured;
+    {
+        int csq = (kind == MK_EP) ? to + for_side(S, pos.side) : to;
+        int slot = hs->slot;
+        pos.pieces[!us][slot] = csq;
+        pos.index[csq] = slot;
+        pos.board[csq] = captured;
+    }
 
     if (kind == MK_CASTLE)
     {
@@ -172,6 +189,8 @@ void undo_move(void)
         int rto   = (to > from) ? to - 1 : to + 1;
         pos.board[rto]   = EM;
         pos.board[rfrom] = pos.side*WR;
+        pos.index[rfrom] = pos.index[rto];
+        pos.pieces[us][pos.index[rfrom]] = rfrom;
     }
 
     if (piece == WK) pos.king[1] = from;

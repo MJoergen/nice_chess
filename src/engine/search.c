@@ -207,11 +207,11 @@ static int is_draw(void)
  ***************************************************************/
 static int has_pieces(void)
 {
-    const int32_t *bd = pos.board;
     const int s = pos.side;
-    for (int sq = A1; sq <= H8; ++sq)
+    const int32_t *pieces = pos.pieces[s > 0];
+    for (int i = 0; i < pos.count[s > 0]; ++i)
     {
-        int p = for_side(bd[sq], s);
+        int p = for_side(pos.board[pieces[i]], s);
         if (p >= WN && p <= WQ)
             return 1;
     }

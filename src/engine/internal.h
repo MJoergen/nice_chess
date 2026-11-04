@@ -81,6 +81,7 @@ typedef struct
     move_t   move;
     int32_t  state;  // castle | ep << 4 | halfmove << 11
     uint32_t hash;
+    int32_t  slot;   // The place of the captured piece in its list
 } history_t;
 
 typedef struct
@@ -96,6 +97,16 @@ typedef struct
     uint32_t  hash;      // Zobrist key
     int32_t   king[2];   // The squares of the kings: [0] black, [1] white
     int32_t   ply;       // The number of entries of hist
+
+    // The piece lists: the squares of the pieces of each side, [0]
+    // black and [1] white, in the order in which they were put on
+    // the board, and the place in its list of the piece on each
+    // square (an empty square's is stale). A captured piece keeps its
+    // place, with square 0, which is off the board, until undo_move
+    // puts it back; so count is the number of places in use.
+    int32_t   pieces[2][16];
+    int32_t   count[2];
+    int32_t   index[120];
 } position_t;
 
 extern position_t pos;

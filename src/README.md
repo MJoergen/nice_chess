@@ -3,10 +3,12 @@
 - `engine/`: the engine core. `engine.h` is its interface; `internal.h`
   is what its files share. It does no I/O, reads no clock, and calls no
   malloc, so it builds for NICE and for the host alike.
-  - `board.c`: the position, the Zobrist keys, and attacks.
+  - `board.c`: the position, with a list of the squares of each
+    side's pieces, the Zobrist keys, and attacks.
   - `movegen.c`: move generation, and the global move stack.
   - `makemove.c`: make and undo, which keep the evaluation's sums, the
-    king squares, and the Zobrist key up to date, and the null move.
+    king squares, the piece lists, and the Zobrist key up to date, and
+    the null move.
   - `fen.c`: FEN input and output, and moves in coordinate notation.
   - `eval.c`: the evaluation, by material and piece-square tables.
   - `search.c`: the search, by iterative deepening, with a principal

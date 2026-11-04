@@ -2,6 +2,56 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-04: Piece lists
+
+`gen_moves` costs about 2870 steps a call, of which the scan of the 78
+squares from a1 to h8 for the side's pieces is about 750. Counted on
+the host, of its calls 72% (`go depth 6` from the opening) and 89%
+(Kiwipete, `go depth 5`) are those of the quiescence search, for the
+captures. A capture cuts 24% and 99.7% of the nodes that are cut; a
+killer cuts most of the rest (72% from the opening). So generating
+the captures and the quiet moves of a node in two stages would save
+little: the quiescence search already generates only captures, and
+it walks the same squares and rays as a full generation. A list of
+the squares of each side's pieces saves the scan in every call.
+
+`pos.pieces[2][16]` holds the squares, `pos.count` the places in use,
+and `pos.index[120]` the place of the piece on each square. A first
+version moved the last piece of a list into the place of a captured
+one, which undo put back from a place saved in the history: 7
+accesses to the lists in each of make and undo for a capture, and the
+perft took 6% more steps than before. Each access to an array by a
+computed index takes 6 to 8 instructions in the translated code (the
+address, the shift to a word index, the bounds check). Now a captured
+piece keeps its place, with square 0, which holds `IV`, so that
+`gen_moves` passes over it in the `default` of its switch, with no
+test of its own; a capture takes 3 accesses, and the count does not
+change in a search. Each move also updates the place of the piece that
+moves, in make and in undo.
+
+Steps in niceemu V1.2, the text front end at `-O 2`, against the
+build before (`for_side`). The 24 Bratko-Kopec positions at 3000
+nodes each search the same number of nodes in both, which makes it
+the measure of the steps a node:
+
+| Run | Before | Piece lists |
+|---|---|---|
+| 24 Bratko-Kopec positions, `go nodes 3000` | 193.16M | 168.65M (−12.7%) |
+| 24 Bratko-Kopec positions, `go depth 5` | 2149.1M | 1985.0M (−7.6%) |
+| `go depth 6` from the opening | 53.76M, 13378 nodes | 30.02M, 8907 nodes |
+| Kiwipete `go depth 5` | 297.67M, 128147 nodes | 262.49M, 123094 nodes |
+| Kiwipete `perft 3` | 72.87M | 76.20M (+4.6%) |
+
+Perft makes every move that it generates, so it pays the updates of
+make and undo more often than the search does. The moves are generated
+in the order of the lists, not of the squares, so the search visits
+other nodes: the search suite at 10000 nodes solves 247 of 548, from
+249 (sbd 68, from 70). In `tests/search.input` the mate in 2 of
+`2rr3k/...` is found at depth 5, where it was found at depth 3: its
+first move, the quiet g3g6, now comes late at depth 3 and is reduced
+by LMR. The MEGA65 builds need 752 and 795 words more. A FEN with more
+than 16 pieces of a side is now invalid.
+
 ## 2026-11-04: Where the steps go, and the multiplications by the side
 
 A trace (`niceemu -t`) of the text front end at `-O 2`, with the steps

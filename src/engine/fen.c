@@ -78,6 +78,7 @@ int engine_set_fen(const char *fen, const char **end)
             p -= 6;
             if ((p == WK && pos.king[1]) || (p == BK && pos.king[0])) goto error;
             if ((p == WP || p == BP) && (rank == 0 || rank == 7)) goto error;
+            if (pos.count[p > 0] == 16) goto error;
             board_put(square(file, rank), p);
             file++;
         }
