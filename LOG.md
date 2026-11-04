@@ -2,6 +2,34 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-04: A rating at the board's speed
+
+`make rate` with its defaults and `CONCURRENCY=8`: `build/host/chess_fast`
+at 83000 nodes a move, the board's 5 seconds, against Stockfish 16 at
+UCI_Elo 1700, 1900, and 2100, at 60+0.6. 200 games each, from
+8moves_v3.pgn (`make book`), each opening with both colors.
+cutechess-cli 1.5.1, Ordo 1.2.6. It took 107 minutes.
+
+| Opponent | Score |
+|---|---|
+| sf1700 | 53% |
+| sf1900 | 37% |
+| sf2100 | 35% |
+| All, 600 games | 42% |
+
+Ordo, with each Stockfish anchored at its UCI_Elo: 1817 ± 30, on the
+CCRL 40/4 scale. 3% of the games were draws. There were no losses on
+time and no illegal moves.
+
+The ± 30 is only the error of the number of games. The engine scored
+nearly the same against 1900 and 2100, so Stockfish's UCI_Elo levels
+are not 200 apart against this engine; the rating is about 1800 within
+50 to 100.
+
+On the board, 4 games of `tools/board_uci.py` against Stockfish at
+UCI_Elo 1800, at 40/200 for the board, gave 3 of 4: too few to
+measure, and not against the rating.
+
 ## 2026-11-03: The board's nodes a move, and a first rating
 
 To rate the engine as it plays on the MEGA65, the host build plays at
