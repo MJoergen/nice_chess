@@ -9,10 +9,13 @@ then a UCI engine: what comes in on stdin goes to the program on the
 board, and the lines it prints come out on stdout. So cutechess-cli, a
 chess GUI, or lichess-bot can play the board as it plays any engine:
 
-    cutechess-cli -engine name=mega65 cmd=tools/board_uci.py proto=uci \\
+    cutechess-cli -engine name=mega65 cmd=tools/board_uci.py dir=. proto=uci \\
         arg=--eth arg=192.168.1.65 arg=build/mega65/chess_text.bin tc=40/200 \\
       -engine cmd=stockfish proto=uci tc=60+0.6 \\
         option.UCI_LimitStrength=true option.UCI_Elo=1800 ...
+
+cutechess-cli runs an engine in the directory of its cmd, so dir=.
+keeps the path of PROG.bin relative to the current directory.
 
 The board's clock is real, and its time management is its own, from
 wtime and btime. The time a move takes on the link counts against it,
