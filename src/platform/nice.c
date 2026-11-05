@@ -13,11 +13,12 @@ uint32_t platform_micros(void)
     return (uint32_t) nice_micros();
 }
 
-// In niceemu the cycle counter and the microsecond counter both count
-// steps (nice_cpu's SYSTEM.md §3), also with --window, where a step
-// takes a microsecond. On a board both count real time, the cycles at
-// the clock's rate, 100 MHz on the MEGA65. So the ratio of the two
-// over a millisecond tells them apart, once, at the first call.
+// In niceemu with --step-time the cycle counter and the microsecond
+// counter both count steps (nice_cpu's SYSTEM.md §3). On a board both
+// count real time, the cycles at the clock's rate, 100 MHz on the
+// MEGA65. So the ratio of the two over a millisecond tells them apart,
+// once, at the first call. Without --step-time niceemu counts the
+// host's time, and is taken for a board.
 int platform_on_board(void)
 {
     static int known, board;

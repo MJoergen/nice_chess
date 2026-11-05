@@ -128,7 +128,7 @@ def read_sym(path: str, name: str) -> int:
 
 
 def dump(emu: str, inp: str, binfile: str, ranges: list[tuple[int, int]]) -> dict[int, int]:
-    cmd = [emu, "-i", inp]
+    cmd = [emu, "--step-time", "-i", inp]
     for addr, n in ranges:
         cmd += ["-d", f"0x{addr:x}:{n}"]
     out = subprocess.run(cmd + [binfile], stdin=subprocess.DEVNULL, capture_output=True,

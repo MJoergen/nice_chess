@@ -33,8 +33,9 @@ white's side, or as "mate N" (N moves, + if white mates). It thinks
 while the front end does, after the opponent's move.
 
 KEYS_OUT gets every key pressed, so that the same game can be played
-again from a file: niceemu -i KEYS_OUT SCREEN_BIN, or with --window.
-As niceemu's clock counts steps, the engine plays the same moves again.
+again from a file: niceemu --step-time -i KEYS_OUT SCREEN_BIN, or with
+--window. As niceemu's clock then counts steps, the engine plays the same
+moves again.
 
 With --eth HOST or --port DEVICE, SCREEN_BIN (build/mega65/chess_screen.bin,
 built for the monitor) runs on the MEGA65 instead, through board.py,
@@ -115,7 +116,7 @@ class Screen:
     """The front end in niceemu, fed key by key."""
 
     def __init__(self, emu: str, binfile: str):
-        self.p = subprocess.Popen([emu, binfile], stdin=subprocess.PIPE,
+        self.p = subprocess.Popen([emu, "--step-time", binfile], stdin=subprocess.PIPE,
                                   stdout=subprocess.PIPE, text=True, bufsize=1)
         self.keys: list[str] = []
 

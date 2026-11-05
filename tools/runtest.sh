@@ -2,8 +2,9 @@
 # runtest.sh NAME CHECK INPUT host|nice|screen|board|board-screen PROGRAM [ARGS...]
 #
 # Runs PROGRAM with INPUT as its console input, on the host, in
-# niceemu ($NICEEMU), or on the board under its monitor (board, through
-# tools/board.py, with the link in $BOARDLINK, such as "--eth 192.168.1.65"),
+# niceemu ($NICEEMU, with --step-time, so that its clock counts steps),
+# or on the board under its monitor (board, through tools/board.py,
+# with the link in $BOARDLINK, such as "--eth 192.168.1.65"),
 # and leaves its output in build/test/NAME.raw.
 # screen is nice with --color, so that the screen at the halt, with
 # its colors, is in the output too, and board-screen is board with it.
@@ -38,7 +39,7 @@ if [ "$kind" = board ] || [ "$kind" = board-screen ]; then
 elif [ "$kind" = nice ] || [ "$kind" = screen ]; then
     color=
     [ "$kind" = screen ] && color=--color
-    "$NICEEMU" $color -i "$input" "$prog" < /dev/null > $raw
+    "$NICEEMU" --step-time $color -i "$input" "$prog" < /dev/null > $raw
     r1=$(grep -o 'R1  [0-9a-f]*' $raw | cut -c5-)
     if grep -q 'Halted (HALT)' $raw && [ -n "$r1" ]; then
         status=$(( 0x$r1 ))

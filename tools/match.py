@@ -21,7 +21,8 @@ to answer go counts. A game of more than --max-moves moves is a draw.
 --go1 and --go2 give an engine a go command of its own instead, such as
 "go nodes 10000", or "go" for its default time; its time is then not
 counted. That is how to play an engine in niceemu, whose clock counts
-steps, not real time: "niceemu build/nice/chess_text.bin" with --go2 go.
+steps, not real time: "niceemu --step-time build/nice/chess_text.bin"
+with --go2 go.
 
 --opt1 and --opt2 NAME=VALUE set a UCI option of an engine, such as
 UCI_Elo=1500 of Stockfish, and may be repeated.

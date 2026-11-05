@@ -31,7 +31,10 @@ date in make and undo.
 
 ## Decisions
 
-1. nice_cpu is pinned to a release, V1.2, and the pin is raised by hand.
+1. nice_cpu is pinned to a release, and the pin is raised by hand: V1.2
+   at first, V1.6 for the font of #12. From V1.3 niceemu's microsecond
+   counter counts the host's time, so the tests and tools run it with
+   `--step-time`, where it counts steps as before.
 2. No copy of mchess2 in this repository. mchess2 is archived, and the
    test suites are fetched from it at commit `65e8855`.
 3. More RAM on the MEGA65 was requested from NiceMonMEGA65

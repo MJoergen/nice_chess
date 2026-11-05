@@ -16,7 +16,7 @@ what that needs, and the tests.
 
 To play in the emulator:
 
-    deps/niceemu-V1.2-x86_64-linux/niceemu build/nice/chess_text.bin
+    deps/niceemu-V1.6-x86_64-linux/niceemu --step-time build/nice/chess_text.bin
 
 Type `help` for the commands. Moves are in coordinate notation, such as
 `e2e4`, and `go` makes the engine move. In niceemu, `go` takes 300 million
@@ -25,24 +25,23 @@ or `go nodes 20000` are quicker. `book on` makes `go` play from the
 opening book, where the position is in it, and `book` lists its moves.
 
 The windowed front end shows the board on the 80×25 screen. It needs
-the window build of niceemu, `niceemu-window-V1.2-x86_64-linux.tar.gz`
-from the [V1.2 release](https://github.com/MJoergen/nice_cpu/releases/tag/V1.2):
+the window build of niceemu, `niceemu-window-V1.6-x86_64-linux.tar.gz`
+from the [V1.6 release](https://github.com/MJoergen/nice_cpu/releases/tag/V1.6):
 
-    niceemu --window --speed 0 build/nice/chess_screen.bin
+    niceemu --window --step-time build/nice/chess_screen.bin
 
-`--speed 0` runs the emulator as fast as it can; at its default of one
-step per microsecond, a move takes the engine five minutes. Move with
-the arrows and Enter, or type a move such as `e2e4` and Enter. The keys
-are on the screen: U undo, S switch sides, R rotate, N new game, + and −
-the level, O the opening book on or off, Q quit, and Esc to make the
-engine move now. The book is on at first, and the engine's first moves
-come from it, at random by their weights.
+`--step-time` makes niceemu's clock count steps, one microsecond each,
+rather than the host's time; the window runs as fast as the host can.
+Move with the arrows and Enter, or type a move such as `e2e4` and Enter.
+The keys are on the screen: U undo, S switch sides, R rotate, N new
+game, + and − the level, O the opening book on or off, Q quit, and Esc
+to make the engine move now. The book is on at first, and the engine's
+first moves come from it, at random by their weights.
 
 Each side has a clock, which counts up the time it has taken; there is
 no time control, and N sets both to 0. On the board the clocks show
-real time. In niceemu they count steps, at 54 million a second, the
-board's rate, so they show the time the board would take: with
-`--speed 0`, a little slower than real time while you think.
+real time. In niceemu with `--step-time` they count steps, at 54 million
+a second, the board's rate, so they show the time the board would take.
 
 The host build speaks UCI after `uci`, so a chess GUI can play it.
 Its option `OwnBook` turns the book on; it is off at first.
