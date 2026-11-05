@@ -27,7 +27,7 @@ monitor, and on the host. See README.md.
 - `CONTRIBUTING.md`: building and the tests, for human contributors.
   Keep it, README.md, and `make help` in sync with the Makefile.
 - `deps/` (fetched by `make deps`) and `build/` are not in git.
-  `deps/nice_cpu` is nice_cpu at the pinned tag: the translator
+  `deps/nice_cpu-TAG` is nice_cpu at the pinned tag: the translator
   (`translator/nicebuild.py`), the runtime and libc, and the docs of the
   CPU and toolchain (`doc/ISA.md`, `doc/TOOLCHAIN.md`).
 

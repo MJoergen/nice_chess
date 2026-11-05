@@ -15,7 +15,7 @@ SEARCHSUITE_SHA256 := 291bd3110550fbb26f8c887e4ed23249200d044b52d912b573b1875351
 BOOKS_COMMIT    := 2ec69181c0b1367c5c58bcf5304a79c7b198b655
 BOOK_ZIP_SHA256 := 7e1e9dd118b4bb97d8a8b5b8a790c86e21f8509d59a27d2883767d94477be02e
 
-NICE_CPU ?= deps/nice_cpu
+NICE_CPU ?= deps/nice_cpu-$(NICE_CPU_TAG)
 NICEEMU  ?= deps/niceemu-$(NICE_CPU_TAG)-x86_64-linux/niceemu
 NICEMON  ?= ../NiceMonMEGA65
 PYTHON   ?= python3
@@ -83,7 +83,7 @@ CONCURRENCY ?= 4
 BOOK      ?= deps/books/8moves_v3.pgn
 export CUTECHESS ORDO STOCKFISH NODES ELOS GAMES CONCURRENCY BOOK
 
-.PHONY: help all test host-test nice-test perft-deep screen-game match-random match-mchess2 rate openings size deps clean distclean
+.PHONY: FORCE help all test host-test nice-test perft-deep screen-game match-random match-mchess2 rate openings size deps clean distclean
 .PHONY: board-text board-screen board-test board-game board-match board-stockfish
 help:
 	@echo "nice_chess: a chess engine for the NICE system"
@@ -115,29 +115,40 @@ help:
 	@echo ""
 	@echo "NICE_CPU=DIR and NICEEMU=PATH use local copies of nice_cpu and niceemu."
 
+# The NICE builds depend on the toolchain: its directory and commit, in
+# a file that changes only when they do, so that a new pin or another
+# NICE_CPU=DIR builds them again.
+TOOLCHAIN = build/toolchain.txt
+$(TOOLCHAIN): FORCE | $(NICE_CPU)
+	@mkdir -p $(@D)
+	@t="$(abspath $(NICE_CPU)) $$(git -C $(NICE_CPU) rev-parse HEAD 2>/dev/null)"; \
+	  [ "$$t" = "$$(cat $@ 2>/dev/null)" ] || echo "$$t" > $@
+
+FORCE:
+
 all: build/nice/chess_text.bin build/nice/chess_screen.bin build/host/chess_text \
      build/mega65/chess_text.bin build/mega65/chess_screen.bin
 
-build/nice/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/nice.c | $(NICE_CPU)
+build/nice/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/nice.c $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(NICEFLAGS) -o $@ $(ENGINE) src/ui/text.c src/platform/nice.c
 
-build/nice/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/platform/nice.c | $(NICE_CPU)
+build/nice/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/platform/nice.c $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(NICEFLAGS) -o $@ $(ENGINE) src/ui/screen.c src/platform/nice.c
 
-build/mega65/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/nice.c | $(NICE_CPU)
+build/mega65/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/nice.c $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(MONFLAGS) -o $@ $(ENGINE) src/ui/text.c src/platform/nice.c
 
-build/mega65/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/platform/nice.c | $(NICE_CPU)
+build/mega65/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/platform/nice.c $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(MONFLAGS) -o $@ $(ENGINE) src/ui/screen.c src/platform/nice.c
 
 # nice_cpu's stand-in for a monitor at 0, which runs a program at 0x8000
 # as the monitor does, so that the MEGA65 builds run in niceemu too,
 # joined after it (a .bin file is address and word pairs).
-build/nice/monstub.bin: $(NICE_CPU)/runtime/test/monitor.nasm | $(NICE_CPU)
+build/nice/monstub.bin: $(NICE_CPU)/runtime/test/monitor.nasm $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(PYTHON) $(NICE_CPU)/assembler/niceasm.py -o $@ $<
 
@@ -145,7 +156,7 @@ build/test/mon_%.bin: build/nice/monstub.bin build/mega65/%.bin
 	@mkdir -p $(@D)
 	cat $^ > $@
 
-build/nice/perftsuite.bin: $(ENGINE) $(HEADERS) tests/perftsuite.c | $(NICE_CPU)
+build/nice/perftsuite.bin: $(ENGINE) $(HEADERS) tests/perftsuite.c $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(NICEFLAGS) -D PERFT_MAX_DEPTH=3 -o $@ $(ENGINE) tests/perftsuite.c
 
@@ -273,7 +284,7 @@ board-match: build/mega65/chess_text.bin build/host/chess_text
 
 deps: $(NICE_CPU) $(NICEEMU) $(PERFTSUITE) $(SEARCHSUITE)
 
-deps/nice_cpu:
+deps/nice_cpu-$(NICE_CPU_TAG):
 	git clone --quiet --depth 1 --branch $(NICE_CPU_TAG) -c advice.detachedHead=false \
 	  https://github.com/MJoergen/nice_cpu $@
 

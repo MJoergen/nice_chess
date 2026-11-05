@@ -7,13 +7,15 @@ REPORT is what niceemu printed at the halt with --dump 0xFFFF0000:2000,
 the 2000 words of the screen. (--color is not enough, as it leaves out
 the blanks at the end of each row, whatever their color.) The
 characters are drawn in the font of niceemu's window, from
-emulator/src/font.zig of nice_cpu, so the picture is what --window
+emulator/src/font.zig of nice_cpu (by default of the newest
+deps/nice_cpu-*), so the picture is what --window
 shows. Needs Pillow.
 """
 
 from __future__ import annotations
 
 import argparse
+import glob
 import re
 import sys
 
@@ -54,7 +56,8 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Draws niceemu's screen as a PNG.")
     ap.add_argument("report")
     ap.add_argument("png")
-    ap.add_argument("--font", default="deps/nice_cpu/emulator/src/font.zig")
+    fonts = sorted(glob.glob("deps/nice_cpu-*/emulator/src/font.zig"))
+    ap.add_argument("--font", default=fonts[-1] if fonts else None, required=not fonts)
     args = ap.parse_args()
 
     glyphs = read_font(args.font)
