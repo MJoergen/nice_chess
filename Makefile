@@ -83,7 +83,7 @@ CONCURRENCY ?= 4
 BOOK      ?= deps/books/8moves_v3.pgn
 export CUTECHESS ORDO STOCKFISH NODES ELOS GAMES CONCURRENCY BOOK
 
-.PHONY: FORCE help all test host-test nice-test perft-deep screen-game match-random match-mchess2 rate openings size deps clean distclean
+.PHONY: FORCE help all test pieces host-test nice-test perft-deep screen-game match-random match-mchess2 rate openings size deps clean distclean
 .PHONY: board-text board-screen board-test board-game board-match board-stockfish
 help:
 	@echo "nice_chess: a chess engine for the NICE system"
@@ -99,6 +99,7 @@ help:
 	@echo "  make openings      fetch the openings of make rate, 8moves_v3.pgn, into deps/books/"
 	@echo "  make rate          a rating: cutechess-cli games against Stockfish's UCI_Elo levels, and Ordo"
 	@echo "  make size          the size of the MEGA65 builds, against the board's budget"
+	@echo "  make pieces        draw the pieces again into src/ui/pieces.h (needs Pillow)"
 	@echo "  make clean         remove build/"
 	@echo "  make distclean     remove build/ and deps/"
 	@echo ""
@@ -133,7 +134,7 @@ build/nice/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/nice.
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(NICEFLAGS) -o $@ $(ENGINE) src/ui/text.c src/platform/nice.c
 
-build/nice/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/platform/nice.c $(TOOLCHAIN)
+build/nice/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/ui/pieces.h src/platform/nice.c $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(NICEFLAGS) -o $@ $(ENGINE) src/ui/screen.c src/platform/nice.c
 
@@ -141,7 +142,7 @@ build/mega65/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/nic
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(MONFLAGS) -o $@ $(ENGINE) src/ui/text.c src/platform/nice.c
 
-build/mega65/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/platform/nice.c $(TOOLCHAIN)
+build/mega65/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/ui/pieces.h src/platform/nice.c $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(MONFLAGS) -o $@ $(ENGINE) src/ui/screen.c src/platform/nice.c
 
@@ -159,6 +160,11 @@ build/test/mon_%.bin: build/nice/monstub.bin build/mega65/%.bin
 build/nice/perftsuite.bin: $(ENGINE) $(HEADERS) tests/perftsuite.c $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(NICEFLAGS) -D PERFT_MAX_DEPTH=3 -o $@ $(ENGINE) tests/perftsuite.c
+
+# The glyphs of the pieces. pieces.h is in git, so that a build needs
+# no Pillow; make pieces draws it again after a change to mkpieces.py.
+pieces:
+	$(PYTHON) tools/mkpieces.py src/ui/pieces.h
 
 build/host/mkbook: $(CORE) $(HEADERS) tools/mkbook.c
 	@mkdir -p $(@D)

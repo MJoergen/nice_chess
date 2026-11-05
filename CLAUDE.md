@@ -16,8 +16,9 @@ monitor, and on the host. See README.md.
   `board.py` runs a program on the board, `board_uci.py` is the board's
   engine as a UCI engine of the host, `screen_game.py` plays a game
   through the keys, `size.py` checks the size, `screenshot.py` draws a
-  screen dump as a PNG. `rate.sh` (shell) is a rating by cutechess-cli
-  and Ordo (`make rate`). `mkbook.c` (C, on the host) makes the table
+  screen dump as a PNG, in the font it selects, `mkpieces.py` draws
+  the pieces as glyphs into `src/ui/pieces.h` (`make pieces`).
+  `rate.sh` (shell) is a rating by cutechess-cli and Ordo (`make rate`). `mkbook.c` (C, on the host) makes the table
   of the opening book from `src/engine/book.txt`.
 - `doc/HISTORY.md`: how the port was done, by phases, and the
   decisions, after the fact. It says only what happened; plans and

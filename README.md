@@ -7,7 +7,7 @@ A simple chess engine for the NICE system
 It is a port of the [mchess2](https://github.com/MJoergen/mchess2)
 engine; [doc/HISTORY.md](doc/HISTORY.md) tells how it was done.
 
-![The windowed front end on the MEGA65, after the engine mated as black](doc/screenshot.png)
+![The windowed front end in niceemu, after the engine mated as black](doc/screenshot.png)
 
 ## Playing
 
@@ -71,6 +71,11 @@ reaches depth 5 from the opening; the board runs about 54 million steps
 of the engine a second. The keys are those of the window, on the
 MEGA65's keyboard: the cursor keys, RETURN, INST/DEL, and ESC. Q clears
 the screen and returns to the monitor.
+
+The windowed front end draws its pieces as glyphs in the font RAM, which
+the board's display has from
+[NiceMonMEGA65#71](https://github.com/MJoergen/NiceMonMEGA65/issues/71)
+on. Under a monitor without it, the squares show no pieces.
 
 `make board-stockfish` plays the windowed front end on the board
 against Stockfish (`STOCKFISH`) at UCI_Elo `ELO` (1800) and a second a

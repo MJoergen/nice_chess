@@ -24,9 +24,17 @@
  *   Q               quit, and clear the screen
  * The letters of commands act only when no move is being typed.
  *
- * Each move is also written to the console, as "move e2e4", and the
- * end of the game as "result ...". The program ends on Q, or at the
- * end of the console's input, which leaves the screen as it is.
+ * The pieces are glyphs of 3x3 characters, drawn by tools/mkpieces.py
+ * (pieces.h): a white piece as its outline, and a black piece filled,
+ * in one color on the square's. The program copies the character ROM
+ * into the font RAM, with Spleen's letters, writes the pieces over the
+ * codes 0x80 to 0xEB, and shows the font RAM (nice_cpu's SYSTEM.md
+ * §1.8). On Q it shows the ROM again.
+ *
+ * Each move is also written to the console, as "move e2e4", the end of
+ * the game as "result ...", and the position at the end as "fen ...".
+ * The program ends on Q, or at the end of the console's input, which
+ * leaves the screen as it is.
  *
  * Each side's clock counts up the time it has taken, while the game
  * goes on; there is no time control. N sets both to 0. In niceemu the
@@ -48,6 +56,7 @@
 #include <nice.h>
 #include "../engine/engine.h"
 #include "../platform/platform.h"
+#include "pieces.h"
 
 /***************************************************************
  * Colors: a screen word has the background in bits 31..20, the
@@ -61,7 +70,7 @@ enum
     LAST_LIGHT  = 0xDC5, LAST_DARK  = 0xAA3,  // The last move
     SEL_LIGHT   = 0x7C7, SEL_DARK   = 0x5A5,  // The piece picked up
     TGT_LIGHT   = 0x9BD, TGT_DARK   = 0x69B,  // Where it can go
-    PC_WHITE    = 0xEEE, PC_BLACK   = 0x111,  // The pieces: letters on chips
+    INK         = 0x111,                      // The pieces
     CHECK_LIGHT = 0xE76, CHECK_DARK = 0xC54,  // A king in check
     MARK        = 0xF11,                      // The cursor's brackets
     PANEL       = 0x123,                      // The background of the rest
@@ -179,6 +188,26 @@ static void set_cursor(int show, int col, int row)
 }
 
 /***************************************************************
+ * The font
+ ***************************************************************/
+#define FONT_RAM  0xFFFE0000u
+#define FONT_ROM  0xFFFE2000u
+#define FONT_BASE 0xFFFFFF86u
+#define GLYPH_PIECES 0x80          // The code of the first glyph of a piece
+
+// The ROM's glyphs, and the pieces over them from GLYPH_PIECES on, into
+// the font RAM, and the RAM shown.
+static void font_init(void)
+{
+    for (unsigned i = 0; i < 256 * 32; ++i)
+        nice_poke(FONT_RAM + i, nice_peek(FONT_ROM + i));
+    for (unsigned g = 0; g < 2 * 6 * 9; ++g)
+        for (unsigned r = 0; r < 32; ++r)
+            nice_poke(FONT_RAM + 32 * (GLYPH_PIECES + g) + r, piece_glyphs[g][r]);
+    nice_poke(FONT_BASE, FONT_RAM);
+}
+
+/***************************************************************
  * The board
  ***************************************************************/
 static int sq_index(int file, int rank) { return file + 8 * rank; }
@@ -212,13 +241,14 @@ static void draw_square(int file, int rank)
         for (int c = 0; c < 5; ++c)
             put(col + c, row + r, blank, ' ');
 
-    // A piece is its letter on a chip of three cells, in its color.
+    // A piece is 3x3 glyphs, in the middle columns of the square.
     if (piece != EM)
     {
-        uint32_t chip = piece > 0 ? COLOR(PC_WHITE, PC_BLACK) : COLOR(PC_BLACK, PC_WHITE);
-        put(col + 1, row + 1, chip, ' ');
-        put(col + 2, row + 1, chip, "PNBRQK"[(piece > 0 ? piece : -piece) - 1]);
-        put(col + 3, row + 1, chip, ' ');
+        int g = GLYPH_PIECES + 9 * (piece > 0 ? piece - 1 : 5 - piece);
+        uint32_t ink = COLOR(bg, INK);
+        for (int r = 0; r < 3; ++r)
+            for (int c = 0; c < 3; ++c)
+                put(col + 1 + c, row + r, ink, g++);
     }
     if (file == cur_file && rank == cur_rank && !thinking)
     {
@@ -811,6 +841,7 @@ static int handle_key(int k)
         case 'q':
             // Leave a blank screen, for the monitor on the board. The
             // end of the input keeps the screen instead, for the tests.
+            nice_poke(FONT_BASE, 0);
             nice_screen_clear();
             return 0;
         case 'u': undo(); break;
@@ -836,6 +867,7 @@ int main(void)
     cur_rank = 1;
     live = platform_on_board();
     engine_book_seed(platform_seed());
+    font_init();
     new_game();
 
     while (1)
@@ -852,5 +884,10 @@ int main(void)
             break;
     }
     set_cursor(0, 0, 0);
+    char fen[ENGINE_FEN_MAX];
+    engine_get_fen(fen);
+    console_print("fen ");
+    console_print(fen);
+    console_putc('\n');
     return 0;
 }

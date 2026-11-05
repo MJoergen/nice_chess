@@ -33,6 +33,11 @@
   for stop.
 - `ui/screen.c`: the windowed front end, on the 80x25 screen, for NICE
   only. Its keys are listed at the top of the file and on the screen.
+  It copies the character ROM into the font RAM, writes the pieces over
+  the codes 0x80 to 0xEB, and shows the font RAM (nice_cpu's SYSTEM.md
+  §1.8). Each piece is 3x3 glyphs: a white piece its outline, a black
+  piece filled. `ui/pieces.h` has the glyphs, which
+  `tools/mkpieces.py` draws (`make pieces`).
   It writes its log of the moves to the console's register itself, so
   that under the monitor on the MEGA65 the log goes to the line and
   not to the screen.
