@@ -40,6 +40,14 @@ depth 6 in its time, where it played e2e4 at depth 6.
 `tests/screen_game.keys` is a new game, recorded again by
 `tools/screen_game.py`; the engine at level 1 wins it.
 
+`make board-match` on the MEGA65 R6 (2026-11-05, over the serial port,
+`PORT=/dev/ttyUSB3`), the board at its 5 seconds a move against the
+host build at 5000 nodes a move, from e2e4 e7e5: the board won both
+games by checkmate, with black and with white. Two games against so
+weak an opponent show that the build plays on the board at its clock,
+not what the speed gives; `match.py` takes one board engine, so the
+builds before and after cannot play each other on one board.
+
 ## 2026-11-04: Piece lists
 
 `gen_moves` costs about 2870 steps a call, of which the scan of the 78
