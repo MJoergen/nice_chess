@@ -76,6 +76,13 @@ class CI(unittest.TestCase):
         self.assertEqual(release.run_state([self.job("a", conclusion="failure"), self.job("test", "queued", "")],
                                            ["a", "test"])[0], "failed")
 
+    def test_wait(self) -> None:
+        self.assertTrue(release.keep_waiting("pending", 10000))
+        self.assertTrue(release.keep_waiting("missing", 0))
+        self.assertFalse(release.keep_waiting("missing", release.MISSING_GRACE))
+        self.assertFalse(release.keep_waiting("passed", 0))
+        self.assertFalse(release.keep_waiting("failed", 0))
+
 
 if __name__ == "__main__":
     unittest.main()

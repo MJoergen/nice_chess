@@ -276,16 +276,28 @@ def ci_status(sha: str, repo: Optional[str] = None) -> tuple[str, str]:
     raise Failure("unreachable")
 
 
+# How long ci --wait waits for the run of a commit to appear: GitHub
+# lists it some seconds after the push.
+MISSING_GRACE = 180
+
+
+def keep_waiting(state: str, waited: float) -> bool:
+    """Whether ci --wait polls again: while the run is pending, and while
+    it is missing, for MISSING_GRACE seconds after the start."""
+    return state == "pending" or (state == "missing" and waited < MISSING_GRACE)
+
+
 def cmd_ci(a: argparse.Namespace) -> int:
     print("CI (doc/RELEASE.md step 5)")
     sha = head()
     if git("rev-parse", "origin/main") != sha:
         raise Failure("HEAD is not origin/main: push the commit first")
+    t0 = time.time()
     while True:
         state, text = ci_status(sha, a.repo)
-        if state == "pending" and a.wait:
+        if a.wait and keep_waiting(state, time.time() - t0):
             print(f"  {text}")
-            time.sleep(60)
+            time.sleep(60 if state == "pending" else 15)
             continue
         say(state == "passed", f"{sha[:7]}: {text}")
         return 0 if state == "passed" else 1
