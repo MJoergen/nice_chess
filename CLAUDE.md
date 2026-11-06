@@ -18,11 +18,15 @@ monitor, and on the host. See README.md.
   through the keys, `size.py` checks the size, `screenshot.py` draws a
   screen dump as a PNG, in the font it selects, `mkpieces.py` draws
   the pieces as glyphs into `src/ui/pieces.h` (`make pieces`).
+  `release.py` scripts the release (`test_release.py` tests it, in
+  `make test`).
   `rate.sh` (shell) is a rating by cutechess-cli and Ordo (`make rate`). `mkbook.c` (C, on the host) makes the table
   of the opening book from `src/engine/book.txt`.
 - `doc/HISTORY.md`: how the port was done, by phases, and the
   decisions, after the fact. It says only what happened; plans and
   open items are GitHub issues, not files or TODO comments.
+- `doc/RELEASE.md`: how to make a release; `RELEASE_NOTES.md`: what
+  changed in each release, newest first. Add a section for every new tag.
 - `LOG.md`: investigations (measurements, options weighed), newest
   first, dated.
 - `CONTRIBUTING.md`: building and the tests, for human contributors.
@@ -40,6 +44,8 @@ monitor, and on the host. See README.md.
     make test           # host and niceemu tests; run after every change
     make size           # the MEGA65 builds against the 92K-word budget
     make perft-deep screen-game match-random   # slower; in CI too
+    make dist           # the archive of a release in build/dist/ (VERSION=V1.0)
+    make release-check ETH=IP   # board-test and board-match, the stamp for release.py tag
 
 The board targets (`board-*`) need `ETH=IP` or `PORT=DEVICE` and a
 NiceMonMEGA65 checkout (`NICEMON=DIR`). They are not in CI; run them
@@ -64,5 +70,8 @@ only when the user asks, or when a change is for the board.
   by hand, deliberately, not as a side effect.
 - The docs are written in short, plain, factual sentences, and say what
   is true now. History goes in doc/HISTORY.md or LOG.md.
+- Releases are `Vmajor.minor`, nice_chess's own (doc/RELEASE.md). The
+  front ends show `VERSION`, from `git describe`; the tests see it as
+  `VERSION`, so a release changes no `*.expected` file.
 - Commit messages: a short subject (`Phase N: ...`, `doc: ...`,
   `CI: ...`), then the why.

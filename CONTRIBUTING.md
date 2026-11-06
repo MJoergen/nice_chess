@@ -20,6 +20,7 @@ a C compiler for the host, `git`, and `curl`.
     make rate        # a rating against Stockfish's UCI_Elo levels (hours; see below)
     make size        # the size of the MEGA65 builds, against the 92K words the monitor leaves them
     make pieces      # draw the pieces again into src/ui/pieces.h, after a change to tools/mkpieces.py (needs Pillow)
+    make dist        # the archive of a release, and SHA256SUMS, in build/dist/
 
 To use local copies of nice_cpu and niceemu instead, pass `NICE_CPU=DIR`
 and `NICEEMU=PATH` to make.
@@ -36,7 +37,24 @@ each, `CONCURRENCY` (4) at a time. Ordo anchors each Stockfish at its
 UCI_Elo, which is on the CCRL 40/4 scale. The games and the rating are
 in `build/rate/`.
 
+`make test` also runs the tests of `tools/release.py`
+(`tools/test_release.py`).
+
+The front ends show `VERSION`: the release tag on a tagged commit, and
+what `git describe` says between tags. `build/gen/version.c` holds it.
+`tools/runtest.sh` replaces it with `VERSION` in the output, so the
+`*.expected` files do not depend on it.
+
 GitHub Actions runs `make test`, `make perft-deep`, `make screen-game`,
 `make match-random`, and `make size` on every push
 ([.github/workflows/test.yml](.github/workflows/test.yml)). The tests
 on the board are in [README.md](README.md#on-the-mega65).
+
+## Releases
+
+[doc/RELEASE.md](doc/RELEASE.md) is how to make a release, with
+`tools/release.py` and `make release-check`, which runs `make
+board-test` and `make board-match` on the MEGA65. The push of a tag
+starts [release.yml](.github/workflows/release.yml), which builds the
+archive and creates the GitHub release.
+[RELEASE_NOTES.md](RELEASE_NOTES.md) has what changed in each release.

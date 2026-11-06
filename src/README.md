@@ -28,6 +28,8 @@
   `nice.c` tells apart by the ratio of the cycle counter to the
   microsecond counter. The players' clocks count 54 million steps as a
   second in niceemu, the MEGA65's rate, and real time on a board.
+- `ui/version.h`: the version the front ends show, from
+  `build/gen/version.c`, which the Makefile writes (`VERSION`).
 - `ui/text.c`: the text front end, on the console, and UCI. `help` lists
   its commands. During a search it reads the console, every 1024 nodes,
   for stop.

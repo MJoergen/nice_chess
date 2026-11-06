@@ -9,6 +9,24 @@ engine; [doc/HISTORY.md](doc/HISTORY.md) tells how it was done.
 
 ![The windowed front end in niceemu, after the engine mated as black](doc/screenshot.png)
 
+## Download
+
+Each [release](https://github.com/MJoergen/nice_chess/releases) has
+`nice_chess-TAG.tar.gz`, where TAG is the release, such as `V1.0`, and
+`SHA256SUMS`. [RELEASE_NOTES.md](RELEASE_NOTES.md) says what changed
+in each, and what it needs. The archive's directory has:
+
+- `mega65/`: both front ends for the MEGA65 (On the MEGA65, below).
+  NiceMonMEGA65's tools load one into the board:
+  `python3 tools/load.py --eth IP --monitor chess_screen.bin`, from a
+  checkout of NiceMonMEGA65.
+- `niceemu/`: both front ends for niceemu (Playing, below).
+- `linux-x86_64/nice_chess`: the text front end on the host, a UCI
+  engine for a chess GUI.
+
+The front ends show their version: the banner of the text front end,
+its UCI `id name`, and the title of the window.
+
 ## Playing
 
 Build with `make deps all`; [CONTRIBUTING.md](CONTRIBUTING.md) lists

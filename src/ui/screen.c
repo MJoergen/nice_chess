@@ -57,6 +57,7 @@
 #include "../engine/engine.h"
 #include "../platform/platform.h"
 #include "pieces.h"
+#include "version.h"
 
 /***************************************************************
  * Colors: a screen word has the background in bits 31..20, the
@@ -477,7 +478,8 @@ static void draw_input(void)
 static void draw_all(void)
 {
     draw_board();
-    draw_line(ROW_TITLE, COLOR(PANEL, BRIGHT), "nice_chess");
+    int col = put_str(PX, ROW_TITLE, COLOR(PANEL, BRIGHT), "nice_chess ");
+    clear_to_end(put_str(col, ROW_TITLE, COLOR(PANEL, BRIGHT), nice_chess_version), ROW_TITLE);
     draw_players();
     draw_status();
     draw_level();

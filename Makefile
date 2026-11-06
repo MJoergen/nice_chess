@@ -20,7 +20,12 @@ NICEEMU  ?= deps/niceemu-$(NICE_CPU_TAG)-x86_64-linux/niceemu
 NICEMON  ?= ../NiceMonMEGA65
 PYTHON   ?= python3
 CC       ?= cc
-export NICEEMU NICEMON
+# The version the front ends show: the release tag on a tagged commit,
+# such as V1.0, and git describe's name of the commit between tags.
+# The release workflow sets it to the tag. tools/runtest.sh replaces it
+# with VERSION in the output, so the tests do not depend on it.
+VERSION  ?= $(shell git describe --tags --match 'V[0-9]*' --always --dirty 2>/dev/null || echo unknown)
+export NICEEMU NICEMON VERSION
 
 # How to reach the board: ETH=IP or PORT=DEVICE, as NiceMonMEGA65's tools
 # take them. Only the board targets need one.
@@ -54,6 +59,8 @@ ENGINE = $(CORE) $(BOOKDATA)
 # The headers, and the Makefile, whose flags every build takes, so that
 # a change of the flags rebuilds.
 HEADERS = $(wildcard src/engine/*.h) src/platform/platform.h Makefile
+# The version, for the front ends (VERSION).
+VERSIONC = build/gen/version.c
 
 # NICE: optimized for speed, without asserts, and without the bounds
 # checks of wasm's memory accesses, which the host builds' asserts and
@@ -83,15 +90,15 @@ CONCURRENCY ?= 4
 BOOK      ?= deps/books/8moves_v3.pgn
 export CUTECHESS ORDO STOCKFISH NODES ELOS GAMES CONCURRENCY BOOK
 
-.PHONY: FORCE help all test pieces host-test nice-test perft-deep screen-game match-random match-mchess2 rate openings size deps clean distclean
-.PHONY: board-text board-screen board-test board-game board-match board-stockfish
+.PHONY: FORCE help all test pieces host-test nice-test tools-test perft-deep screen-game match-random match-mchess2 rate openings size deps clean distclean
+.PHONY: board-text board-screen board-test board-game board-match board-stockfish dist release-check
 help:
 	@echo "nice_chess: a chess engine for the NICE system"
 	@echo ""
 	@echo "  make help          show this text (the default)"
 	@echo "  make deps          fetch nice_cpu $(NICE_CPU_TAG), niceemu $(NICE_CPU_TAG), and mchess2's test suites into deps/"
 	@echo "  make all           build both front ends, for niceemu, for the MEGA65, and for the host"
-	@echo "  make test          the tests, on the host and in niceemu"
+	@echo "  make test          the tests, on the host and in niceemu, and of tools/release.py"
 	@echo "  make perft-deep    the perft suite to depth 5 on the host (a minute)"
 	@echo "  make screen-game   a full game in the windowed front end, in niceemu (a minute)"
 	@echo "  make match-random  the host build against random moves (20 games)"
@@ -100,6 +107,7 @@ help:
 	@echo "  make rate          a rating: cutechess-cli games against Stockfish's UCI_Elo levels, and Ordo"
 	@echo "  make size          the size of the MEGA65 builds, against the board's budget"
 	@echo "  make pieces        draw the pieces again into src/ui/pieces.h (needs Pillow)"
+	@echo "  make dist          the archive of a release, and SHA256SUMS, in build/dist/ (VERSION=V1.0)"
 	@echo "  make clean         remove build/"
 	@echo "  make distclean     remove build/ and deps/"
 	@echo ""
@@ -113,6 +121,8 @@ help:
 	@echo "  make board-game    a full game in the windowed front end, on the board (a few minutes)"
 	@echo "  make board-match   the text front end on the board against the host build, in UCI"
 	@echo "  make board-stockfish  a game on the board's screen against Stockfish (ELO=1800, BLACK=1: it is black)"
+	@echo "  make release-check board-test and board-match, and the stamp that tools/release.py tag needs"
+	@echo "                    (doc/RELEASE.md)"
 	@echo ""
 	@echo "NICE_CPU=DIR and NICEEMU=PATH use local copies of nice_cpu and niceemu."
 
@@ -125,26 +135,31 @@ $(TOOLCHAIN): FORCE | $(NICE_CPU)
 	@t="$(abspath $(NICE_CPU)) $$(git -C $(NICE_CPU) rev-parse HEAD 2>/dev/null)"; \
 	  [ "$$t" = "$$(cat $@ 2>/dev/null)" ] || echo "$$t" > $@
 
+$(VERSIONC): FORCE
+	@mkdir -p $(@D)
+	@t='const char nice_chess_version[] = "$(VERSION)";'; \
+	  [ "$$t" = "$$(cat $@ 2>/dev/null)" ] || echo "$$t" > $@
+
 FORCE:
 
 all: build/nice/chess_text.bin build/nice/chess_screen.bin build/host/chess_text \
      build/mega65/chess_text.bin build/mega65/chess_screen.bin
 
-build/nice/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/nice.c $(TOOLCHAIN)
+build/nice/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
-	$(NICEBUILD) $(NICEFLAGS) -o $@ $(ENGINE) src/ui/text.c src/platform/nice.c
+	$(NICEBUILD) $(NICEFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/text.c src/platform/nice.c
 
-build/nice/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/ui/pieces.h src/platform/nice.c $(TOOLCHAIN)
+build/nice/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/ui/pieces.h src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
-	$(NICEBUILD) $(NICEFLAGS) -o $@ $(ENGINE) src/ui/screen.c src/platform/nice.c
+	$(NICEBUILD) $(NICEFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/screen.c src/platform/nice.c
 
-build/mega65/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/nice.c $(TOOLCHAIN)
+build/mega65/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
-	$(NICEBUILD) $(MONFLAGS) -o $@ $(ENGINE) src/ui/text.c src/platform/nice.c
+	$(NICEBUILD) $(MONFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/text.c src/platform/nice.c
 
-build/mega65/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/ui/pieces.h src/platform/nice.c $(TOOLCHAIN)
+build/mega65/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/ui/pieces.h src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
-	$(NICEBUILD) $(MONFLAGS) -o $@ $(ENGINE) src/ui/screen.c src/platform/nice.c
+	$(NICEBUILD) $(MONFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/screen.c src/platform/nice.c
 
 # nice_cpu's stand-in for a monitor at 0, which runs a program at 0x8000
 # as the monitor does, so that the MEGA65 builds run in niceemu too,
@@ -175,13 +190,13 @@ $(BOOKDATA): build/host/mkbook src/engine/book.txt
 	build/host/mkbook < src/engine/book.txt > $@.tmp
 	mv $@.tmp $@
 
-build/host/chess_text: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/host.c
+build/host/chess_text: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/host.c $(VERSIONC)
 	@mkdir -p $(@D)
-	$(CC) $(HOSTFLAGS) -o $@ $(ENGINE) src/ui/text.c src/platform/host.c
+	$(CC) $(HOSTFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/text.c src/platform/host.c
 
-build/host/chess_fast: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/host.c
+build/host/chess_fast: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/host.c $(VERSIONC)
 	@mkdir -p $(@D)
-	$(CC) $(FASTFLAGS) -o $@ $(ENGINE) src/ui/text.c src/platform/host.c
+	$(CC) $(FASTFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/text.c src/platform/host.c
 
 build/host/perftsuite: $(ENGINE) $(HEADERS) tests/perftsuite.c
 	@mkdir -p $(@D)
@@ -191,7 +206,11 @@ build/host/searchsuite: $(ENGINE) $(HEADERS) tests/searchsuite.c
 	@mkdir -p $(@D)
 	$(CC) $(HOSTFLAGS) -o $@ $(ENGINE) tests/searchsuite.c
 
-test: host-test nice-test
+test: host-test nice-test tools-test
+
+# The tests of tools/release.py.
+tools-test:
+	$(PYTHON) -m unittest discover -s tools -p 'test_*.py'
 
 host-test: build/host/chess_text build/host/perftsuite build/host/searchsuite $(PERFTSUITE) $(SEARCHSUITE)
 	@tools/runtest.sh host_text text tests/text.input host build/host/chess_text
@@ -287,6 +306,30 @@ board-game: build/mega65/chess_screen.bin build/host/chess_text
 board-match: build/mega65/chess_text.bin build/host/chess_text
 	$(PYTHON) tools/match.py $(BOARDLINK) --openings 1 --go1 "go nodes 5000" --go2 go \
 	  build/host/chess_text build/host/chess_text board:build/mega65/chess_text.bin
+
+# A release (doc/RELEASE.md): the archive nice_chess-VERSION.tar.gz,
+# whose directory holds the MEGA65 builds, the builds for niceemu, the
+# host build without asserts as nice_chess, a UCI engine for x86_64
+# Linux, and README.md, RELEASE_NOTES.md, and LICENSE; and SHA256SUMS.
+# The release workflow runs it with VERSION set to the tag, after the
+# tests and make size.
+DIST = build/dist
+dist: build/mega65/chess_text.bin build/mega65/chess_screen.bin build/nice/chess_text.bin \
+      build/nice/chess_screen.bin build/host/chess_fast
+	rm -rf $(DIST)
+	mkdir -p $(DIST)/nice_chess-$(VERSION)/mega65 $(DIST)/nice_chess-$(VERSION)/niceemu \
+	  $(DIST)/nice_chess-$(VERSION)/linux-x86_64
+	cp build/mega65/chess_text.bin build/mega65/chess_screen.bin $(DIST)/nice_chess-$(VERSION)/mega65/
+	cp build/nice/chess_text.bin build/nice/chess_screen.bin $(DIST)/nice_chess-$(VERSION)/niceemu/
+	cp build/host/chess_fast $(DIST)/nice_chess-$(VERSION)/linux-x86_64/nice_chess
+	cp README.md RELEASE_NOTES.md LICENSE $(DIST)/nice_chess-$(VERSION)/
+	tar czf $(DIST)/nice_chess-$(VERSION).tar.gz -C $(DIST) --owner=0 --group=0 nice_chess-$(VERSION)
+	cd $(DIST) && sha256sum nice_chess-$(VERSION).tar.gz > SHA256SUMS
+	@echo "$(DIST)/nice_chess-$(VERSION).tar.gz"
+
+# The gates of a release on the board, and their stamp (tools/release.py).
+release-check:
+	$(PYTHON) tools/release.py check $(BOARDLINK)
 
 deps: $(NICE_CPU) $(NICEEMU) $(PERFTSUITE) $(SEARCHSUITE)
 

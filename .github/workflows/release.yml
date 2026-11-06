@@ -1,0 +1,45 @@
+name: release
+
+# The GitHub release of a tag Vmajor.minor, with nice_chess-TAG.tar.gz
+# and SHA256SUMS as its files. The tag comes from tools/release.py tag
+# (doc/RELEASE.md step 6), after test.yml passed on its commit and the
+# stamp of the board, so this workflow runs only what the files need:
+# the tests and the size of the builds it packs, with the tag as their
+# version.
+on:
+  push:
+    tags: ["V[0-9]+.[0-9]+"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    env:
+      VERSION: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+      # Fails unless RELEASE_NOTES.md has a dated section for the tag.
+      # Its first line is the title of the release, and the rest the text.
+      - name: The section of the release notes
+        run: python3 tools/release.py section "$GITHUB_REF_NAME" > "$RUNNER_TEMP/section.md"
+      - name: Install clang, lld, and llvm
+        run: sudo apt-get update && sudo apt-get install -y clang lld llvm
+      - name: Fetch nice_cpu, niceemu, and the test suites
+        run: make deps
+      - name: Test
+        run: make test
+      - name: Size
+        run: make size
+      - name: The archive and SHA256SUMS
+        run: make dist
+      - name: The GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tail -n +2 "$RUNNER_TEMP/section.md" > "$RUNNER_TEMP/notes.md"
+          gh release create "$GITHUB_REF_NAME" --verify-tag \
+            --title "$(head -n 1 "$RUNNER_TEMP/section.md")" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            "build/dist/nice_chess-$GITHUB_REF_NAME.tar.gz" build/dist/SHA256SUMS

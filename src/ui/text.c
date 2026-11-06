@@ -43,6 +43,7 @@
 #include <string.h>
 #include "../engine/engine.h"
 #include "../platform/platform.h"
+#include "version.h"
 
 static const char piece_chars[] = "kqrbnp.PNBRQK";
 
@@ -457,7 +458,7 @@ int main(void)
 
     engine_new_game();
     engine_book_seed(platform_seed());
-    printf("nice_chess. Type help for the commands.\n");
+    printf("nice_chess %s. Type help for the commands.\n", nice_chess_version);
 
     while (1)
     {
@@ -481,8 +482,8 @@ int main(void)
         else if (!strcmp(cmd, "uci"))
         {
             uci_mode = 1;
-            printf("id name nice_chess\nid author Michael Jorgensen\n"
-                   "option name OwnBook type check default false\nuciok\n");
+            printf("id name nice_chess %s\nid author Michael Jorgensen\n"
+                   "option name OwnBook type check default false\nuciok\n", nice_chess_version);
             fflush(stdout);
         }
         else if (!strcmp(cmd, "isready"))
