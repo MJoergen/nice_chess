@@ -84,3 +84,57 @@ the link ([the screenshot](screenshot.png)), and in UCI on the board it
 scored 1.5 of 2 against the host build at 5000 nodes a move.
 
 What was left over became issues #2 to #12.
+
+## After the phases
+
+The work from 2026-11-03 to the first release, by subject. The
+measurements are in LOG.md, by date.
+
+**The rating** (`e227034`, `ec3089a`, 2026-11-03 and 2026-11-04):
+`make rate` plays the host build without asserts at the board's number
+of nodes a move against Stockfish's UCI_Elo levels, with cutechess-cli
+and Ordo, so that the engine is rated as it plays on the MEGA65,
+without the board; `tools/board_uci.py` makes the board itself a UCI
+engine of the host. At 83000 nodes a move, the board's 5 seconds then,
+600 games gave 1817 ± 30 Elo on the CCRL 40/4 scale, about 1800.
+
+**The search** (`641a6e1` to `8f724d8`, 2026-11-04): the NICE builds
+went to `-O 2` (#7), and the transposition table to 16384 entries,
+128 KB in a third page of linear memory, once the 92K words allowed it
+(#6); then a principal variation search (#4), null-move pruning, a
+history table with late move reductions, `for_side` in place of the
+products by the side, and lists of each side's pieces in place of a
+scan of the board. The text front end hears `stop` during a search
+(#9). Each change was measured in niceemu steps, and the search changes
+in 2000 games against the build before: null move +71 Elo, history and
+LMR +51, PVS +16. Last, the NICE builds dropped wasm's bounds checks,
+with the host build's asserts and `CHECK_STATE` as the check in their
+place: about 4% fewer steps and 3800 words fewer. From the opening, the
+default time of a move reaches depth 7, where Phase 4 reached depth 5;
+the board searches about 93000 nodes in its 5 seconds, against 83000.
+On 2026-11-05 the board won both games of `make board-match` against
+the host build at 5000 nodes a move, over the debug UART.
+
+**The opening book** (`3839229` to `5ba0138`, 2026-11-04): 122 lines
+in `src/engine/book.txt`, each with Stockfish's score at its end, make
+a table of 403 positions by the engine's own Zobrist keys, which
+`tools/mkbook.c` builds on the host. The windowed front end plays from
+it at first, and O turns it off; the text front end has `book on`, and
+UCI the option `OwnBook`.
+
+**The front ends** (2026-11-04 to 2026-11-08): a clock for each side
+in the window (#8, `12ea6d2`), which in niceemu counts steps as the
+board's time; the pieces as glyphs in the font RAM (#12, `55970b7`),
+which took nice_cpu V1.6, for the font in its emulator's window, and
+NiceMonMEGA65 V1.6, for the font RAM on the board; and Q leaves the
+screen in the monitor's colors (`eede674`). `make board-stockfish`
+plays the board's screen against Stockfish through its keys
+(`cf0becb`).
+
+**The release** (`cf94e8b`, 2026-11-06): doc/RELEASE.md, the steps of
+a release, and `tools/release.py`, which scripts them: the preflight,
+the check on the board and its stamp, the wait for CI, the tag with the
+section of RELEASE_NOTES.md as its message, and the workflow that
+builds the archive and the GitHub release. The archive has the MEGA65
+builds under 8.3 names, as NiceMonMEGA65 V1.9 loads them from the SD
+card (`8b4af80`).

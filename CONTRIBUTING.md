@@ -6,7 +6,10 @@ run the tests.
 ## Building and testing
 
 Needs Python 3.10+, clang with the wasm32 target, `wasm-ld`, `llvm-ar`,
-a C compiler for the host, `git`, and `curl`.
+a C compiler for the host, `git`, and `curl`. `make match-mchess2`
+needs a C++ compiler too. `make rate` and `make dist` link the host
+build without asserts statically, which needs glibc's static library:
+`libc6-dev` has it on Debian and Ubuntu, `glibc-static` on Fedora.
 
     make             # list the targets
     make deps        # nice_cpu V1.6 and niceemu V1.6, and mchess2's test suites, into deps/

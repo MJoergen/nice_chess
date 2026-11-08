@@ -30,7 +30,7 @@ release workflow sets `VERSION` to the tag.
     - `niceemu/chess_text.bin` and `niceemu/chess_screen.bin`, the
       front ends for niceemu;
     - `linux-x86_64/nice_chess`, the text front end on the host,
-      without asserts, as a UCI engine;
+      without asserts and linked statically, as a UCI engine;
     - `README.md`, `RELEASE_NOTES.md`, and `LICENSE`.
   - `SHA256SUMS`, the SHA-256 sum of the archive.
 
@@ -66,7 +66,7 @@ the release, not part of it.
    [CONTRIBUTING.md](../CONTRIBUTING.md), [src/README.md](../src/README.md),
    [CLAUDE.md](../CLAUDE.md), and `make help`, which agree with the
    Makefile. What happened goes in [HISTORY.md](HISTORY.md) or
-   [LOG.md](../LOG.md).
+   [LOG.md](../LOG.md), and HISTORY.md reaches this release.
 2. The figures quoted (the time of a move on the board, the depth, the
    size) are what the builds of this commit give.
 3. The versions in README.md, such as the niceemu of `NICE_CPU_TAG`,
@@ -98,6 +98,9 @@ games of the board against the host build at 5000 nodes a move (about
 logs are in `build/release/`. Then it writes `build/release/stamp.json`
 with the commit, the link, the NiceMonMEGA65 checkout's `git describe`,
 and the match's score. `tag` needs it, and `make clean` deletes it.
+The checkout's name is the tools', and not always the monitor's on the
+board, which its banner shows at a cold start; the release notes name
+the monitor's.
 
 The board runs the commit's builds, whose version is `git describe`'s,
 not the tag. They differ from the release's only in that string.
@@ -142,6 +145,18 @@ the tag, and create the release by hand, as release.yml does:
     tail -n +2 section.md > notes.md
     gh release create V1.0 --verify-tag --title "$(head -n 1 section.md)" \
        --notes-file notes.md build/dist/nice_chess-V1.0.tar.gz build/dist/SHA256SUMS
+
+## 8. The archive
+
+Try the archive as a user gets it, on another Linux if one is at hand:
+download it, check the sum, and run the host build and a build for
+niceemu from it.
+
+    gh release download V1.0 --dir build/release/V1.0
+    (cd build/release/V1.0 && sha256sum -c SHA256SUMS && tar xzf nice_chess-V1.0.tar.gz)
+    printf 'go depth 3\nquit\n' | build/release/V1.0/nice_chess-V1.0/linux-x86_64/nice_chess
+    printf 'go depth 3\nquit\n' | deps/niceemu-V1.6-x86_64-linux/niceemu --step-time \
+        build/release/V1.0/nice_chess-V1.0/niceemu/chess_text.bin
 
 A tag is never moved, and a release is not deleted. A fix is the next
 release, or the release notes say what is wrong.

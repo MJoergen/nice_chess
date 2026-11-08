@@ -74,9 +74,11 @@ MONFLAGS = $(NICEFLAGS) --monitor
 # The host: with asserts, and a check of the Zobrist key and the
 # evaluation's sums at every node of perft.
 HOSTFLAGS = -O2 -W -Wall -Wextra -DCHECK_STATE
-# The host, for matches: without asserts and the check, which play the
-# same moves, only faster.
-FASTFLAGS = -O2 -W -Wall -Wextra -DNDEBUG
+# The host, for matches and the release: without asserts and the check,
+# which play the same moves, only faster, and linked statically, so that
+# the release's binary runs on any x86_64 Linux. It needs glibc's
+# libc.a: libc6-dev on Debian and Ubuntu, glibc-static on Fedora.
+FASTFLAGS = -O2 -W -Wall -Wextra -DNDEBUG -static
 
 # A rating, by tools/rate.sh: cutechess-cli and Ordo, and the opponents.
 # The board's search at 5 seconds a move is about 93000 nodes (LOG.md).
@@ -310,7 +312,7 @@ board-match: build/mega65/chess_text.bin build/host/chess_text
 # A release (doc/RELEASE.md): the archive nice_chess-VERSION.tar.gz,
 # whose directory holds the MEGA65 builds, under 8.3 names for the
 # monitor's load from the SD card (CHESS.BIN the windowed front end,
-# CHESST.BIN the text front end), the builds for niceemu, the
+# CHESST.BIN the text front end), the builds for niceemu, the static
 # host build without asserts as nice_chess, a UCI engine for x86_64
 # Linux, and README.md, RELEASE_NOTES.md, and LICENSE; and SHA256SUMS.
 # The release workflow runs it with VERSION set to the tag, after the

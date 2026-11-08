@@ -2,8 +2,10 @@
 
 The releases of nice_chess, newest first. Each section lists the changes
 since the one before that a player or a user of the builds can see.
-[doc/HISTORY.md](doc/HISTORY.md) has the full story, and
-[doc/RELEASE.md](doc/RELEASE.md) how a release is made.
+[doc/HISTORY.md](https://github.com/MJoergen/nice_chess/blob/main/doc/HISTORY.md)
+has the full story, and
+[doc/RELEASE.md](https://github.com/MJoergen/nice_chess/blob/main/doc/RELEASE.md)
+how a release is made.
 
 A release is named `Vmajor.minor`, and its files are
 `nice_chess-Vmajor.minor.tar.gz` and `SHA256SUMS`
@@ -15,7 +17,7 @@ checked on.
 
 The first release.
 
-**What it needs.**
+**What it needs**
 
 - The MEGA65 builds run under the monitor of NiceMonMEGA65 V1.2.1 or
   later, which gives a program 92K words. The windowed front end draws
@@ -25,7 +27,7 @@ The first release.
   the folder `NICE` of a FAT32 SD card: `load CHESS.BIN`, then `r`.
 - The builds for niceemu need niceemu of nice_cpu V1.6 or later, the
   window build for the windowed front end.
-- The host build is for x86_64 Linux.
+- The host build is for x86_64 Linux, linked statically.
 
 **The engine**
 
@@ -35,7 +37,8 @@ The first release.
   reductions, quiescence, a transposition table, and a history table.
 - An opening book of 403 positions.
 - On the MEGA65 it takes 5 seconds a move at level 3, and reaches depth
-  5 from the opening.
+  7 from the opening. At the board's speed, `make rate` gave it about
+  1800 Elo on the CCRL 40/4 scale on 2026-11-04.
 
 **The front ends**
 
