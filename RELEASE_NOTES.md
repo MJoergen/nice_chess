@@ -21,6 +21,8 @@ The first release.
   later, which gives a program 92K words. The windowed front end draws
   its pieces in the font RAM, which NiceMonMEGA65 has from V1.6 on.
   Under an earlier monitor its squares show no pieces.
+- From NiceMonMEGA65 V1.9 on, the monitor loads the MEGA65 builds from
+  the folder `NICE` of a FAT32 SD card: `load CHESS.BIN`, then `r`.
 - The builds for niceemu need niceemu of nice_cpu V1.6 or later, the
   window build for the windowed front end.
 - The host build is for x86_64 Linux.
@@ -44,5 +46,7 @@ The first release.
   and a clock for each side.
 - Both show the version: the banner, the UCI `id name`, and the title
   of the window.
+- The archive has the MEGA65 builds as `mega65/CHESS.BIN`, the windowed
+  front end, and `mega65/CHESST.BIN`, the text front end.
 
 Built with nice_cpu V1.6.

@@ -24,8 +24,9 @@ release workflow sets `VERSION` to the tag.
   [RELEASE_NOTES.md](../RELEASE_NOTES.md).
 - A GitHub release with that section as its text, and two files:
   - `nice_chess-V1.0.tar.gz`, with `nice_chess-V1.0/`:
-    - `mega65/chess_text.bin` and `mega65/chess_screen.bin`, the
-      front ends for the MEGA65, under NiceMonMEGA65's monitor;
+    - `mega65/CHESS.BIN` and `mega65/CHESST.BIN`, the windowed and
+      the text front ends for the MEGA65, under NiceMonMEGA65's
+      monitor, with 8.3 names for its `load` from the SD card;
     - `niceemu/chess_text.bin` and `niceemu/chess_screen.bin`, the
       front ends for niceemu;
     - `linux-x86_64/nice_chess`, the text front end on the host,

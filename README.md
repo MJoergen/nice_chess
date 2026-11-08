@@ -16,10 +16,10 @@ Each [release](https://github.com/MJoergen/nice_chess/releases) has
 `SHA256SUMS`. [RELEASE_NOTES.md](RELEASE_NOTES.md) says what changed
 in each, and what it needs. The archive's directory has:
 
-- `mega65/`: both front ends for the MEGA65 (On the MEGA65, below).
-  NiceMonMEGA65's tools load one into the board:
-  `python3 tools/load.py --eth IP --monitor chess_screen.bin`, from a
-  checkout of NiceMonMEGA65.
+- `mega65/`: both front ends for the MEGA65 (On the MEGA65, below):
+  `CHESS.BIN`, the windowed front end, and `CHESST.BIN`, the text
+  front end. They have 8.3 names, so the monitor loads them from the SD
+  card.
 - `niceemu/`: both front ends for niceemu (Playing, below).
 - `linux-x86_64/nice_chess`: the text front end on the host, a UCI
   engine for a chess GUI.
@@ -72,8 +72,21 @@ UCI_Elo levels, with cutechess-cli and Ordo (CONTRIBUTING.md).
 
 The builds in `build/mega65/` run on the MEGA65 under the monitor of
 [NiceMonMEGA65](https://github.com/MJoergen/NiceMonMEGA65), from its
-release V1.2.1 on, which gives a program 92K words of RAM. They
-are loaded over the board's Ethernet port or its debug UART with
+release V1.2.1 on, which gives a program 92K words of RAM.
+
+From NiceMonMEGA65 V1.9 on, the monitor loads a program from a FAT32
+SD card, so the board needs no host. On a PC, make the folder `NICE`
+in the root of the card and copy `CHESS.BIN` from the release into it
+(or `build/mega65/chess_screen.bin`, renamed to an 8.3 name). Put the
+card in the MEGA65 and type at the monitor's prompt:
+
+    load CHESS.BIN
+    r
+
+`CHESST.BIN`, the text front end, loads the same way; its terminal is
+the debug UART, or `nc IP 4510` over Ethernet.
+
+From a host, the builds are loaded over the board's Ethernet port or its debug UART with
 NiceMonMEGA65's tools, from a checkout of it (`NICEMON=DIR`,
 `../NiceMonMEGA65` by default), with `ETH=IP` or `PORT=/dev/ttyUSBn`:
 

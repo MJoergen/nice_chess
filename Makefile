@@ -308,7 +308,9 @@ board-match: build/mega65/chess_text.bin build/host/chess_text
 	  build/host/chess_text build/host/chess_text board:build/mega65/chess_text.bin
 
 # A release (doc/RELEASE.md): the archive nice_chess-VERSION.tar.gz,
-# whose directory holds the MEGA65 builds, the builds for niceemu, the
+# whose directory holds the MEGA65 builds, under 8.3 names for the
+# monitor's load from the SD card (CHESS.BIN the windowed front end,
+# CHESST.BIN the text front end), the builds for niceemu, the
 # host build without asserts as nice_chess, a UCI engine for x86_64
 # Linux, and README.md, RELEASE_NOTES.md, and LICENSE; and SHA256SUMS.
 # The release workflow runs it with VERSION set to the tag, after the
@@ -319,7 +321,8 @@ dist: build/mega65/chess_text.bin build/mega65/chess_screen.bin build/nice/chess
 	rm -rf $(DIST)
 	mkdir -p $(DIST)/nice_chess-$(VERSION)/mega65 $(DIST)/nice_chess-$(VERSION)/niceemu \
 	  $(DIST)/nice_chess-$(VERSION)/linux-x86_64
-	cp build/mega65/chess_text.bin build/mega65/chess_screen.bin $(DIST)/nice_chess-$(VERSION)/mega65/
+	cp build/mega65/chess_screen.bin $(DIST)/nice_chess-$(VERSION)/mega65/CHESS.BIN
+	cp build/mega65/chess_text.bin $(DIST)/nice_chess-$(VERSION)/mega65/CHESST.BIN
 	cp build/nice/chess_text.bin build/nice/chess_screen.bin $(DIST)/nice_chess-$(VERSION)/niceemu/
 	cp build/host/chess_fast $(DIST)/nice_chess-$(VERSION)/linux-x86_64/nice_chess
 	cp README.md RELEASE_NOTES.md LICENSE $(DIST)/nice_chess-$(VERSION)/
