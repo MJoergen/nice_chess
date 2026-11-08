@@ -38,8 +38,8 @@ To play in the emulator:
 
 Type `help` for the commands. Moves are in coordinate notation, such as
 `e2e4`, and `go` makes the engine move. In niceemu, `go` takes 300 million
-steps, about 7 seconds in the emulator and 4 on the board; `go depth 4`
-or `go nodes 20000` are quicker. `book on` makes `go` play from the
+steps, about 7 seconds in the emulator; on the board it takes 5 seconds.
+`go depth 4` or `go nodes 20000` are quicker. `book on` makes `go` play from the
 opening book, where the position is in it, and `book` lists its moves.
 
 The windowed front end shows the board on the 80×25 screen. It needs
@@ -55,6 +55,11 @@ The keys are on the screen: U undo, S switch sides, R rotate, N new
 game, + and − the level, O the opening book on or off, Q quit, and Esc
 to make the engine move now. The book is on at first, and the engine's
 first moves come from it, at random by their weights.
+
+There are 5 levels, and the game starts at level 3. A level sets only
+the time the engine takes for a move: 1/9, 1/3, 1, 3, or 9 times that
+of `go`. On the board that is about 0.6, 1.7, 5, 15, and 45 seconds.
+The engine plays a move from the book at once, at any level.
 
 Each side has a clock, which counts up the time it has taken; there is
 no time control, and N sets both to 0. On the board the clocks show
