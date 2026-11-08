@@ -841,10 +841,16 @@ static int handle_key(int k)
     else switch (k)
     {
         case 'q':
-            // Leave a blank screen, for the monitor on the board. The
-            // end of the input keeps the screen instead, for the tests.
+            // Leave a blank screen, for the monitor on the board, in
+            // its colors, white on black: the cursor swaps the colors
+            // of its cell, so on a blank of color 0 it does not show.
+            // nice_screen_clear writes color 0 (nice_cpu#148).
+            // The end of the input keeps the screen instead, for the
+            // tests.
             nice_poke(FONT_BASE, 0);
-            nice_screen_clear();
+            for (int row = 0; row < 25; row++)
+                for (int col = 0; col < 80; col++)
+                    put(col, row, COLOR(0x000, BRIGHT), ' ');
             return 0;
         case 'u': undo(); break;
         case 'n': new_game(); break;
