@@ -71,8 +71,10 @@ fixed, so the choice is the same every run.
 
 There are 5 levels, and the game starts at level 3. A level sets only
 the time the engine takes for a move: 1/9, 1/3, 1, 3, or 9 times that
-of `go`. On the board that is about 0.6, 1.7, 5, 15, and 45 seconds.
-The engine plays a move from the book at once, at any level.
+of `go`. On the board that is about 0.6, 1.7, 5, 15, and 45 seconds,
+and about 1600, 1770, 1850, 1980, and 2050 Elo on the CCRL 40/4 scale,
+as `make rate` measured them on 2026-11-09 (below). The engine plays a
+move from the book at once, at any level.
 
 Each side has a clock, which counts up the time it has taken; there is
 no time control, and N sets both to 0. On the board the clocks show
@@ -84,9 +86,9 @@ after `uci`, so a chess GUI can play it. Its option `OwnBook` turns
 the book on; it is off at first.
 `tools/match.py` plays two UCI engines against each other, and can run
 the NICE build in niceemu, or on the board, as one of them.
-`make rate` rates the engine at the board's speed against Stockfish's
-UCI_Elo levels, with cutechess-cli and Ordo (CONTRIBUTING.md). On
-2026-11-04 it gave about 1800 Elo on the CCRL 40/4 scale
+`make rate` rates each of the 5 levels at the board's speed against
+Stockfish's UCI_Elo levels, with cutechess-cli and Ordo
+(CONTRIBUTING.md); the figures above are its result of 2026-11-09
 ([LOG.md](https://github.com/MJoergen/nice_chess/blob/main/LOG.md)).
 
 ## On the MEGA65

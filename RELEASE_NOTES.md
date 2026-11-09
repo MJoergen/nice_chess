@@ -37,8 +37,9 @@ The first release.
   reductions, quiescence, a transposition table, and a history table.
 - An opening book of 403 positions.
 - On the MEGA65 it takes 5 seconds a move at level 3, and reaches depth
-  7 from the opening. At the board's speed, `make rate` gave it about
-  1800 Elo on the CCRL 40/4 scale on 2026-11-04.
+  7 from the opening. At the board's speed, `make rate` gave levels 1
+  to 5 about 1600, 1770, 1850, 1980, and 2050 Elo on the CCRL 40/4
+  scale on 2026-11-09.
 
 **The front ends**
 

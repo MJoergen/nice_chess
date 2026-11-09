@@ -20,7 +20,7 @@ build without asserts statically, which needs glibc's static library:
     make match-random   # the host build against random moves
     make match-mchess2  # the host build against mchess2 (about 15 minutes)
     make openings    # the openings of make rate, 8moves_v3.pgn, into deps/books/
-    make rate        # a rating against Stockfish's UCI_Elo levels (hours; see below)
+    make rate        # a rating of each level against Stockfish's UCI_Elo levels (hours; see below)
     make size        # the size of the MEGA65 builds, against the 92K words the monitor leaves them
     make pieces      # draw the pieces again into src/ui/pieces.h, after a change to tools/mkpieces.py (needs Pillow)
     make dist        # the archive of a release, and SHA256SUMS, in build/dist/
@@ -31,12 +31,17 @@ and `NICEEMU=PATH` to make.
 `make rate` needs cutechess-cli, Ordo, and Stockfish (`CUTECHESS`,
 `ORDO`, `STOCKFISH`). Its openings are `BOOK`, a .pgn or .epd file:
 by default `deps/books/8moves_v3.pgn`, from fishtest's books at a
-pinned commit, which it fetches (`make openings`). It plays `build/host/chess_fast`, the host build
-without asserts, at `NODES` nodes a move, 93000 by default, which is
-about 5 seconds a move on the MEGA65. At the same nodes the host and
-NICE builds play the same moves. The opponents are Stockfish at each
-UCI_Elo of `ELOS` (1700 1900 2100), at 60+0.6, `GAMES` (200) games
-each, `CONCURRENCY` (4) at a time. Ordo anchors each Stockfish at its
+pinned commit, which it fetches (`make openings`). It plays
+`build/host/chess_fast`, the host build without asserts, at each level
+of `LEVELS` (1 2 3 4 5), at a fixed number of nodes a move: `NODES`
+(93000) is about 5 seconds a move on the MEGA65, the time of level 3,
+and levels 1, 2, 4, and 5 get 1/9, 1/3, 3, and 9 times that, their
+share of the time. At the same nodes the host and NICE builds play the
+same moves. The opponents are Stockfish at each UCI_Elo of `ELOS`
+(1600 1800 2000 2200), at 60+0.6, `GAMES` (100) games for each level
+against each, `CONCURRENCY` (4) at a time: 2000 games by default,
+about 6 hours at `CONCURRENCY=8`.
+Ordo rates the levels in one pool, with each Stockfish anchored at its
 UCI_Elo, which is on the CCRL 40/4 scale. The games and the rating are
 in `build/rate/`.
 

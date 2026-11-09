@@ -2,6 +2,47 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-09: A rating of each level
+
+`make rate`, now of each of the 5 levels (`LEVELS`), with its defaults
+and `CONCURRENCY=8`: `build/host/chess_fast` at 1/9, 1/3, 1, 3, and 9
+times 93000 nodes a move, the levels' shares of the board's 5 seconds,
+against Stockfish 16 at UCI_Elo 1600, 1800, 2000, and 2200, at 60+0.6.
+100 games for each level against each Stockfish, from 8moves_v3.pgn,
+each opening with both colors: 2000 games, 400 a level, in one
+gauntlet with the levels as its seeds. cutechess-cli 1.5.1, Ordo
+1.2.6. It took 6 hours 14 minutes, from 2026-11-08 19:40.
+
+| Level | Nodes a move | Depth | sf1600 | sf1800 | sf2000 | sf2200 | All | Ordo |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 10333 | 4 | 36% | 25% | 18% | 12% | 23% | 1607 ± 44 |
+| 2 | 31000 | 5 | 54% | 42% | 34% | 20% | 37% | 1769 ± 39 |
+| 3 | 93000 | 6 | 66% | 44% | 44% | 25% | 45% | 1847 ± 40 |
+| 4 | 279000 | 7 | 76% | 64% | 54% | 42% | 59% | 1980 ± 39 |
+| 5 | 837000 | 8 | 82% | 73% | 60% | 46% | 66% | 2054 ± 40 |
+
+Ordo rated the levels in one pool, with each Stockfish anchored at
+its UCI_Elo, on the CCRL 40/4 scale. The depth is the median over the
+moves of the games, from the comments of the PGN. 77 games, 3.9%,
+were draws. There were no losses on time and no illegal moves. On the
+host a move took 3 ms at level 1 and 200 ms at level 5.
+
+Level 3 is 1847 ± 40, against 1817 ± 30 on 2026-11-04 at 83000 nodes,
+before null move, history and LMR, PVS, and the table of 16384
+entries: within the errors of both.
+
+Each level has 3 times the nodes of the one below, and the steps
+between them are 162, 78, 134, and 74 Elo: 112 on average, but more
+uneven than the ± 40 of each explains. The Stockfish levels are not
+200 apart against this engine: without anchors (cutechess-cli's own
+table, with the pool at 0), sf1600, sf1800, sf2000, and sf2200 are at
+−89, 3, 55, and 155, so 200 of UCI_Elo is about 80 Elo against these
+levels, and the levels span 321 Elo there (−210 to 111), against 447
+anchored. The anchoring puts each level on the UCI_Elo scale, as the
+rating of 2026-11-04 was, but the distance between two levels is less
+certain than their errors say. The levels are about 1600, 1770, 1850,
+1980, and 2050, each within 50 to 100.
+
 ## 2026-11-04: The NICE builds without bounds checks
 
 With `--no-bounds-checks` (nicewasm, through nicebuild.py), an access

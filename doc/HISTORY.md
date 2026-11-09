@@ -96,7 +96,10 @@ of nodes a move against Stockfish's UCI_Elo levels, with cutechess-cli
 and Ordo, so that the engine is rated as it plays on the MEGA65,
 without the board; `tools/board_uci.py` makes the board itself a UCI
 engine of the host. At 83000 nodes a move, the board's 5 seconds then,
-600 games gave 1817 ± 30 Elo on the CCRL 40/4 scale, about 1800.
+600 games gave 1817 ± 30 Elo on the CCRL 40/4 scale, about 1800. On
+2026-11-09, 2000 games rated each of the 5 levels (`LEVELS`), as the
+seeds of one gauntlet at their shares of the nodes: 1607 to 2054 Elo,
+1847 at level 3.
 
 **The search** (`641a6e1` to `8f724d8`, 2026-11-04): the NICE builds
 went to `-O 2` (#7), and the transposition table to 16384 entries,
