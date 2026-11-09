@@ -78,9 +78,6 @@ enum
     TEXT        = 0xCCC, BRIGHT = 0xFFF, DIM = 0x89A, WARN = 0xFA4
 };
 
-// The monitor's colors on the board, white on black: what Q leaves.
-#define MONITOR_COLOR COLOR(0x000, 0xFFF)
-
 // The first column of the right half.
 #define PX 42
 
@@ -845,15 +842,11 @@ static int handle_key(int k)
     {
         case 'q':
             // Leave a blank screen, for the monitor on the board, in
-            // its colors, white on black: the cursor swaps the colors
-            // of its cell, so on a blank of color 0 it does not show.
-            // nice_screen_clear writes color 0 (nice_cpu#148).
-            // The end of the input keeps the screen instead, for the
-            // tests.
+            // its colors, white on black, as nice_screen_clear writes
+            // them. The end of the input keeps the screen instead, for
+            // the tests.
             nice_poke(FONT_BASE, 0);
-            for (int row = 0; row < NICE_SCREEN_ROWS; row++)
-                for (int col = 0; col < NICE_SCREEN_COLS; col++)
-                    put(col, row, MONITOR_COLOR, ' ');
+            nice_screen_clear();
             return 0;
         case 'u': undo(); break;
         case 'n': new_game(); break;
