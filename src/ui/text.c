@@ -27,9 +27,11 @@
  * move" before it.
  *
  * After uci, the commands are those of the UCI protocol: uci,
- * isready, ucinewgame, position, go, setoption, and quit. The one
- * option is OwnBook, the book, false at first. There is no prompt,
- * and go does not make the move.
+ * isready, ucinewgame, position, go, setoption, and quit. The
+ * options are OwnBook, the book, false at first, and Strength, 1 to 5,
+ * 5 at first (engine_set_strength): below 5, go gets a share of its
+ * time and of its nodes, but all of its depth. There is no prompt, and go does
+ * not make the move. setoption works before uci too.
  *
  * During a search, in both modes, the line stop stops it, and the
  * line isready is answered with readyok. Any other line waits until
@@ -49,6 +51,8 @@ static const char piece_chars[] = "kqrbnp.PNBRQK";
 
 static int uci_mode = 0;
 static int own_book = 0;
+static int strength = ENGINE_STRENGTH_MAX;
+static uint32_t game_seed;         // Of the noise below full strength, new for each game
 
 /***************************************************************
  * next_word
@@ -258,13 +262,29 @@ static void print_book(void)
     printf("\n");
 }
 
-// UCI: setoption name OwnBook value true|false
+// UCI: setoption name OwnBook value true|false, or name Strength value N
 static void do_setoption(char *args)
 {
-    if (strcmp(next_word(&args), "name") || strcmp(next_word(&args), "OwnBook")
-        || strcmp(next_word(&args), "value"))
+    if (strcmp(next_word(&args), "name"))
         return;
-    own_book = !strcmp(next_word(&args), "true");
+    char *name = next_word(&args);
+    if (strcmp(next_word(&args), "value"))
+        return;
+    char *value = next_word(&args);
+    if (!strcmp(name, "OwnBook"))
+        own_book = !strcmp(value, "true");
+    else if (!strcmp(name, "Strength"))
+    {
+        strength = atoi(value);
+        engine_set_strength(strength, game_seed);
+    }
+}
+
+static void new_game(void)
+{
+    engine_new_game();
+    game_seed = game_seed * 1664525u + 1013904223u;
+    engine_set_strength(strength, game_seed);
 }
 
 static void do_divide(int depth)
@@ -384,6 +404,11 @@ static move_t do_go(char *args)
         soft_time = hard_time / 2;
     }
 
+    // Below full strength, a share of the time and of the nodes.
+    hard_time = engine_strength_share(hard_time);
+    soft_time = engine_strength_share(soft_time);
+    limits.nodes = engine_strength_share(limits.nodes);
+
     if (own_book)
     {
         move_t m = engine_book_move();
@@ -452,7 +477,8 @@ int main(void)
 {
     static char line[sizeof in_line];
 
-    engine_new_game();
+    game_seed = platform_seed();
+    new_game();
     engine_book_seed(platform_seed());
     printf("nice_chess %s. Type help for the commands.\n", nice_chess_version);
 
@@ -479,7 +505,8 @@ int main(void)
         {
             uci_mode = 1;
             printf("id name nice_chess %s\nid author Michael Jorgensen\n"
-                   "option name OwnBook type check default false\nuciok\n", nice_chess_version);
+                   "option name OwnBook type check default false\n"
+                   "option name Strength type spin default 5 min 1 max 5\nuciok\n", nice_chess_version);
             fflush(stdout);
         }
         else if (!strcmp(cmd, "isready"))
@@ -488,7 +515,7 @@ int main(void)
             fflush(stdout);
         }
         else if (!strcmp(cmd, "new") || !strcmp(cmd, "ucinewgame"))
-            engine_new_game();
+            new_game();
         else if (!strcmp(cmd, "position"))
             do_position(arg);
         else if (!strcmp(cmd, "go"))

@@ -19,8 +19,9 @@
  *   S               switch sides: the engine plays the side to move
  *   R               rotate the board
  *   N               a new game
- *   + -             give the engine more or less time, levels 1 to 5,
- *                   when there is no time control
+ *   + -             with no time control, give the engine more or
+ *                   less time, levels 1 to 5; under a time control,
+ *                   make it stronger or weaker, strengths 1 to 5
  *   T               the next time control, and a new game
  *   O               the opening book on or off (on at first)
  *   Q               quit, and clear the screen
@@ -45,7 +46,9 @@
  * from the base time and gains the increment after each of its side's
  * moves; a side whose clock reaches 0 loses, whatever the material.
  * The engine takes a share of the time on its clock
- * (engine_time_share). U takes back moves, not time. N sets the
+ * (engine_time_share), at its strength (engine_set_strength), 5, the
+ * full one, at first; a new game has a new seed of the strength's
+ * noise, the same in niceemu each time. U takes back moves, not time. N sets the
  * clocks as at the start. In niceemu the clocks count steps, at 54
  * million a second, the MEGA65's rate, so the engine's time there is
  * what it would take on the board.
@@ -148,6 +151,8 @@ static const struct
 };
 #define N_CONTROLS ((int) (sizeof controls / sizeof controls[0]))
 static int    control;             // The time control: an index of controls
+static int    strength = ENGINE_STRENGTH_MAX; // Under a time control
+static uint32_t game_seed;         // Of the noise below full strength
 
 // The result of a game lost on time, beside the engine's results.
 enum { RESULT_TIME = 16 };
@@ -438,8 +443,9 @@ static void draw_status(void)
 
 static void draw_level(void)
 {
-    char buf[32];
-    char *p = control ? fmt_str(buf, controls[control].name)
+    char buf[48];
+    char *p = control ? fmt_uint(fmt_str(fmt_str(buf, controls[control].name), ", strength "),
+                                 (uint32_t) strength)
                       : fmt_str(fmt_uint(fmt_str(buf, "Level "), (uint32_t) level), " of 5");
     fmt_str(p, book ? ", book on" : ", book off");
     draw_line(ROW_LEVEL, COLOR(PANEL, DIM), buf);
@@ -709,6 +715,7 @@ static void new_game(void)
         clock_secs[i] = clock_rest[i] = clock_bonus[i] = 0;
     flagged = 0;
     clock_on = 0;
+    game_seed = platform_seed();
     clock_last = platform_micros();
     have_info = 0;
     clear_selection();
@@ -786,6 +793,7 @@ static void think(void)
     thinking = 1;
     draw_all();
 
+    engine_set_strength(control ? strength : ENGINE_STRENGTH_MAX, game_seed);
     clock_tick();
     start_time = clock_ms(clock_side);
     if (control)
@@ -799,6 +807,7 @@ static void think(void)
     else
         hard_time = platform_move_time() / (platform_clock_second() / 1000)
                     / level_den[level - 1] * level_num[level - 1];
+    hard_time = engine_strength_share(hard_time);
     soft_time = hard_time / 2;
     engine_limits_t limits = {0, 0, stop_search};
     m = engine_search(&limits, on_info);
@@ -958,7 +967,7 @@ static int handle_key(int k)
         case '+':
         case '-':
             if (control)
-                message = "No levels under a time control.";
+                strength += k == '+' ? strength < ENGINE_STRENGTH_MAX : -(strength > 1);
             else
                 level += k == '+' ? level < 5 : -(level > 1);
             break;

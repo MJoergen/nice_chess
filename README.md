@@ -59,7 +59,7 @@ The other keys are on the screen:
 - S: switch sides.
 - R: rotate the board.
 - N: a new game.
-- \+ and −: the level, when there is no time control.
+- \+ and −: the level, or under a time control, the strength.
 - T: the next time control, and a new game.
 - O: the opening book on or off.
 - ESC: make the engine move now.
@@ -103,6 +103,27 @@ a share of the time on its clock: a thirtieth of it, and three
 quarters of the increment, but never more than half of it. U takes
 back moves, not time. N starts the game again, with the same time
 control.
+
+Under a time control, + and − set the engine's strength, from 1 to 5,
+the full strength and the default. Below 5, the engine adds noise to
+its evaluation of each position, so it misjudges some, and it takes
+only a share of its time, so it sees fewer tactics. It then moves
+early, and keeps the rest of its time:
+
+| Strength | Noise    | Share of the time | Elo below 5 |
+|---------:|---------:|------------------:|------------:|
+| 5        |          | all               | 0           |
+| 4        | ±25 cp   | 1/1.5             | 140         |
+| 3        | ±45 cp   | 1/2.2             | 270         |
+| 2        | ±60 cp   | 1/3               | 405         |
+| 1        | ±75 cp   | 1/3.8             | 535         |
+
+The Elo figures are from games of the strengths against each other, at
+Blitz's time on the board (LOG.md); against other players the steps
+are likely smaller.
+
+The noise of a position is the same within a game, and differs from
+game to game.
 
 ## The text front end
 
@@ -148,7 +169,8 @@ deterministic.
 `linux-x86_64/nice_chess` has the same commands as the text front end
 at a terminal; there `go` takes 1 second. After `uci` it speaks UCI,
 so a chess GUI can play it. Its option `OwnBook` turns the book on; it
-is off at first.
+is off at first. Its option `Strength`, 1 to 5, is the strength of the
+windowed front end; it is 5 at first.
 
 ## Building
 

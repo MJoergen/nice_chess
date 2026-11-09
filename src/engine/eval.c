@@ -21,6 +21,13 @@
  * Tomasz Michniewski (chessprogramming.org), but for the end-game
  * pawns.
  *
+ * Below full strength (engine_set_strength), evaluate adds noise of
+ * up to plus or minus an amplitude, from a hash of the Zobrist key and
+ * a seed. A position thus gets the same value each time the search
+ * meets it, so the transposition table stays consistent, and the
+ * seed varies it from game to game. The noise is not in the
+ * incremental sums.
+ *
  * Copyright (c) 2026 Michael Jørgensen. MIT license (see LICENSE).
  ***************************************************************/
 
@@ -148,11 +155,35 @@ void eval_init(void)
  * Returns the value of the position in centipawns, from the point
  * of view of the side to move.
  ***************************************************************/
+static int      noise_amplitude;
+static uint32_t noise_seed;
+
+void eval_set_noise(int amplitude, uint32_t seed)
+{
+    noise_amplitude = amplitude;
+    noise_seed = seed;
+} // end of eval_set_noise
+
+// From -noise_amplitude to noise_amplitude, by a hash of the Zobrist
+// key and the seed (the finalizer of MurmurHash3).
+static int noise(void)
+{
+    uint32_t x = pos.hash ^ noise_seed;
+    x ^= x >> 16;
+    x *= 0x85EBCA6Bu;
+    x ^= x >> 13;
+    x *= 0xC2B2AE35u;
+    x ^= x >> 16;
+    return (int) (x % (uint32_t) (2 * noise_amplitude + 1)) - noise_amplitude;
+} // end of noise
+
 int evaluate(void)
 {
     int phase = pos.phase < 24 ? pos.phase : 24;
     int mg = unpack_mg(pos.psqt);
     int eg = unpack_eg(pos.psqt);
     int v = (mg * phase + eg * (24 - phase)) / 24;
-    return pos.side > 0 ? v : -v;
+    if (pos.side < 0)
+        v = -v;
+    return noise_amplitude ? v + noise() : v;
 } // end of evaluate

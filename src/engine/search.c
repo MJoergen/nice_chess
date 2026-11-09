@@ -74,6 +74,19 @@ static engine_limits_t limits;
 static uint32_t nodes;
 static int      stopped;
 
+// The strengths below full: the noise in the evaluation, in
+// centipawns, and the divisor of the time or the nodes of a search,
+// in tenths. Index 0 is strength 1.
+static const struct { int16_t noise; uint8_t divisor; } strengths[ENGINE_STRENGTH_MAX - 1] =
+{
+    {75, 38},
+    {60, 30},
+    {45, 22},
+    {25, 15},
+};
+static int      strength = ENGINE_STRENGTH_MAX;
+static uint32_t strength_seed;
+
 static inline int iabs(int x) { return x < 0 ? -x : x; }
 
 /***************************************************************
@@ -515,3 +528,25 @@ uint32_t engine_time_share(uint32_t left, uint32_t inc, uint32_t movestogo)
     uint32_t t = left / (movestogo ? movestogo : 30) + inc / 4 * 3 + inc % 4 * 3 / 4;
     return t > left / 2 ? left / 2 : t;
 } // end of engine_time_share
+
+void engine_set_strength(int s, uint32_t seed)
+{
+    if (s < 1)
+        s = 1;
+    if (s > ENGINE_STRENGTH_MAX)
+        s = ENGINE_STRENGTH_MAX;
+    if (s == strength && (s == ENGINE_STRENGTH_MAX || seed == strength_seed))
+        return;
+    strength = s;
+    strength_seed = seed;
+    eval_set_noise(s < ENGINE_STRENGTH_MAX ? strengths[s - 1].noise : 0, seed);
+    tt_clear();
+} // end of engine_set_strength
+
+uint32_t engine_strength_share(uint32_t budget)
+{
+    if (strength == ENGINE_STRENGTH_MAX)
+        return budget;
+    uint32_t share = budget / strengths[strength - 1].divisor * 10;
+    return share || !budget ? share : 1;
+} // end of engine_strength_share

@@ -166,6 +166,21 @@ typedef int (*engine_info_fn)(const engine_info_t *info);
 // move. info may be NULL. The position is unchanged afterwards.
 move_t engine_search(const engine_limits_t *limits, engine_info_fn info);
 
+// The strengths of engine_set_strength: 1 is the weakest, and
+// ENGINE_STRENGTH_MAX full strength, the default.
+#define ENGINE_STRENGTH_MAX 5
+
+// Weakens the engine below ENGINE_STRENGTH_MAX: noise in the
+// evaluation, which the seed varies from game to game, and a share of
+// the time or the nodes of a search (engine_strength_share). Clears
+// the transposition table when the strength or the seed changes.
+void engine_set_strength(int strength, uint32_t seed);
+
+// The share of a budget of time or of nodes that a search gets at the
+// strength set: all of it at ENGINE_STRENGTH_MAX. The front end applies
+// it to the limits it gives engine_search.
+uint32_t engine_strength_share(uint32_t budget);
+
 // The time to take for a move, under a clock with left on it, inc
 // added after each move, and movestogo moves to the next time control
 // (0 if none): a share of the time left, and most of the increment,

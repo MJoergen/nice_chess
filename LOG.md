@@ -2,6 +2,54 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-09: The strengths below full (#19)
+
+A strength below full adds noise to the evaluation, and searches a
+share of the time or the nodes. The aim: about 500 Elo from strength 5
+to strength 1, in even steps. Every game was on the host
+(build/host/chess_fast), with cutechess-cli, at 140000 nodes a move for
+full strength: about what Blitz 3+2 gives the engine on the board, 7.5
+seconds at about 18600 nodes a second. The openings were those of
+8moves_v3.pgn, each with both colors, and Ordo rated the players.
+
+First, a fixed node cap and noise, each alone, against full strength,
+60 games each (about ±90 Elo):
+
+| Noise | Node cap | Elo |
+|------:|---------:|----:|
+| 20    |          | +6   |
+| 40    |          | -18  |
+| 80    |          | -209 |
+| 150   |          | -185 |
+|       | 60000    | -142 |
+|       | 30000    | -355 |
+|       | 15000    | -488 |
+|       | 7000     | -715 |
+|       | 3000     | -838 |
+
+The nodes do most of it, about 200 Elo for each halving. A fixed cap
+would then be a larger handicap at a slower time control, as full
+strength gets more nodes there: about 700000 a move at Rapid, and 3
+million at Classical. So a strength divides the budget, time or
+nodes, instead, which costs about the same at any time control.
+
+Pairs of noise and share against full strength, 100 games each (about
+±70 Elo), gave -117 for 40 and 1/2, -243 for 60 and 1/3, -350 for 80
+and 1/3, and -500 for 100 and 1/5. In a round robin of all five,
+those steps came out wider, 705 Elo from 5 to 1. The milder table, in
+a round robin of 2600 games, 1040 for each strength:
+
+| Strength | Noise | Share | Elo  |
+|---------:|------:|------:|-----:|
+| 5        | 0     | 1     | 0    |
+| 4        | 25    | 1/1.5 | -141 |
+| 3        | 45    | 1/2.2 | -270 |
+| 2        | 60    | 1/3   | -406 |
+| 1        | 75    | 1/3.8 | -537 |
+
+These are Elo among the engine's own strengths; against other players,
+such as Stockfish in `make rate`, the steps are likely smaller.
+
 ## 2026-11-09: What the bytes of CHESS.BIN are
 
 CHESS.BIN, the windowed front end built for the MEGA65 (nice_cpu V1.6,
