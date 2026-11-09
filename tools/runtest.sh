@@ -56,7 +56,7 @@ fi
 expected=tests/$check.expected
 clocks='/m\(White\|Black\)  /s/[0-9][0-9:]*:[0-9][0-9]/m:ss/'
 version="s/nice_chess ${VERSION:?the Makefile exports VERSION}/nice_chess VERSION/g"
-{ sed 's/^\(> \)*//; s/ time [0-9]*//' $raw | grep -f tests/${check%%[0-9]*}.grep | sed "$clocks; $version"; echo "exit $status"; } > $out
+{ sed 's/^\(> \)*//; s/ time [0-9][0-9]*//' $raw | grep -f tests/${check%%[0-9]*}.grep | sed "$clocks; $version"; echo "exit $status"; } > $out
 if [ "$kind" = board-screen ]; then
     # The engine's moves come from timed searches too, so they and what
     # they decide are left out as well: the moves, the FEN, the move list,

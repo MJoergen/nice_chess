@@ -509,3 +509,9 @@ move_t engine_search(const engine_limits_t *lim, engine_info_fn info)
     move_sp -= n;
     return best_move;
 } // end of engine_search
+
+uint32_t engine_time_share(uint32_t left, uint32_t inc, uint32_t movestogo)
+{
+    uint32_t t = left / (movestogo ? movestogo : 30) + inc / 4 * 3 + inc % 4 * 3 / 4;
+    return t > left / 2 ? left / 2 : t;
+} // end of engine_time_share

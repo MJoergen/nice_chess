@@ -59,13 +59,14 @@ The other keys are on the screen:
 - S: switch sides.
 - R: rotate the board.
 - N: a new game.
-- \+ and −: the level.
+- \+ and −: the level, when there is no time control.
+- T: the next time control, and a new game.
 - O: the opening book on or off.
 - ESC: make the engine move now.
 - Q: clear the screen and return to the monitor.
 
-There are 5 levels, and the game starts at level 3. A level sets only
-the time the engine takes for a move:
+The game starts with no time control, at level 3. There are 5 levels;
+a level sets only the time the engine takes for a move:
 
 | Level | Time a move | Elo (CCRL 40/4) |
 |------:|------------:|----------------:|
@@ -83,8 +84,25 @@ The book is on at first. The engine plays a move from the book at
 once, at any level, and picks it at random by the moves' weights, so
 the openings differ from game to game.
 
-Each side has a clock, which counts up the real time it has taken;
-there is no time control, and N sets both to 0.
+Each side has a clock. With no time control, it counts up the real
+time the side has taken, and N sets both to 0.
+
+T steps through the time controls, and starts a new game with each:
+
+| Time control    | Base       | Increment a move |
+|-----------------|-----------:|-----------------:|
+| none            |            |                  |
+| Blitz 3+2       | 3 minutes  | 2 s              |
+| Rapid 15+10     | 15 minutes | 10 s             |
+| Classical 90+30 | 90 minutes | 30 s             |
+
+Under a time control, each clock counts down from the base, and gains
+the increment after each of its side's moves. A side whose clock
+reaches 0 loses, whatever the material on the board. The engine takes
+a share of the time on its clock: a thirtieth of it, and three
+quarters of the increment, but never more than half of it. U takes
+back moves, not time. N starts the game again, with the same time
+control.
 
 ## The text front end
 

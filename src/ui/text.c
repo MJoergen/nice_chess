@@ -371,14 +371,10 @@ static move_t do_go(char *args)
         soft_time = hard_time = ms_to_us(movetime);
     else if (timed)
     {
-        // A share of the time left, and most of the increment, but
-        // never more than half of the time left.
         int white = engine_side_to_move() > 0;
-        unsigned long left = white ? wtime : btime;
-        unsigned long inc  = white ? winc : binc;
-        unsigned long t = left / (movestogo ? movestogo : 30) + inc * 3 / 4;
-        if (t > left / 2)
-            t = left / 2;
+        unsigned long t = engine_time_share((uint32_t) (white ? wtime : btime),
+                                            (uint32_t) (white ? winc : binc),
+                                            (uint32_t) movestogo);
         hard_time = ms_to_us(t ? t : 1);
         soft_time = hard_time / 2;
     }

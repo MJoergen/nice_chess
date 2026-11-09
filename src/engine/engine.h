@@ -166,4 +166,11 @@ typedef int (*engine_info_fn)(const engine_info_t *info);
 // move. info may be NULL. The position is unchanged afterwards.
 move_t engine_search(const engine_limits_t *limits, engine_info_fn info);
 
+// The time to take for a move, under a clock with left on it, inc
+// added after each move, and movestogo moves to the next time control
+// (0 if none): a share of the time left, and most of the increment,
+// but never more than half of the time left. Any unit, the same for
+// all.
+uint32_t engine_time_share(uint32_t left, uint32_t inc, uint32_t movestogo);
+
 #endif // ENGINE_H

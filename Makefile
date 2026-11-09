@@ -227,12 +227,14 @@ nice-test: build/nice/chess_text.bin build/nice/chess_screen.bin build/nice/perf
            build/test/mon_chess_text.bin build/test/mon_chess_screen.bin | $(NICEEMU)
 	@tools/runtest.sh nice_screen screen tests/screen.keys screen build/nice/chess_screen.bin
 	@tools/runtest.sh nice_screen_book screen_book tests/screen_book.keys screen build/nice/chess_screen.bin
+	@tools/runtest.sh nice_screen_clock screen_clock tests/screen_clock.keys screen build/nice/chess_screen.bin
 	@tools/runtest.sh nice_text text tests/text.input nice build/nice/chess_text.bin
 	@tools/runtest.sh nice_search search tests/search.input nice build/nice/chess_text.bin
 	@tools/runtest.sh nice_book book tests/book.input nice build/nice/chess_text.bin
 	@tools/runtest.sh nice_perftsuite3 perftsuite3 $(PERFTSUITE) nice build/nice/perftsuite.bin
 	@tools/runtest.sh mega65_screen screen tests/screen.keys screen build/test/mon_chess_screen.bin
 	@tools/runtest.sh mega65_screen_book screen_book tests/screen_book.keys screen build/test/mon_chess_screen.bin
+	@tools/runtest.sh mega65_screen_clock screen_clock tests/screen_clock.keys screen build/test/mon_chess_screen.bin
 	@tools/runtest.sh mega65_text text tests/text.input nice build/test/mon_chess_text.bin
 	@tools/runtest.sh mega65_search search tests/search.input nice build/test/mon_chess_text.bin
 	@tools/runtest.sh mega65_book book tests/book.input nice build/test/mon_chess_text.bin

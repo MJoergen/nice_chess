@@ -19,7 +19,9 @@
  *   S               switch sides: the engine plays the side to move
  *   R               rotate the board
  *   N               a new game
- *   + -             give the engine more or less time, levels 1 to 5
+ *   + -             give the engine more or less time, levels 1 to 5,
+ *                   when there is no time control
+ *   T               the next time control, and a new game
  *   O               the opening book on or off (on at first)
  *   Q               quit, and clear the screen
  * The letters of commands act only when no move is being typed.
@@ -36,10 +38,17 @@
  * The program ends on Q, or at the end of the console's input, which
  * leaves the screen as it is.
  *
- * Each side's clock counts up the time it has taken, while the game
- * goes on; there is no time control. N sets both to 0. In niceemu the
- * clock counts steps, at 54 million a second, the MEGA65's rate, so
- * the engine's time there is what it would take on the board.
+ * T steps through the time controls: none, Blitz 3+2, Rapid 15+10,
+ * and Classical 90+30, and starts a new game. With none, each side's
+ * clock counts up the time it has taken, and the level sets the time
+ * of the engine's move. With a time control, each clock counts down
+ * from the base time and gains the increment after each of its side's
+ * moves; a side whose clock reaches 0 loses, whatever the material.
+ * The engine takes a share of the time on its clock
+ * (engine_time_share). U takes back moves, not time. N sets the
+ * clocks as at the start. In niceemu the clocks count steps, at 54
+ * million a second, the MEGA65's rate, so the engine's time there is
+ * what it would take on the board.
  *
  * The engine polls the keyboard during its search on a board, and in
  * niceemu only once a read of the console has found no byte waiting:
@@ -124,6 +133,25 @@ static const uint8_t level_den[5] = {9, 3, 1, 1, 1};
 static int    level = 3;
 static int    book = 1;            // The engine plays from its opening book
 
+// The time controls: a base time and an increment, in seconds. The
+// first is none: the clocks count up, and the levels apply.
+static const struct
+{
+    const char *name;
+    uint32_t    base, inc;
+} controls[] =
+{
+    {"",                   0,  0},
+    {"Blitz 3+2",        180,  2},
+    {"Rapid 15+10",      900, 10},
+    {"Classical 90+30", 5400, 30},
+};
+#define N_CONTROLS ((int) (sizeof controls / sizeof controls[0]))
+static int    control;             // The time control: an index of controls
+
+// The result of a game lost on time, beside the engine's results.
+enum { RESULT_TIME = 16 };
+
 // What the engine thought about its last move.
 static engine_info_t info;
 static int    have_info;           // 1 if info is set, 2 if the move was the book's
@@ -135,6 +163,10 @@ static uint32_t clock_secs[2], clock_rest[2];
 static uint32_t clock_last;        // platform_micros at the last tick
 static int    clock_side;          // The side the clock runs for: 0 white, 1 black
 static int    clock_on;            // The game goes on, and so does the clock
+static uint32_t clock_bonus[2];    // The seconds of increment each side has gained
+static int    flagged;             // 1 + the side whose time ran out, or 0
+
+static void log_result(void);
 
 /***************************************************************
  * Writing to the screen
@@ -287,8 +319,22 @@ static void draw_line(int row, uint32_t color, const char *s)
     clear_to_end(put_str(PX, row, color, s), row);
 }
 
+// The seconds on a side's clock under a time control, from which its
+// time taken counts.
+static uint32_t clock_limit(int side)
+{
+    return controls[control].base + clock_bonus[side];
+}
+
+// The game's result: the engine's, or RESULT_TIME.
+static int game_result(void)
+{
+    return flagged ? RESULT_TIME : engine_result();
+}
+
 // A player and their clock: "White  you          0:12", the side whose
-// clock runs bright.
+// clock runs bright. The clock shows the time taken, or under a time
+// control the whole seconds left.
 static void draw_player(int side)
 {
     char buf[40];
@@ -297,6 +343,11 @@ static void draw_player(int side)
     while (p < buf + 20)
         *p++ = ' ';
     uint32_t s = clock_secs[side];
+    if (control)
+    {
+        uint32_t limit = clock_limit(side);
+        s = s >= limit ? 0 : limit - s - (clock_rest[side] != 0);
+    }
     if (s >= 3600)
     {
         p = fmt_uint(p, s / 3600);
@@ -320,8 +371,9 @@ static void draw_players(void)
 }
 
 // Charges the time since the last tick to the side the clock runs
-// for, and draws its clock when a second has passed. The engine's
-// search calls it too, so it does not ask the engine whose move it is.
+// for, and draws its clock when a second has passed. Under a time
+// control, a side whose time has run out loses. The engine's search
+// calls it too, so it does not ask the engine whose move it is.
 static void clock_tick(void)
 {
     uint32_t now = platform_micros();
@@ -335,6 +387,14 @@ static void clock_tick(void)
     {
         clock_secs[clock_side] += rest / second;
         rest %= second;
+        if (control && clock_secs[clock_side] >= clock_limit(clock_side))
+        {
+            clock_secs[clock_side] = clock_limit(clock_side);
+            rest = 0;
+            flagged = 1 + clock_side;
+            clock_on = 0;
+            log_result();
+        }
         draw_player(clock_side);
     }
     clock_rest[clock_side] = rest;
@@ -346,7 +406,7 @@ static void clock_switch(void)
 {
     clock_tick();
     clock_side = engine_side_to_move() < 0;
-    clock_on = engine_result() == ENGINE_PLAYING;
+    clock_on = game_result() == ENGINE_PLAYING;
 }
 
 static const char *status_text(int result)
@@ -358,6 +418,8 @@ static const char *status_text(int result)
         case ENGINE_STALEMATE:  return "Stalemate. A draw.";
         case ENGINE_FIFTY:      return "A draw by the 50-move rule.";
         case ENGINE_REPETITION: return "A draw by repetition.";
+        case RESULT_TIME:       return flagged == 1 ? "White's time is up. Black wins."
+                                                    : "Black's time is up. White wins.";
         default: break;
     }
     if (thinking)
@@ -369,7 +431,7 @@ static const char *status_text(int result)
 
 static void draw_status(void)
 {
-    int result = engine_result();
+    int result = game_result();
     draw_line(ROW_STATUS, COLOR(PANEL, result != ENGINE_PLAYING || thinking ? WARN : BRIGHT),
               status_text(result));
 }
@@ -377,8 +439,9 @@ static void draw_status(void)
 static void draw_level(void)
 {
     char buf[32];
-    fmt_str(fmt_str(fmt_uint(fmt_str(buf, "Level "), (uint32_t) level), " of 5"),
-            book ? ", book on" : ", book off");
+    char *p = control ? fmt_str(buf, controls[control].name)
+                      : fmt_str(fmt_uint(fmt_str(buf, "Level "), (uint32_t) level), " of 5");
+    fmt_str(p, book ? ", book on" : ", book off");
     draw_line(ROW_LEVEL, COLOR(PANEL, DIM), buf);
 }
 
@@ -488,9 +551,9 @@ static void draw_all(void)
     draw_moves();
     draw_line(ROW_INPUT - 1, COLOR(PANEL, TEXT), "");
     draw_input();
-    draw_line(ROW_HELP,     COLOR(PANEL, DIM), "Arrows, Enter: move. Or type e2e4.");
+    draw_line(ROW_HELP,     COLOR(PANEL, DIM), "Arrows+Enter or e2e4: move  Esc stop");
     draw_line(ROW_HELP + 1, COLOR(PANEL, DIM), "U undo  S switch  R rotate  N new");
-    draw_line(ROW_HELP + 2, COLOR(PANEL, DIM), "+/- level  O book  Q quit  Esc stop");
+    draw_line(ROW_HELP + 2, COLOR(PANEL, DIM), "+/- level  T time  O book  Q quit");
 }
 
 /***************************************************************
@@ -584,8 +647,9 @@ static int wait_key(void)
         --n_ahead;
         return k;
     }
-    int k;
-    while ((k = poll_key()) == K_NONE)
+    // K_NONE when a side's time runs out, for the screen to show it.
+    int k, was = flagged;
+    while ((k = poll_key()) == K_NONE && flagged == was)
         clock_tick();
     return k;
 }
@@ -609,22 +673,32 @@ static void clear_selection(void)
         targets[i] = 0;
 }
 
+// Writes the result of the game to the console.
+static void log_result(void)
+{
+    console_print("result ");
+    console_print(status_text(game_result()));
+    console_putc('\n');
+}
+
+// Plays a move, unless the mover's time ran out first, and gives the
+// mover the increment.
 static void play(move_t m)
 {
+    clock_tick();
+    if (flagged)
+        return;
+    int side = engine_side_to_move() < 0;
     if (n_played >= MAX_PLAYED || engine_make_move(m))
     {
         message = "The game is too long.";
         return;
     }
     played[n_played++] = m;
+    clock_bonus[side] += controls[control].inc;
     log_move(m);
-    int result = engine_result();
-    if (result != ENGINE_PLAYING)
-    {
-        console_print("result ");
-        console_print(status_text(result));
-        console_putc('\n');
-    }
+    if (game_result() != ENGINE_PLAYING)
+        log_result();
 }
 
 static void new_game(void)
@@ -632,7 +706,9 @@ static void new_game(void)
     engine_new_game();
     n_played = 0;
     for (int i = 0; i < 2; ++i)
-        clock_secs[i] = clock_rest[i] = 0;
+        clock_secs[i] = clock_rest[i] = clock_bonus[i] = 0;
+    flagged = 0;
+    clock_on = 0;
     clock_last = platform_micros();
     have_info = 0;
     clear_selection();
@@ -658,17 +734,24 @@ static void undo(void)
 /***************************************************************
  * The engine's move
  ***************************************************************/
+// The engine's time is that of its clock, in ms, which does not wrap
+// as platform_micros does, after 79 seconds of steps in niceemu.
 static uint32_t start_time, soft_time, hard_time;
+
+static uint32_t clock_ms(int side)
+{
+    return clock_secs[side] * 1000 + clock_rest[side] / (platform_clock_second() / 1000);
+}
 
 static uint32_t elapsed(void)
 {
-    return platform_micros() - start_time;
+    return clock_ms(clock_side) - start_time;
 }
 
 static int stop_search(void)
 {
     clock_tick();
-    if (elapsed() >= hard_time)
+    if (flagged || elapsed() >= hard_time)
         return 1;
     if (!live)
         return 0;
@@ -685,6 +768,7 @@ static int on_info(const engine_info_t *in)
     info = *in;
     have_info = 1;
     draw_info();
+    clock_tick();
     return elapsed() >= soft_time;
 }
 
@@ -702,10 +786,21 @@ static void think(void)
     thinking = 1;
     draw_all();
 
-    hard_time = platform_move_time() / level_den[level - 1] * level_num[level - 1];
+    clock_tick();
+    start_time = clock_ms(clock_side);
+    if (control)
+    {
+        uint32_t limit = clock_limit(clock_side) * 1000;
+        uint32_t left = limit > start_time ? limit - start_time : 0;
+        hard_time = engine_time_share(left, controls[control].inc * 1000, 0);
+        if (hard_time == 0)
+            hard_time = 1;
+    }
+    else
+        hard_time = platform_move_time() / (platform_clock_second() / 1000)
+                    / level_den[level - 1] * level_num[level - 1];
     soft_time = hard_time / 2;
     engine_limits_t limits = {0, 0, stop_search};
-    start_time = platform_micros();
     m = engine_search(&limits, on_info);
 
     thinking = 0;
@@ -722,7 +817,7 @@ static void enter_typed(void)
 {
     typed[n_typed] = '\0';
     move_t m = engine_parse_move(typed, 0);
-    if (m && (engine_result() != ENGINE_PLAYING || engine_side_to_move() != human))
+    if (m && (game_result() != ENGINE_PLAYING || engine_side_to_move() != human))
         m = 0;
     if (m)
         play(m);
@@ -739,7 +834,7 @@ static void enter_typed(void)
 static void enter_square(void)
 {
     int sq = sq_index(cur_file, cur_rank);
-    if (engine_result() != ENGINE_PLAYING || engine_side_to_move() != human)
+    if (game_result() != ENGINE_PLAYING || engine_side_to_move() != human)
         return;
 
     move_t moves[ENGINE_MAX_MOVES];
@@ -856,8 +951,17 @@ static int handle_key(int k)
             flipped = human < 0;
             clear_selection();
             break;
-        case '+': level += level < 5; break;
-        case '-': level -= level > 1; break;
+        case 't':
+            control = (control + 1) % N_CONTROLS;
+            new_game();
+            break;
+        case '+':
+        case '-':
+            if (control)
+                message = "No levels under a time control.";
+            else
+                level += k == '+' ? level < 5 : -(level > 1);
+            break;
         case 'o': book = !book; break;
         default: break;
     }
@@ -878,12 +982,14 @@ int main(void)
     {
         clock_switch();
         draw_all();
-        if (engine_result() == ENGINE_PLAYING && engine_side_to_move() != human)
+        if (game_result() == ENGINE_PLAYING && engine_side_to_move() != human)
         {
             think();
             continue;
         }
         int k = wait_key();
+        if (k == K_NONE)
+            continue;
         if (k == K_END || !handle_key(k))
             break;
     }
