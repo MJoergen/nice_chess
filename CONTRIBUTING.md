@@ -56,7 +56,7 @@ what `git describe` says between tags. `build/gen/version.c` holds it.
 GitHub Actions runs `make test`, `make perft-deep`, `make screen-game`,
 `make match-random`, and `make size` on every push
 ([.github/workflows/test.yml](.github/workflows/test.yml)). The tests
-on the board are in [README.md](README.md#on-the-mega65).
+on the board are in [README.md](README.md#the-board-from-a-host).
 
 ## Releases
 
