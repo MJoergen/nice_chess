@@ -12,7 +12,7 @@ build without asserts statically, which needs glibc's static library:
 `libc6-dev` has it on Debian and Ubuntu, `glibc-static` on Fedora.
 
     make             # list the targets
-    make deps        # nice_cpu V1.6 and niceemu V1.6, and mchess2's test suites, into deps/
+    make deps        # nice_cpu V2.0 and niceemu V2.0, and mchess2's test suites, into deps/
     make all         # build/nice/ for niceemu, build/mega65/ for the MEGA65, build/host/chess_text for the host
     make test        # the tests, on the host and in niceemu
     make perft-deep  # the perft suite to depth 5 on the host (about a minute)

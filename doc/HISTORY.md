@@ -32,7 +32,10 @@ date in make and undo.
 ## Decisions
 
 1. nice_cpu is pinned to a release, and the pin is raised by hand: V1.2
-   at first, V1.6 for the font of #12. From V1.3 niceemu's microsecond
+   at first, V1.6 for the font of #12, and V2.0 after V1.0, for
+   `nice_screen_clear` in the monitor's colors (nice_cpu#148). V2.0
+   adds 2681 words to the text front end, for the float conversions of
+   its `printf`, and changes no output. From V1.3 niceemu's microsecond
    counter counts the host's time, so the tests and tools run it with
    `--step-time`, where it counts steps as before.
 2. No copy of mchess2 in this repository. mchess2 is archived, and the

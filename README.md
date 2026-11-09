@@ -32,9 +32,9 @@ its UCI `id name`, and the title of the window.
 ## Playing
 
 The front ends for niceemu run in the niceemu of nice_cpu's
-[V1.6 release](https://github.com/MJoergen/nice_cpu/releases/tag/V1.6):
-`niceemu-V1.6-x86_64-linux.tar.gz` runs the text front end, and the
-window build, `niceemu-window-V1.6-x86_64-linux.tar.gz`, runs both.
+[V2.0 release](https://github.com/MJoergen/nice_cpu/releases/tag/V2.0):
+`niceemu-V2.0-x86_64-linux.tar.gz` runs the text front end, and the
+window build, `niceemu-window-V2.0-x86_64-linux.tar.gz`, runs both.
 From the archive:
 
     niceemu --step-time niceemu/chess_text.bin
@@ -45,7 +45,7 @@ builds the front ends into `build/nice/`;
 [CONTRIBUTING.md](https://github.com/MJoergen/nice_chess/blob/main/CONTRIBUTING.md)
 lists what that needs, and the tests:
 
-    deps/niceemu-V1.6-x86_64-linux/niceemu --step-time build/nice/chess_text.bin
+    deps/niceemu-V2.0-x86_64-linux/niceemu --step-time build/nice/chess_text.bin
 
 `--step-time` makes niceemu's clock count steps, one microsecond each,
 rather than the host's time; the window runs as fast as the host can.
