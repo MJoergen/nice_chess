@@ -30,6 +30,7 @@ program on the board as they play one in niceemu.
 from __future__ import annotations
 
 import argparse
+import importlib
 import os
 import sys
 import time
@@ -40,12 +41,17 @@ SCREEN_WORDS = 2000
 FONT_RANGES = [(0xFFFFFF86, 1), (0xFFFE0000, 8192), (0xFFFE2000, 8192)]
 
 
+# The module of NiceMonMEGA65's tools with the debug link: boardlink.py
+# from its V1.9 on, nicelink.py before
+LINK_MODULES = ("boardlink", "nicelink")
+
+
 def tools_dir(nicemon: str | None) -> str:
     d = nicemon or os.environ.get("NICEMON") or os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "..", "NiceMonMEGA65")
     tools = os.path.join(d, "tools")
-    if not os.path.exists(os.path.join(tools, "nicelink.py")):
-        sys.exit(f"board.py: {tools}/nicelink.py not found; --nicemon DIR or NICEMON=DIR "
+    if not any(os.path.exists(os.path.join(tools, m + ".py")) for m in LINK_MODULES):
+        sys.exit(f"board.py: {tools}/boardlink.py not found; --nicemon DIR or NICEMON=DIR "
                  "names a checkout of NiceMonMEGA65")
     return tools
 
@@ -54,9 +60,11 @@ class Board:
     """A program under the monitor on the board, as a console."""
 
     def __init__(self, nicemon: str | None, link_args: list[str], binfile: str):
-        sys.path.insert(0, tools_dir(nicemon))
+        tools = tools_dir(nicemon)
+        sys.path.insert(0, tools)
         import load as loader  # noqa: E402  NiceMonMEGA65/tools/load.py
-        import nicelink  # noqa: E402
+        nicelink = importlib.import_module(next(
+            m for m in LINK_MODULES if os.path.exists(os.path.join(tools, m + ".py"))))
 
         self.nicelink = nicelink
         ap = argparse.ArgumentParser(prog="board.py")

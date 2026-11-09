@@ -148,7 +148,10 @@ def cmd_preflight(_: argparse.Namespace) -> int:
     tag = makefile_var(MAKEFILE.read_text(), "NICE_CPU_TAG")
     ok &= say((ROOT / "deps" / f"nice_cpu-{tag}").is_dir(), f"deps/nice_cpu-{tag} is there (make deps)")
     nicemon = nicemon_dir()
-    ok &= say((nicemon / "tools" / "load.py").is_file(),
+    tools = nicemon / "tools"
+    # load.py and the debug link, which tools/board.py imports
+    ok &= say((tools / "load.py").is_file()
+              and any((tools / m).is_file() for m in ("boardlink.py", "nicelink.py")),
               f"NiceMonMEGA65 is at {nicemon} (NICEMON), for the board")
     if shutil.which("gh"):
         p = subprocess.run(["gh", "auth", "status"], cwd=ROOT, capture_output=True, text=True)
