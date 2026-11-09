@@ -2,6 +2,47 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-09: What the bytes of CHESS.BIN are
+
+CHESS.BIN, the windowed front end built for the MEGA65 (nice_cpu V1.6,
+`-O 2`), is 471870 bytes. It is the text `.bin` format of the
+toolchain: a line `AAAAAAAA DDDDDDDD` of 18 bytes for each word that
+is not 0. So the file is 26215 words, about 105 KB as 32-bit words.
+The words that are 0, such as the 43988 free words of the linear
+memory, are not in the file.
+
+Each line was counted against the symbol before its address, from
+`build/mega65/chess_screen.sym`. A static function is counted with the
+exported function before it, which is in the same file.
+
+| Part | Words | KB of the file | Share |
+|---|---|---|---|
+| Engine code | 13944 | 245 | 53% |
+| - search.c | 4962 | 87 | 19% |
+| - fen.c (FEN, and moves as text) | 2859 | 50 | 11% |
+| - makemove.c | 1757 | 31 | 7% |
+| - board.c | 1690 | 30 | 6% |
+| - movegen.c | 1244 | 22 | 5% |
+| - book.c | 586 | 10 | 2% |
+| - tt.c, eval.c, game.c | 846 | 15 | 3% |
+| Front end code (screen.c) | 7936 | 140 | 30% |
+| Data segments | 3116 | 55 | 12% |
+| - the glyphs of the pieces (pieces.h) | 1728 | 30 | 7% |
+| - the table of the book (535 entries) | 1070 | 19 | 4% |
+| - the tables of eval.c, strings, other constants | 318 | 6 | 1% |
+| Runtime, libc, and nice.c | about 1240 | about 22 | 5% |
+
+The code is 83% of the file. The translator makes several NICE
+instructions of each wasm instruction: `main` of screen.c is 2528
+words, and `draw_all` 2794. perft.c is not in the file, as the
+windowed front end does not call it. CHESST.BIN, the text front end,
+is 453312 bytes, with the same engine.
+
+The size of the file does not limit the board; the image in words
+does. `make size` gives 72251 words for this build, against the budget
+of 94176. Only a binary format, in the monitor's loader, would make
+the file much smaller.
+
 ## 2026-11-09: A rating of each level
 
 `make rate`, now of each of the 5 levels (`LEVELS`), with its defaults
