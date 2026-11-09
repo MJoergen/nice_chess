@@ -49,14 +49,18 @@ lists what that needs, and the tests:
 
 `--step-time` makes niceemu's clock count steps, one microsecond each,
 rather than the host's time; the window runs as fast as the host can.
+It is optional for playing. Without it, the engine takes niceemu for a
+board: `go` takes 5 seconds of the host's time, the clocks show the
+host's time, and the moves depend on the host's speed. The tests and
+the tools run niceemu with it, so that the runs are deterministic.
 
 In the text front end, type `help` for the commands. Moves are in
 coordinate notation, such as `e2e4` or `e7e8q`, and `go` makes the
-engine move. In niceemu, `go` takes 300 million steps, about 7 seconds
-in the emulator; on the board it takes 5 seconds, and on the host 1
-second. `go depth 4` or `go nodes 20000` are quicker. `book on` makes
-`go` play from the opening book, where the position is in it, and
-`book` lists its moves.
+engine move. In niceemu with `--step-time`, `go` takes 300 million
+steps, about 7 seconds in the emulator; on the board it takes 5
+seconds, and on the host 1 second. `go depth 4` or `go nodes 20000`
+are quicker. `book on` makes `go` play from the opening book, where
+the position is in it, and `book` lists its moves.
 
 The windowed front end shows the board on the 80×25 screen. Move with
 the arrows and Enter, or type a move such as `e2e4` and Enter. A
