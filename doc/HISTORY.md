@@ -140,4 +140,10 @@ the check on the board and its stamp, the wait for CI, the tag with the
 section of RELEASE_NOTES.md as its message, and the workflow that
 builds the archive and the GitHub release. The archive has the MEGA65
 builds under 8.3 names, as NiceMonMEGA65 V1.9 loads them from the SD
-card (`8b4af80`).
+card (`8b4af80`). On 2026-11-09 the check for V1.0 found
+that board.py had not followed NiceMonMEGA65 V1.9, whose
+`tools/nicelink.py` became `tools/boardlink.py`, and that board_screen
+compared the engine's timed moves, which the board's real clock and
+niceemu's steps decide differently (`d721171`). With both fixed, the
+board passed `make board-test` and won both games of `make board-match`,
+under NiceMonMEGA65 V1.9 over the debug UART.

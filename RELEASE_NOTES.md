@@ -13,7 +13,7 @@ A release is named `Vmajor.minor`, and its files are
 the release is built with, and the NiceMonMEGA65 release it was
 checked on.
 
-## V1.0 (not yet released)
+## V1.0 (2026-11-09)
 
 The first release.
 
@@ -53,4 +53,6 @@ The first release.
 - The archive has the MEGA65 builds as `mega65/CHESS.BIN`, the windowed
   front end, and `mega65/CHESST.BIN`, the text front end.
 
-Built with nice_cpu V1.6.
+Built with nice_cpu V1.6, and checked on the MEGA65 under NiceMonMEGA65
+V1.9: `make board-test` passed, and the board won both games of
+`make board-match`.
