@@ -2,6 +2,58 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-10: The strengths against Stockfish (#19)
+
+`make rate` with `STRENGTHS="1 2 3 4 5"` plays each strength at
+139500 nodes a move, Blitz 3+2's first move on the board, against
+Stockfish at UCI_Elo, at 60+0.6, 100 games a pairing.
+
+With the table of 2026-11-09, against Stockfish 1400, 1600, 1800, and
+2000 (2000 games), the strengths were 1814, 1783, 1692, 1646, and
+1637 (±40): 177 Elo from 5 to 1, about a third of the 537 of the round
+robin. Strengths 2 and 1 were about equal.
+
+Strength 1 (1/3.8 of the nodes) with more noise, against Stockfish
+1320 and 1600, 120 games each:
+
+| Noise | Elo        |
+|------:|-----------:|
+| 150   | 1478 ±66   |
+| 250   | 1436 ±65   |
+| 400   | 1331 ±72   |
+| 600   | 1024 ±116  |
+
+The new table, ±90, ±160, ±360, and ±500 for strengths 4 to 1, aimed
+at 150 Elo a step. Its run, 2500 games, against Stockfish 1320, 1600,
+and 2000, and two engines of the CCRL 40/4 list below Stockfish's
+lowest UCI_Elo, Blunders 0.1.0 (1266) and Belofte 2.1.9 (1153), at
+60+0.6 too. The scores of the strengths:
+
+| Strength | Belofte | Blunders | SF 1320 | SF 1600 | SF 2000 |
+|---------:|--------:|---------:|--------:|--------:|--------:|
+| 5        | 92%     | 80%      | 91%     | 69%     | 42%     |
+| 4        | 88%     | 65%      | 78%     | 60%     | 32%     |
+| 3        | 67%     | 38%      | 73%     | 44%     | 23%     |
+| 2        | 15%     | 10%      | 49%     | 16%     | 8%      |
+| 1        | 8%      | 5%       | 30%     | 7%      | 3%      |
+
+The two sets of anchors disagree. With Stockfish's alone, Blunders
+rates 1637 and Belofte 1479 (±44), about 350 above their CCRL ratings:
+they play on their clocks, on a host much faster than CCRL's, while
+the engine plays a fixed number of nodes, and Stockfish's UCI_Elo is
+fitted at 60+0.6. So the ratings are those with Stockfish's anchors:
+
+| Strength | Elo  | Error | Step |
+|---------:|-----:|------:|-----:|
+| 5        | 1852 | 41    |      |
+| 4        | 1729 | 38    | 124  |
+| 3        | 1576 | 38    | 153  |
+| 2        | 1280 | 42    | 296  |
+| 1        | 1136 | 53    | 144  |
+
+717 Elo from 5 to 1. The step from 3 to 2 is twice the others; the
+table was kept.
+
 ## 2026-11-09: The strengths below full (#19)
 
 A strength below full adds noise to the evaluation, and searches a

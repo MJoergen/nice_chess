@@ -15,16 +15,26 @@
 # on the MEGA65, the time of go and of level 3 (LOG.md). Stockfish
 # gets 60+0.6, the time control its UCI_Elo was fitted at, to CCRL 40/4.
 #
+# Each strength of $STRENGTHS (none by default) plays too, with the UCI
+# option Strength, at 3/2 of $NODES a move: about 7.5 seconds on the
+# MEGA65, the engine's time for its first move at Blitz 3+2. Below
+# full strength the engine takes its share of those nodes.
+#
+# Each of $OPPONENTS (none by default), NAME=ELO=COMMAND, is another
+# UCI engine at its own default settings and Stockfish's time control,
+# anchored at ELO: an engine of the CCRL 40/4 list, such as one rated
+# below Stockfish's lowest UCI_Elo, 1320. COMMAND has no spaces.
+#
 # The settings come from the environment, as the Makefile exports them:
-# CUTECHESS, ORDO, STOCKFISH (commands), BOOK, NODES, LEVELS, ELOS,
-# GAMES, CONCURRENCY. The games go to build/rate/games.pgn, and the
+# CUTECHESS, ORDO, STOCKFISH (commands), BOOK, NODES, LEVELS, STRENGTHS,
+# ELOS, OPPONENTS, GAMES, CONCURRENCY. An empty LEVELS rates no level. The games go to build/rate/games.pgn, and the
 # rating to build/rate/ratings.txt. A new run starts a new games.pgn.
 # It plays a copy of the engine in build/rate/, so that a build during
 # the hours of a run does not change the player.
 set -eu
 : "${BOOK:=deps/books/8moves_v3.pgn}"
 : "${CUTECHESS:=cutechess-cli}" "${ORDO:=ordo}" "${STOCKFISH:=stockfish}"
-: "${NODES:=93000}" "${LEVELS:=1 2 3 4 5}" "${ELOS:=1600 1800 2000 2200}"
+: "${NODES:=93000}" "${LEVELS=1 2 3 4 5}" "${STRENGTHS=}" "${ELOS:=1600 1800 2000 2200}" "${OPPONENTS=}"
 : "${GAMES:=100}" "${CONCURRENCY:=4}"
 
 case "$BOOK" in
@@ -53,10 +63,32 @@ for level in $LEVELS; do
     set -- "$@" -engine name=level$level cmd=$dir/chess_fast proto=uci tc=inf nodes=$nodes
     seeds=$((seeds + 1))
 done
+for strength in $STRENGTHS; do
+    case $strength in
+        [1-5]) ;;
+        *) echo "rate.sh: STRENGTHS must be of 1 to 5" >&2; exit 1 ;;
+    esac
+    set -- "$@" -engine name=strength$strength cmd=$dir/chess_fast proto=uci tc=inf \
+        nodes=$((NODES * 3 / 2)) option.Strength=$strength
+    seeds=$((seeds + 1))
+done
+if [ $seeds -eq 0 ]; then
+    echo "rate.sh: nothing to rate: LEVELS and STRENGTHS are empty" >&2
+    exit 1
+fi
 for elo in $ELOS; do
     set -- "$@" -engine name=sf$elo cmd="$STOCKFISH" proto=uci tc=60+0.6 \
         option.UCI_LimitStrength=true option.UCI_Elo=$elo option.Threads=1 option.Hash=16
     echo "\"sf$elo\",$elo" >> $dir/anchors.csv
+done
+for opponent in $OPPONENTS; do
+    name=${opponent%%=*} rest=${opponent#*=}
+    elo=${rest%%=*} cmd=${rest#*=}
+    case $elo in
+        ''|*[!0-9]*) echo "rate.sh: OPPONENTS must be NAME=ELO=COMMAND" >&2; exit 1 ;;
+    esac
+    set -- "$@" -engine name=$name cmd="$cmd" proto=uci tc=60+0.6
+    echo "\"$name\",$elo" >> $dir/anchors.csv
 done
 
 # Each pairing plays GAMES games: GAMES/2 openings, each twice.
@@ -68,9 +100,10 @@ done
 
 # Ordo 1.2.6 does not fix the rating of an anchor of -m when it is the
 # only one, so one anchor is given by -A and -a.
-set -- $ELOS
-if [ $# -eq 1 ]; then
-    anchors="-A sf$1 -a $1"
+if [ $(wc -l < $dir/anchors.csv) -eq 1 ]; then
+    IFS=, read -r name elo < $dir/anchors.csv
+    name=${name#\"} name=${name%\"}
+    anchors="-A $name -a $elo"
 else
     anchors="-m $dir/anchors.csv"
 fi

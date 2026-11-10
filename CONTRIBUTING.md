@@ -41,9 +41,18 @@ same moves. The opponents are Stockfish at each UCI_Elo of `ELOS`
 (1600 1800 2000 2200), at 60+0.6, `GAMES` (100) games for each level
 against each, `CONCURRENCY` (4) at a time: 2000 games by default,
 about 6 hours at `CONCURRENCY=8`.
-Ordo rates the levels in one pool, with each Stockfish anchored at its
-UCI_Elo, which is on the CCRL 40/4 scale. The games and the rating are
-in `build/rate/`.
+`STRENGTHS` (empty by default), such as `1 2 3 4 5`, rates the
+strengths of a time control too, with the UCI option `Strength`, at
+3/2 of `NODES` a move: about 7.5 seconds on the MEGA65, the engine's
+time for its first move at Blitz 3+2. `LEVELS=` rates no level.
+`OPPONENTS` (empty by default), such as
+`blunders=1266=/path/to/blunders`, adds other UCI engines, each
+anchored at its rating on the CCRL 40/4 list; Stockfish's UCI_Elo goes
+no lower than 1320. Such an engine plays on its clock, on a host
+faster than CCRL's, so it can play above its rating (LOG.md).
+Ordo rates the levels and the strengths in one pool, with each
+Stockfish anchored at its UCI_Elo, which is on the CCRL 40/4 scale.
+The games and the rating are in `build/rate/`.
 
 `make test` also runs the tests of `tools/release.py`
 (`tools/test_release.py`).

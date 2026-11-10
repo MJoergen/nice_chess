@@ -110,17 +110,16 @@ its evaluation of each position, so it misjudges some, and it takes
 only a share of its time, so it sees fewer tactics. It then moves
 early, and keeps the rest of its time:
 
-| Strength | Noise    | Share of the time | Elo below 5 |
-|---------:|---------:|------------------:|------------:|
-| 5        |          | all               | 0           |
-| 4        | ±25 cp   | 1/1.5             | 140         |
-| 3        | ±45 cp   | 1/2.2             | 270         |
-| 2        | ±60 cp   | 1/3               | 405         |
-| 1        | ±75 cp   | 1/3.8             | 535         |
+| Strength | Noise    | Share of the time | Elo (CCRL 40/4) |
+|---------:|---------:|------------------:|----------------:|
+| 5        |          | all               | 1850            |
+| 4        | ±90 cp   | 1/1.5             | 1730            |
+| 3        | ±160 cp  | 1/2.2             | 1580            |
+| 2        | ±360 cp  | 1/3               | 1280            |
+| 1        | ±500 cp  | 1/3.8             | 1140            |
 
-The Elo figures are from games of the strengths against each other, at
-Blitz's time on the board (LOG.md); against other players the steps
-are likely smaller.
+The ratings are those `make rate` measured at Blitz's time on the
+board, on 2026-11-10 (LOG.md).
 
 The noise of a position is the same within a game, and differs from
 game to game.
@@ -218,9 +217,9 @@ The board's clock is real, and one board plays one game at a time.
 
 `tools/match.py` plays two UCI engines against each other, and can run
 the NICE build in niceemu, or on the board, as one of them.
-`make rate` rates each of the 5 levels at the board's speed against
-Stockfish's UCI_Elo levels, with cutechess-cli and Ordo
-(CONTRIBUTING.md); the table in Playing is its result of 2026-11-09.
+`make rate` rates each of the 5 levels, and each strength, at the
+board's speed against Stockfish's UCI_Elo levels, with cutechess-cli
+and Ordo (CONTRIBUTING.md); the tables in Playing are its results.
 
 ## License
 

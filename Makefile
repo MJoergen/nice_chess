@@ -88,11 +88,13 @@ ORDO      ?= ordo
 STOCKFISH ?= stockfish
 NODES     ?= 93000
 LEVELS    ?= 1 2 3 4 5
+STRENGTHS ?=
+OPPONENTS ?=
 ELOS      ?= 1600 1800 2000 2200
 GAMES     ?= 100
 CONCURRENCY ?= 4
 BOOK      ?= deps/books/8moves_v3.pgn
-export CUTECHESS ORDO STOCKFISH NODES LEVELS ELOS GAMES CONCURRENCY BOOK
+export CUTECHESS ORDO STOCKFISH NODES LEVELS STRENGTHS ELOS OPPONENTS GAMES CONCURRENCY BOOK
 
 .PHONY: FORCE help all test pieces host-test nice-test tools-test perft-deep screen-game match-random match-mchess2 rate openings size deps clean distclean
 .PHONY: board-text board-screen board-test board-game board-match board-stockfish dist release-check
@@ -109,6 +111,8 @@ help:
 	@echo "  make match-mchess2 the host build against mchess2 (20 games, 15 minutes)"
 	@echo "  make openings      fetch the openings of make rate, 8moves_v3.pgn, into deps/books/"
 	@echo "  make rate          a rating of each level: cutechess-cli games against Stockfish's UCI_Elo levels, and Ordo"
+	@echo "                     (STRENGTHS=\"1 2 3 4 5\" rates the strengths too, LEVELS= no level)"
+	@echo "                     (OPPONENTS=\"NAME=ELO=COMMAND ...\" adds engines anchored at ELO)"
 	@echo "  make size          the size of the MEGA65 builds, against the board's budget"
 	@echo "  make pieces        draw the pieces again into src/ui/pieces.h (needs Pillow)"
 	@echo "  make dist          the archive of a release, and SHA256SUMS, in build/dist/ (VERSION=V1.0)"

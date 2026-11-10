@@ -79,10 +79,10 @@ static int      stopped;
 // in tenths. Index 0 is strength 1.
 static const struct { int16_t noise; uint8_t divisor; } strengths[ENGINE_STRENGTH_MAX - 1] =
 {
-    {75, 38},
-    {60, 30},
-    {45, 22},
-    {25, 15},
+    {500, 38},
+    {360, 30},
+    {160, 22},
+    { 90, 15},
 };
 static int      strength = ENGINE_STRENGTH_MAX;
 static uint32_t strength_seed;
