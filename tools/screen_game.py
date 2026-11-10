@@ -55,7 +55,7 @@ import subprocess
 import sys
 import time
 
-from board import Board, dump_lines
+from board import SCREEN, Board, dump_lines
 from match import Referee
 
 UP, DOWN, RIGHT, LEFT = "\x1b[A", "\x1b[B", "\x1b[C", "\x1b[D"
@@ -172,8 +172,10 @@ class BoardScreen:
             end = time.monotonic() + 10
             while not self.board.quiet(0.5) and time.monotonic() < end:
                 self.board.readline(0.5)
+            parts = [(SCREEN, self.board.screen())] + self.board.font()
             with open(dump, "w") as f:
-                f.write("\n".join(dump_lines(self.board.screen())) + "\n")
+                for addr, words in parts:
+                    f.write("\n".join(dump_lines(addr, words)) + "\n")
         self.board.end_input()
         self.board.wait_returned(10)
         self.board.close()
