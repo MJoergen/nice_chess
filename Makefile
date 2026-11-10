@@ -128,7 +128,7 @@ help:
 	@echo "  make board-test    the tests of both front ends, on the board"
 	@echo "  make board-game    a full game in the windowed front end, on the board (a few minutes)"
 	@echo "  make board-match   the text front end on the board against the host build, in UCI"
-	@echo "  make board-stockfish  a game on the board's screen against Stockfish (ELO=1800, BLACK=1: it is black)"
+	@echo "  make board-stockfish  a game on the board's screen against Stockfish (ELO=1800, MOVETIME=1000 ms, BLACK=1: it is black)"
 	@echo "  make release-check board-test and board-match, and the stamp that tools/release.py tag needs"
 	@echo "                    (doc/RELEASE.md)"
 	@echo ""
@@ -299,13 +299,14 @@ board-test: build/mega65/chess_text.bin build/mega65/chess_screen.bin
 # A game at LEVEL (2 by default) by the keys, white's moves from the host
 # build; the keys, and the screen at the end, go to build/mega65/.
 # A game in the windowed front end on the board, against Stockfish at
-# UCI_Elo $(ELO) and a second a move, white unless BLACK=1; the board's
+# UCI_Elo $(ELO) and $(MOVETIME) ms a move, white unless BLACK=1; the board's
 # screen shows it as it is played. The engine has its level 3, 5 seconds.
 # The host prints each move with Stockfish's score, at full strength.
 ELO ?= 1800
+MOVETIME ?= 1000
 board-stockfish: build/mega65/chess_screen.bin build/host/chess_text
 	$(PYTHON) tools/screen_game.py $(BOARDLINK) --level 3 --opponent "$(STOCKFISH)" \
-	  --opt UCI_LimitStrength=true --opt UCI_Elo=$(ELO) --movetime 1000 $(if $(BLACK),--black) \
+	  --opt UCI_LimitStrength=true --opt UCI_Elo=$(ELO) --movetime $(MOVETIME) $(if $(BLACK),--black) \
 	  --eval "$(STOCKFISH)" \
 	  build/mega65/chess_screen.bin build/host/chess_text build/mega65/stockfish.keys
 

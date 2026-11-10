@@ -211,8 +211,8 @@ its debug UART with NiceMonMEGA65's tools, from a checkout of it
     make board-stockfish ETH=192.168.1.65  # a game on the board's screen against Stockfish
 
 `make board-stockfish` plays the windowed front end on the board
-against Stockfish (`STOCKFISH`) at UCI_Elo `ELO` (1800) and a second a
-move, by its keys, through `tools/screen_game.py`; the board's screen
+against Stockfish (`STOCKFISH`) at UCI_Elo `ELO` (1800) and `MOVETIME` ms
+(1000) a move, by its keys, through `tools/screen_game.py`; the board's screen
 shows the game as it is played. Stockfish is white, or black with
 `BLACK=1`. The host prints each move, with the score of a second
 Stockfish, at its full strength, from white's side.
