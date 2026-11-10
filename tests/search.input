@@ -12,4 +12,15 @@ fen 2rr3k/pp3pp1/1nnqbN1p/3pN3/2pP4/2P3Q1/PPB4P/R4RK1 w - - 0 1
 go nodes 30000
 fen 7k/8/6QK/8/8/8/8/8 b - - 0 1
 go depth 2
+uci
+setoption name Ponder value true
+position startpos moves e2e4 e7e5
+go ponder depth 4
+ponderhit
+position startpos moves e2e4 e7e5 g1f3
+go ponder depth 6
+stop
+position startpos moves d2d4
+go ponder depth 1
+ponderhit
 quit

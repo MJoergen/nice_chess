@@ -2,6 +2,14 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-10: Pondering in UCI (#17)
+
+cutechess-cli played build/host/chess_fast with `ponder` against itself
+without, 400 games at 10+0.1 from the openings of 8moves_v3.pgn, each
+with both colors, 8 games at a time on 20 cores, so that each engine
+had a core of its own. Pondering scored 168 wins, 100 losses, and 132
+draws: +59.6 ± 28.1 Elo. No game was lost on time.
+
 ## 2026-11-10: The strengths against Stockfish (#19)
 
 `make rate` with `STRENGTHS="1 2 3 4 5"` plays each strength at

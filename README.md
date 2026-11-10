@@ -169,7 +169,9 @@ deterministic.
 at a terminal; there `go` takes 1 second. After `uci` it speaks UCI,
 so a chess GUI can play it. Its option `OwnBook` turns the book on; it
 is off at first. Its option `Strength`, 1 to 5, is the strength of the
-windowed front end; it is 5 at first.
+windowed front end; it is 5 at first. It ponders: `go ponder` thinks on
+the opponent's time, on the reply that its `bestmove ... ponder M`
+named.
 
 ## Building
 

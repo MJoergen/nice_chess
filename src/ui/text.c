@@ -37,6 +37,17 @@
  * line isready is answered with readyok. Any other line waits until
  * the search ends.
  *
+ * go ponder searches the position, which ends with the move the
+ * engine expects of its opponent, with no limit of time, until
+ * ponderhit or stop. ponderhit, which says the opponent played that
+ * move, turns it into the search that go would have made without
+ * ponder, its time counted from the ponderhit. bestmove waits for
+ * ponderhit or stop. In UCI, bestmove names the move the engine
+ * expects in reply, the second of the principal variation, as
+ * "ponder M", when it has one. The option Ponder is there for the
+ * GUIs, which ask for it before they send go ponder; its value
+ * changes nothing.
+ *
  * Copyright (c) 2026 Michael Jørgensen. MIT license (see LICENSE).
  ***************************************************************/
 
@@ -87,6 +98,7 @@ static char in_line[2048]; // position startpos moves ... of a long game
 static int in_len;         // The bytes in in_line
 static int in_ready;       // Whether in_line holds a whole line
 static int in_last;        // The byte before
+static int in_ended;       // The input has ended
 
 // Adds the byte c to in_line. Returns 1 when it ends the line.
 static int add_byte(int c)
@@ -133,10 +145,10 @@ static int read_line(char *s)
 /***************************************************************
  * poll_input
  * Reads the bytes of the console that wait, during a search, up to
- * the end of a line. Returns 1 for the line stop, which it drops. It
- * answers isready, and drops it too. Any other line it leaves for
- * read_line, and then reads no more. From a file, where a read waits,
- * the next line is read at once.
+ * the end of a line. Returns 1 for the line stop, and 2 for the line
+ * ponderhit, which it drops. It answers isready, and drops it too.
+ * Any other line it leaves for read_line, and then reads no more.
+ * From a file, where a read waits, the next line is read at once.
  ***************************************************************/
 static int poll_input(void)
 {
@@ -144,23 +156,27 @@ static int poll_input(void)
     {
         int c = platform_pollc();
         if (c < 0)
+        {
+            in_ended = c == -1;
             return 0;
+        }
         if (!add_byte(c))
             continue;
         char *w = in_line;
         while (*w == ' ' || *w == '\t')
             w++;
         int stop = !strncmp(w, "stop", 4);
+        int hit = !strncmp(w, "ponderhit", 9);
         int ready = !strncmp(w, "isready", 7);
-        if (!stop && !ready)
+        if (!stop && !hit && !ready)
             return 0;
-        for (w += stop ? 4 : 7; *w == ' ' || *w == '\t'; w++)
+        for (w += stop ? 4 : hit ? 9 : 7; *w == ' ' || *w == '\t'; w++)
             ;
         if (*w)
             return 0; // Such as "stopper"
         in_len = in_ready = 0;
-        if (stop)
-            return 1;
+        if (!ready)
+            return hit ? 2 : 1;
         printf("readyok\n");
         fflush(stdout);
     }
@@ -310,19 +326,41 @@ static void do_divide(int depth)
  *
  * A search with a time has two limits: it starts no new iteration
  * after soft_time, as the next would likely not finish, and it
- * stops at hard_time.
+ * stops at hard_time. While it ponders, it has neither, and keeps
+ * them in ponder_soft and ponder_hard for the ponderhit.
  ***************************************************************/
-static uint32_t start_time;
+static uint32_t start_time, info_time; // info_time: the start, for info
 static uint32_t soft_time, hard_time; // In microseconds; 0 for no limit
+static int pondering;
+static uint32_t ponder_soft, ponder_hard;
+static engine_info_t last_info;      // Of the last iteration
+static int have_info;
 
 static uint32_t elapsed(void)
 {
     return platform_micros() - start_time;
 }
 
+// Handles a line that poll_input found: ponderhit starts the clock of
+// the search. Returns 1 to stop the search.
+static int heard(int r)
+{
+    if (r == 2 && pondering)
+    {
+        pondering = 0;
+        start_time = platform_micros();
+        soft_time = ponder_soft;
+        hard_time = ponder_hard;
+        return 0;
+    }
+    if (r == 1)
+        pondering = 0;
+    return r == 1;
+}
+
 static int stop_search(void)
 {
-    return (hard_time && elapsed() >= hard_time) || poll_input();
+    return (hard_time && elapsed() >= hard_time) || heard(poll_input());
 }
 
 static int print_info(const engine_info_t *in)
@@ -334,7 +372,8 @@ static int print_info(const engine_info_t *in)
         printf("mate %d", -(ENGINE_MATE + in->score) / 2);
     else
         printf("cp %d", in->score);
-    printf(" nodes %u time %u pv", (unsigned) in->nodes, (unsigned) (elapsed() / 1000));
+    printf(" nodes %u time %u pv", (unsigned) in->nodes,
+           (unsigned) ((platform_micros() - info_time) / 1000));
     for (int i = 0; i < in->pv_len; ++i)
     {
         char buf[8];
@@ -343,6 +382,8 @@ static int print_info(const engine_info_t *in)
     }
     printf("\n");
     fflush(stdout);
+    last_info = *in;
+    have_info = 1;
     return soft_time && elapsed() >= soft_time;
 }
 
@@ -356,13 +397,15 @@ static uint32_t ms_to_us(unsigned long ms)
 
 /***************************************************************
  * do_go
- * Reads the limits, searches, and returns the best move, or 0.
+ * Reads the limits, searches, and returns the best move, or 0. With
+ * ponder, it returns only after ponderhit or stop.
  ***************************************************************/
 static move_t do_go(char *args)
 {
     engine_limits_t limits = {0, 0, stop_search};
     unsigned long movetime = 0, wtime = 0, btime = 0, winc = 0, binc = 0, movestogo = 0;
     int timed = 0, infinite = 0;
+    pondering = 0;
 
     while (1)
     {
@@ -374,7 +417,9 @@ static move_t do_go(char *args)
             limits.depth = atoi(w);
             continue;
         }
-        unsigned long v = strtoul(next_word(&args), NULL, 10);
+        unsigned long v = 0;
+        if (strcmp(w, "infinite") && strcmp(w, "ponder"))
+            v = strtoul(next_word(&args), NULL, 10);
         if      (!strcmp(w, "depth"))     limits.depth = (int) v;
         else if (!strcmp(w, "nodes"))     limits.nodes = (uint32_t) v;
         else if (!strcmp(w, "movetime"))  movetime = v, timed = 1;
@@ -384,6 +429,7 @@ static move_t do_go(char *args)
         else if (!strcmp(w, "binc"))      binc = v;
         else if (!strcmp(w, "movestogo")) movestogo = v;
         else if (!strcmp(w, "infinite"))  infinite = 1;
+        else if (!strcmp(w, "ponder"))    pondering = 1;
     }
 
     soft_time = hard_time = 0;
@@ -409,18 +455,28 @@ static move_t do_go(char *args)
     soft_time = engine_strength_share(soft_time);
     limits.nodes = engine_strength_share(limits.nodes);
 
-    if (own_book)
+    if (pondering)
     {
-        move_t m = engine_book_move();
-        if (m)
-        {
-            printf("info string book move\n");
-            return m;
-        }
+        ponder_soft = soft_time;
+        ponder_hard = hard_time;
+        soft_time = hard_time = 0;
+    }
+    have_info = 0;
+    move_t m = own_book ? engine_book_move() : 0;
+    if (m)
+        printf("info string book move\n");
+    else
+    {
+        start_time = info_time = platform_micros();
+        m = engine_search(&limits, print_info);
     }
 
-    start_time = platform_micros();
-    return engine_search(&limits, print_info);
+    // A search that ended by itself while it pondered: bestmove waits,
+    // until a line other than isready, or the end of the input.
+    while (pondering && !in_ready && !in_ended)
+        heard(poll_input());
+    pondering = 0;
+    return m;
 }
 
 /***************************************************************
@@ -469,7 +525,13 @@ static void print_bestmove(move_t m)
         engine_move_to_str(m, buf);
     else
         strcpy(buf, "0000");
-    printf("bestmove %s\n", buf);
+    printf("bestmove %s", buf);
+    if (uci_mode && m && have_info && last_info.pv_len >= 2 && last_info.pv[0] == m)
+    {
+        engine_move_to_str(last_info.pv[1], buf);
+        printf(" ponder %s", buf);
+    }
+    printf("\n");
     fflush(stdout);
 }
 
@@ -506,6 +568,7 @@ int main(void)
             uci_mode = 1;
             printf("id name nice_chess %s\nid author Michael Jorgensen\n"
                    "option name OwnBook type check default false\n"
+                   "option name Ponder type check default false\n"
                    "option name Strength type spin default 5 min 1 max 5\nuciok\n", nice_chess_version);
             fflush(stdout);
         }

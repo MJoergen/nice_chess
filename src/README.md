@@ -32,7 +32,7 @@
   `build/gen/version.c`, which the Makefile writes (`VERSION`).
 - `ui/text.c`: the text front end, on the console, and UCI. `help` lists
   its commands. During a search it reads the console, every 1024 nodes,
-  for stop.
+  for stop, and for ponderhit after `go ponder`.
 - `ui/screen.c`: the windowed front end, on the 80x25 screen, for NICE
   only. Its keys are listed at the top of the file and on the screen.
   It copies the character ROM into the font RAM, writes the pieces over
