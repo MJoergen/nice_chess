@@ -23,6 +23,37 @@ of the gain is in sbd, the positional suite, 92 of 134 against 68.
 The tables are int16_t now, as some entries are over 127: the text
 front end is 22 words larger, the windowed one 7 words smaller.
 
+The strengths, with the same table of noise and share, were rated
+again as on 2026-11-10: `make rate` with `STRENGTHS="1 2 3 4 5"`,
+139500 nodes a move, against Stockfish 1320, 1600, and 2000, Blunders
+0.1.0, and Belofte 2.1.9, at 60+0.6, 100 games a pairing (2500 games),
+10 at a time. Blunders crashed in 6 games, which count as losses for
+it. The scores of the strengths:
+
+| Strength | Belofte | Blunders | SF 1320 | SF 1600 | SF 2000 |
+|---------:|--------:|---------:|--------:|--------:|--------:|
+| 5        | 98%     | 93%      | 92%     | 79%     | 61%     |
+| 4        | 89%     | 76%      | 81%     | 71%     | 50%     |
+| 3        | 70%     | 53%      | 84%     | 46%     | 26%     |
+| 2        | 23%     | 12%      | 44%     | 13%     | 8%      |
+| 1        | 6%      | 3%       | 38%     | 10%     | 5%      |
+
+Rated with Stockfish's anchors alone, as before:
+
+| Strength | Elo  | Error | Step | Old tables | Gain |
+|---------:|-----:|------:|-----:|-----------:|-----:|
+| 5        | 2005 | 48    |      | 1852       | +152 |
+| 4        | 1840 | 42    | 165  | 1729       | +111 |
+| 3        | 1651 | 38    | 189  | 1576       | +75  |
+| 2        | 1300 | 42    | 352  | 1280       | +20  |
+| 1        | 1182 | 49    | 118  | 1136       | +46  |
+
+Full strength gained about as much against Stockfish as against the
+old tables. The gain shrinks with the strength, as the noise covers
+more of the evaluation: 823 Elo from 5 to 1, against 717. Strength 5
+now scores 61% against Stockfish 2000, the highest anchor, so its
+rating is the least sure. The step from 3 to 2 is still the widest.
+
 ## 2026-11-10: Pondering in UCI (#17)
 
 cutechess-cli played build/host/chess_fast with `ponder` against itself
