@@ -24,6 +24,7 @@
  *                   make it stronger or weaker, strengths 1 to 5
  *   T               the next time control, and a new game
  *   O               the opening book on or off (on at first)
+ *   P               pondering on or off (on at first)
  *   Q               quit, and clear the screen
  * The letters of commands act only when no move is being typed.
  *
@@ -58,6 +59,21 @@
  * that is, once the input is a keyboard. Input from a file (niceemu
  * -i, in the tests) is then read only between moves, so a run is the
  * same every time.
+ *
+ * Pondering: after its move, the engine makes the move it expects of
+ * the player, the second of its principal variation, and searches the
+ * position after it, on the player's time. The search reads a key
+ * every 1024 nodes, from a keyboard or a file alike, so a run from a
+ * file is still the same every time. The keys that need the engine's
+ * board (U, S, N, T, Q, the end of the input) stop it; they then wait
+ * in ahead, and the expected move is taken back. So does a move of
+ * the player other than the expected one, which is then played. The
+ * expected move is a hit: it is played on the screen only, and the
+ * search goes on as the engine's, with its time from then. Meanwhile
+ * the screen draws the position, and checks the player's moves, from
+ * view, a copy taken before the search. There is no pondering after a
+ * move of the book, when the principal variation has no second move,
+ * or when the expected move ends the game, and none with P off.
  *
  * This front end is for NICE only. It does not use printf.
  *
@@ -97,7 +113,7 @@ enum
 enum
 {
     ROW_TITLE = 0, ROW_PLAYERS = 1,           // Players: white, then black
-    ROW_STATUS = 3, ROW_LEVEL = 4,
+    ROW_STATUS = 3, ROW_LEVEL = 4, ROW_PONDER = 5,
     ROW_INFO = 6, ROW_PV = 7,                 // PV: two rows
     ROW_MOVES = 10, MOVE_ROWS = 9,            // Two columns of 9 moves
     ROW_INPUT = 20, ROW_MSG = 21, ROW_HELP = 22 // Help: three rows
@@ -156,6 +172,61 @@ static uint32_t game_seed;         // Of the noise below full strength
 
 // The result of a game lost on time, beside the engine's results.
 enum { RESULT_TIME = 16 };
+
+// The position the screen shows, and its legal moves. While the engine
+// ponders, its own board is in the search, so what is drawn, and the
+// player's moves, come from here. snapshot takes it from the engine.
+typedef struct
+{
+    int    piece[64];
+    int    side;                   // 1 if white is to move, -1 if black
+    int    in_check;
+    int    result;                 // engine_result
+    int    n_moves;
+    move_t moves[ENGINE_MAX_MOVES];
+} view_t;
+static view_t view;
+static view_t view_next;           // After the move the engine expects
+
+static void snapshot(view_t *v)
+{
+    for (int sq = 0; sq < 64; ++sq)
+        v->piece[sq] = engine_piece_at(sq % 8, sq / 8);
+    v->side = engine_side_to_move();
+    v->in_check = engine_in_check();
+    v->result = engine_result();
+    v->n_moves = engine_legal_moves(v->moves);
+}
+
+// The legal move of the view that s, such as "e2e4" or "e7e8n", names,
+// or 0. A promotion with no piece given is to a queen.
+static move_t view_move(const char *s)
+{
+    int len = 0;
+    while (s[len])
+        ++len;
+    for (int i = 0; i < view.n_moves; ++i)
+    {
+        char m[8];
+        engine_move_to_str(view.moves[i], m);
+        int j = 0;
+        while (j < len && m[j] == s[j])
+            ++j;
+        if (j == len && (m[j] == '\0' || (len == 4 && m[4] == 'q')))
+            return view.moves[i];
+    }
+    return 0;
+}
+
+// Pondering: the engine searches the position after the move it
+// expects of the player, while the player thinks (see the top).
+static int    ponder_on = 1;       // P turns it off
+static move_t expected;            // The player's move the engine expects, or 0
+static int    pondering;           // The search runs on the player's time
+static move_t ponder_miss;         // The player's move, if not the expected one
+static int    ponder_stop;         // A key that needs the engine's board
+static engine_info_t ponder_info;  // Of the last iteration of the ponder
+static int    have_ponder_info;
 
 // What the engine thought about its last move.
 static engine_info_t info;
@@ -265,8 +336,8 @@ static void draw_square(int file, int rank)
         if (sq == engine_move_from(last) || sq == engine_move_to(last))
             bg = light ? LAST_LIGHT : LAST_DARK;
     }
-    int piece = engine_piece_at(file, rank);
-    if ((piece == WK || piece == BK) && piece * engine_side_to_move() > 0 && engine_in_check())
+    int piece = view.piece[sq];
+    if ((piece == WK || piece == BK) && piece * view.side > 0 && view.in_check)
         bg = light ? CHECK_LIGHT : CHECK_DARK;
     if (sq == selected)
         bg = light ? SEL_LIGHT : SEL_DARK;
@@ -334,7 +405,7 @@ static uint32_t clock_limit(int side)
 // The game's result: the engine's, or RESULT_TIME.
 static int game_result(void)
 {
-    return flagged ? RESULT_TIME : engine_result();
+    return flagged ? RESULT_TIME : view.result;
 }
 
 // A player and their clock: "White  you          0:12", the side whose
@@ -410,13 +481,13 @@ static void clock_tick(void)
 static void clock_switch(void)
 {
     clock_tick();
-    clock_side = engine_side_to_move() < 0;
+    clock_side = view.side < 0;
     clock_on = game_result() == ENGINE_PLAYING;
 }
 
 static const char *status_text(int result)
 {
-    int white = engine_side_to_move() > 0;
+    int white = view.side > 0;
     switch (result)
     {
         case ENGINE_CHECKMATE:  return white ? "Checkmate. Black wins." : "Checkmate. White wins.";
@@ -429,7 +500,7 @@ static const char *status_text(int result)
     }
     if (thinking)
         return "Thinking... Esc: move now";
-    if (engine_in_check())
+    if (view.in_check)
         return white ? "White to move, in check" : "Black to move, in check";
     return white ? "White to move" : "Black to move";
 }
@@ -439,6 +510,12 @@ static void draw_status(void)
     int result = game_result();
     draw_line(ROW_STATUS, COLOR(PANEL, result != ENGINE_PLAYING || thinking ? WARN : BRIGHT),
               status_text(result));
+}
+
+static void draw_ponder(void)
+{
+    draw_line(ROW_PONDER, COLOR(PANEL, DIM), !ponder_on ? "Ponder off"
+              : pondering ? "Ponder on: thinking on your time" : "Ponder on");
 }
 
 static void draw_level(void)
@@ -552,14 +629,14 @@ static void draw_all(void)
     draw_players();
     draw_status();
     draw_level();
-    draw_line(5, COLOR(PANEL, TEXT), "");
+    draw_ponder();
     draw_info();
     draw_moves();
     draw_line(ROW_INPUT - 1, COLOR(PANEL, TEXT), "");
     draw_input();
-    draw_line(ROW_HELP,     COLOR(PANEL, DIM), "Arrows+Enter or e2e4: move  Esc stop");
+    draw_line(ROW_HELP,     COLOR(PANEL, DIM), "Arrows+Enter or e2e4: move  Q quit");
     draw_line(ROW_HELP + 1, COLOR(PANEL, DIM), "U undo  S switch  R rotate  N new");
-    draw_line(ROW_HELP + 2, COLOR(PANEL, DIM), "+/- level  T time  O book  Q quit");
+    draw_line(ROW_HELP + 2, COLOR(PANEL, DIM), "+/- level  T time  O book  P ponder");
 }
 
 /***************************************************************
@@ -687,14 +764,25 @@ static void log_result(void)
     console_putc('\n');
 }
 
+static void ponder_hit(void);
+
 // Plays a move, unless the mover's time ran out first, and gives the
-// mover the increment.
+// mover the increment. While the engine ponders, the player's move is
+// a hit, which the search goes on with, or a miss, which stops it.
 static void play(move_t m)
 {
+    if (pondering)
+    {
+        if (m == expected)
+            ponder_hit();
+        else
+            ponder_miss = m;
+        return;
+    }
     clock_tick();
     if (flagged)
         return;
-    int side = engine_side_to_move() < 0;
+    int side = view.side < 0;
     if (n_played >= MAX_PLAYED || engine_make_move(m))
     {
         message = "The game is too long.";
@@ -702,6 +790,7 @@ static void play(move_t m)
     }
     played[n_played++] = m;
     clock_bonus[side] += controls[control].inc;
+    snapshot(&view);
     log_move(m);
     if (game_result() != ENGINE_PLAYING)
         log_result();
@@ -715,6 +804,8 @@ static void new_game(void)
         clock_secs[i] = clock_rest[i] = clock_bonus[i] = 0;
     flagged = 0;
     clock_on = 0;
+    expected = 0;
+    snapshot(&view);
     game_seed = platform_seed();
     clock_last = platform_micros();
     have_info = 0;
@@ -734,6 +825,7 @@ static void undo(void)
         engine_undo();
         --n_played;
     } while (n_played > 0 && engine_side_to_move() != human);
+    snapshot(&view);
     have_info = 0;
     clear_selection();
 }
@@ -755,8 +847,31 @@ static uint32_t elapsed(void)
     return clock_ms(clock_side) - start_time;
 }
 
+static int handle_key(int k);
+
 static int stop_search(void)
 {
+    if (pondering)
+    {
+        // The keys are read, as between moves, a key at a time.
+        clock_tick();
+        if (flagged)
+            return 1;
+        int k = poll_key();
+        if (k == K_NONE)
+            return 0;
+        if (k == K_END)
+            ponder_stop = 1;
+        else
+        {
+            handle_key(k);
+            if (!ponder_stop && !ponder_miss)
+                draw_all();
+        }
+        if (ponder_stop && n_ahead < AHEAD)
+            ahead[n_ahead++] = k;
+        return ponder_stop || ponder_miss || !ponder_on;
+    }
     clock_tick();
     if (flagged || elapsed() >= hard_time)
         return 1;
@@ -772,6 +887,13 @@ static int stop_search(void)
 
 static int on_info(const engine_info_t *in)
 {
+    if (pondering)
+    {
+        // The info of the engine's last move stays on the screen.
+        ponder_info = *in;
+        have_ponder_info = 1;
+        return 0;
+    }
     info = *in;
     have_info = 1;
     draw_info();
@@ -779,21 +901,9 @@ static int on_info(const engine_info_t *in)
     return elapsed() >= soft_time;
 }
 
-static void think(void)
+// The limits of the time of the engine's move, from now.
+static void set_times(void)
 {
-    have_info = 0;
-    clear_selection();
-    move_t m = book ? engine_book_move() : 0;
-    if (m)
-    {
-        have_info = 2;
-        play(m);
-        return;
-    }
-    thinking = 1;
-    draw_all();
-
-    engine_set_strength(control ? strength : ENGINE_STRENGTH_MAX, game_seed);
     clock_tick();
     start_time = clock_ms(clock_side);
     if (control)
@@ -809,12 +919,97 @@ static void think(void)
                     / level_den[level - 1] * level_num[level - 1];
     hard_time = engine_strength_share(hard_time);
     soft_time = hard_time / 2;
-    engine_limits_t limits = {0, 0, stop_search};
-    m = engine_search(&limits, on_info);
+}
 
+// Plays the move that the search found, and keeps the reply it
+// expects, the second move of its principal variation, to ponder on.
+static void engine_moved(move_t m)
+{
     thinking = 0;
+    if (!m)
+        return;
+    play(m);
+    if (have_info == 1 && info.pv_len >= 2 && info.pv[0] == m)
+        expected = info.pv[1];
+}
+
+static void think(void)
+{
+    have_info = 0;
+    expected = 0;
+    clear_selection();
+    move_t m = book ? engine_book_move() : 0;
     if (m)
+    {
+        have_info = 2;
         play(m);
+        return;
+    }
+    thinking = 1;
+    draw_all();
+
+    engine_set_strength(control ? strength : ENGINE_STRENGTH_MAX, game_seed);
+    set_times();
+    engine_limits_t limits = {0, 0, stop_search};
+    engine_moved(engine_search(&limits, on_info));
+}
+
+// The player played the expected move: the search becomes the
+// engine's, with its time from now. The engine's board has the move.
+static void ponder_hit(void)
+{
+    clock_tick();
+    if (flagged)
+        return;
+    played[n_played++] = expected;
+    clock_bonus[view.side < 0] += controls[control].inc;
+    log_move(expected);
+    view = view_next;
+    clock_switch();
+    pondering = 0;
+    thinking = 1;
+    info = ponder_info;
+    have_info = have_ponder_info;
+    clear_selection();
+    set_times();
+    draw_all();
+}
+
+// Searches the position after the expected move until the player
+// moves, or presses a key that needs the engine's board, which then
+// waits in ahead. The player's keys are read in the search.
+static void ponder(void)
+{
+    move_t e = expected;
+    expected = 0;
+    if (n_played + 1 >= MAX_PLAYED || engine_make_move(e))
+        return;
+    if (engine_result() != ENGINE_PLAYING)
+    {
+        engine_undo();
+        return;
+    }
+    snapshot(&view_next);
+    expected = e;
+    engine_set_strength(control ? strength : ENGINE_STRENGTH_MAX, game_seed);
+    pondering = 1;
+    have_ponder_info = 0;
+    ponder_miss = 0;
+    ponder_stop = 0;
+    draw_ponder();
+    engine_limits_t limits = {0, 0, stop_search};
+    move_t m = engine_search(&limits, on_info);
+    expected = 0;
+    if (!pondering)
+    {
+        engine_moved(m); // A hit
+        return;
+    }
+    // A miss, a key, or the end of the search with no move yet
+    pondering = 0;
+    engine_undo();
+    if (ponder_miss)
+        play(ponder_miss);
 }
 
 /***************************************************************
@@ -825,8 +1020,8 @@ static void think(void)
 static void enter_typed(void)
 {
     typed[n_typed] = '\0';
-    move_t m = engine_parse_move(typed, 0);
-    if (m && (game_result() != ENGINE_PLAYING || engine_side_to_move() != human))
+    move_t m = view_move(typed);
+    if (m && (game_result() != ENGINE_PLAYING || view.side != human))
         m = 0;
     if (m)
         play(m);
@@ -843,15 +1038,13 @@ static void enter_typed(void)
 static void enter_square(void)
 {
     int sq = sq_index(cur_file, cur_rank);
-    if (game_result() != ENGINE_PLAYING || engine_side_to_move() != human)
+    if (game_result() != ENGINE_PLAYING || view.side != human)
         return;
 
-    move_t moves[ENGINE_MAX_MOVES];
-    int n = engine_legal_moves(moves);
     if (selected >= 0 && targets[sq])
     {
         // A promotion by the cursor is to a queen, the first that
-        // engine_parse_move finds.
+        // view_move finds.
         char s[6];
         s[0] = (char) ('a' + selected % 8);
         s[1] = (char) ('1' + selected / 8);
@@ -859,7 +1052,7 @@ static void enter_square(void)
         s[3] = (char) ('1' + cur_rank);
         s[4] = '\0';
         clear_selection();
-        play(engine_parse_move(s, 0));
+        play(view_move(s));
         return;
     }
     if (sq == selected)
@@ -868,11 +1061,11 @@ static void enter_square(void)
         return;
     }
     clear_selection();
-    for (int i = 0; i < n; ++i)
-        if (engine_move_from(moves[i]) == sq)
+    for (int i = 0; i < view.n_moves; ++i)
+        if (engine_move_from(view.moves[i]) == sq)
         {
             selected = sq;
-            targets[engine_move_to(moves[i])] = 1;
+            targets[engine_move_to(view.moves[i])] = 1;
         }
     if (selected < 0)
         message = "No move from there.";
@@ -942,6 +1135,8 @@ static int handle_key(int k)
     }
     else if (n_typed)
         message = "Type a move such as e2e4.";
+    else if (pondering && (k == 'q' || k == 'u' || k == 'n' || k == 's' || k == 't'))
+        ponder_stop = 1; // After the search, from ahead
     else switch (k)
     {
         case 'q':
@@ -972,6 +1167,7 @@ static int handle_key(int k)
                 level += k == '+' ? level < 5 : -(level > 1);
             break;
         case 'o': book = !book; break;
+        case 'p': ponder_on = !ponder_on; break;
         default: break;
     }
     return 1;
@@ -989,11 +1185,17 @@ int main(void)
 
     while (1)
     {
+        snapshot(&view);
         clock_switch();
         draw_all();
-        if (game_result() == ENGINE_PLAYING && engine_side_to_move() != human)
+        if (game_result() == ENGINE_PLAYING && view.side != human)
         {
             think();
+            continue;
+        }
+        if (expected && ponder_on && game_result() == ENGINE_PLAYING)
+        {
+            ponder();
             continue;
         }
         int k = wait_key();

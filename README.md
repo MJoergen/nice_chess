@@ -62,6 +62,7 @@ The other keys are on the screen:
 - \+ and −: the level, or under a time control, the strength.
 - T: the next time control, and a new game.
 - O: the opening book on or off.
+- P: pondering on or off.
 - ESC: make the engine move now.
 - Q: clear the screen and return to the monitor.
 
@@ -123,6 +124,14 @@ board, on 2026-11-10 (LOG.md).
 
 The noise of a position is the same within a game, and differs from
 game to game.
+
+The engine ponders: while you think, it searches the position after
+the move it expects of you, the second move of its principal
+variation. If you play that move, its search goes on, with the
+engine's time counted from your move, so it sees deeper. If you play
+another, it starts again. Pondering is on at first, at every level and
+strength, and P turns it off. The ratings above were measured without
+it; on the host, pondering was worth about 60 Elo at 10+0.1 (LOG.md).
 
 ## The text front end
 

@@ -40,6 +40,9 @@
   §1.8). Each piece is 3x3 glyphs: a white piece its outline, a black
   piece filled. `ui/pieces.h` has the glyphs, which
   `tools/mkpieces.py` draws (`make pieces`).
+  It ponders on the player's time: the search of the position after
+  the move it expects reads the keys, and draws from a copy of the
+  position, as the engine's board is then in the search.
   It writes its log of the moves to the console's register itself, so
   that under the monitor on the MEGA65 the log goes to the line and
   not to the screen.
