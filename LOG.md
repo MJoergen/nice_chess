@@ -2,6 +2,37 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-10: Pondering at the board's speed (#17)
+
+The host's engine was held to the board's speed for this: a build of
+build/host/chess_fast (with the PeSTO tables) whose platform_pollc,
+which the search calls every 1024 nodes, sleeps until 1024 nodes at
+18600 a second have passed. It searched 94208 nodes in 5 seconds,
+against about 93000 on the board. The build was not committed. Every
+game was at Blitz 3+2, from the openings of 8moves_v3.pgn, each with
+both colors, under cutechess-cli; no game was lost on time.
+
+Pondering against no pondering, 400 games: 169 wins, 111 losses, and
+120 draws, +50.7 ± 28.7 Elo, as on the host at 10+0.1 (+59.6).
+
+Each against Stockfish 1800 and 2200 (UCI_Elo, at 3+2 too), 100 games
+a pairing:
+
+| Engine    | SF 1800 | SF 2200 | Elo        |
+|-----------|--------:|--------:|-----------:|
+| Ponder    | 54%     | 44%     | 1988 ± 56  |
+| No ponder | 66%     | 44%     | 2062 ± 55  |
+
+Ordo, with the two Stockfish anchored. The difference, -75, is within
+its error, about ±78: no gain from pondering showed against Stockfish.
+
+The rate of hits explains most of it. In 6 games at 20+0.2 each, the
+engine's expected reply was played 145 times of 180 against itself,
+and 95 times of 298 against Stockfish 1800. So self-play overstates
+pondering, and against Stockfish it is likely worth 15 to 20 Elo, too
+little for 400 games to show. Against a player, its worth depends on
+how often the engine guesses the reply.
+
 ## 2026-11-10: The PeSTO tables
 
 The evaluation's material and piece-square tables were those of
