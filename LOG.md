@@ -2,6 +2,27 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-10: The PeSTO tables
+
+The evaluation's material and piece-square tables were those of
+Michniewski's "Simplified Evaluation Function", set by hand, with one
+table for both phases but for the king, and a bonus by rank for
+end-game pawns. PeSTO's (Ronald Friederich, from Rofchade) were
+tuned on game results, for the same evaluation: material and tables,
+in the middle game and the end game, blended by the same phase. They
+were taken unchanged from chessprogramming.org.
+
+cutechess-cli played build/host/chess_fast with PeSTO's tables against
+itself with the old ones, 2000 games at 93000 nodes a move (5 seconds
+on the board), from the openings of 8moves_v3.pgn, each with both
+colors, 10 games at a time on 20 cores. PeSTO's scored 1236 wins, 460
+losses, and 304 draws: +142.3 ± 15.0 Elo.
+
+The search suite at 10000 nodes solved 272 of 548, against 247; most
+of the gain is in sbd, the positional suite, 92 of 134 against 68.
+The tables are int16_t now, as some entries are over 127: the text
+front end is 22 words larger, the windowed one 7 words smaller.
+
 ## 2026-11-10: Pondering in UCI (#17)
 
 cutechess-cli played build/host/chess_fast with `ponder` against itself
