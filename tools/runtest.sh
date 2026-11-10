@@ -11,7 +11,8 @@
 # On the board the clock is real, so a timed search, its figures, and
 # the move it finds, differ from the emulator's: board-screen leaves
 # out of the comparison the rows that show the figures, and the moves,
-# the FEN, the move list, and the board's squares.
+# the FEN, the move list, and the board's squares, and it compares
+# the row of pondering as "Ponder on" whether the engine ponders or not.
 # The lines that match a pattern of tests/CHECK.grep (with the digits
 # at the end of CHECK left out: perftsuite3 uses perftsuite.grep), after the
 # prompts "> " and the times of info lines (" time N") are taken off, and
@@ -61,10 +62,13 @@ if [ "$kind" = board-screen ]; then
     # The engine's moves come from timed searches too, so they and what
     # they decide are left out as well: the moves, the FEN, the move list,
     # and the board's squares, the segments whose background is not the
-    # panel's (17;34;51, PANEL in src/ui/screen.c).
+    # panel's (17;34;51, PANEL in src/ui/screen.c). The screen is read
+    # before the input ends, when the engine may ponder (row 5 "Ponder
+    # on: thinking on your time"); in niceemu the end of the input has
+    # stopped it, so the row is compared as "Ponder on".
     p=$(printf '\001') e=$(printf '\033')
     squares="/^|/{s/$e\[48;2;17;34;51;/$p/g; s/$e\[48;2;[0-9;]*m[^$e$p]*//g; s/$p/$e[48;2;17;34;51;/g}"
-    timed="/mDepth [0-9]*  Score /d; /m PV /d; /^move /d; /^fen /d; $squares; /m[0-9][0-9]*\. /d"
+    timed="/mDepth [0-9]*  Score /d; /m PV /d; /^move /d; /^fen /d; $squares; /m[0-9][0-9]*\. /d; s/Ponder on: thinking on your time/Ponder on/"
     expected=$dir/$name.expected
     sed "$timed" tests/$check.expected > $expected
     sed -i "$timed" $out

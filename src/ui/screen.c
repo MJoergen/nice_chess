@@ -853,11 +853,14 @@ static int stop_search(void)
 {
     if (pondering)
     {
-        // The keys are read, as between moves, a key at a time.
+        // The keys are read, as between moves, a key at a time: first
+        // those typed while the engine thought. A key that stops the
+        // search stays in ahead, or goes there, for after it.
         clock_tick();
         if (flagged)
             return 1;
-        int k = poll_key();
+        int queued = n_ahead > 0;
+        int k = queued ? wait_key() : poll_key();
         if (k == K_NONE)
             return 0;
         if (k == K_END)
@@ -868,7 +871,14 @@ static int stop_search(void)
             if (!ponder_stop && !ponder_miss)
                 draw_all();
         }
-        if (ponder_stop && n_ahead < AHEAD)
+        if (ponder_stop && queued)
+        {
+            for (int i = n_ahead; i > 0; --i)
+                ahead[i] = ahead[i - 1];
+            ahead[0] = k;
+            ++n_ahead;
+        }
+        else if (ponder_stop && n_ahead < AHEAD)
             ahead[n_ahead++] = k;
         return ponder_stop || ponder_miss || !ponder_on;
     }
