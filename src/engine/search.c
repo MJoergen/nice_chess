@@ -427,7 +427,8 @@ static int search(int alpha, int beta, int depth, int ply)
  * first. When a limit stops an iteration, the best move so far of
  * that iteration is kept if it was searched to the end, as it was
  * then better than the best move of the iteration before (which was
- * searched first).
+ * searched first). info is then called for that iteration too, so
+ * that the last line reported starts with the move returned.
  ***************************************************************/
 move_t engine_search(const engine_limits_t *lim, engine_info_fn info)
 {
@@ -494,10 +495,10 @@ move_t engine_search(const engine_limits_t *lim, engine_info_fn info)
             list[i] = list[i - 1];
         list[0] = best_move;
 
-        if (stopped)
-            break;
-
-        tt_store(depth, best, TT_EXACT, best_move, 0);
+        // An iteration cut short still tells its best move and line,
+        // as that move is the one returned.
+        if (!stopped)
+            tt_store(depth, best, TT_EXACT, best_move, 0);
         if (info)
         {
             engine_info_t in;
@@ -510,6 +511,8 @@ move_t engine_search(const engine_limits_t *lim, engine_info_fn info)
             if (info(&in))
                 break;
         }
+        if (stopped)
+            break;
 
         // Stop at one legal move, or at a mate that this depth sees in full.
         if (n == 1)

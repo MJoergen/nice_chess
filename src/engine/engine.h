@@ -156,7 +156,9 @@ typedef struct
     move_t   pv[ENGINE_MAX_PV]; // The principal variation, from the root
 } engine_info_t;
 
-// Called by engine_search after each iteration that it completes.
+// Called by engine_search after each iteration that it completes,
+// and after one that a limit cut short once its first move was
+// searched, so that the last call's pv[0] is the move returned.
 // A nonzero return stops the search. This is where a front end
 // decides that it is not worth starting another iteration.
 typedef int (*engine_info_fn)(const engine_info_t *info);

@@ -17,6 +17,7 @@ info depth 2 score cp 873 nodes 243 pv d1e2 e5d5 e1f2
 info depth 3 score cp 883 nodes 1899 pv d1d3 e5e6 e1f2
 info depth 4 score cp 895 nodes 7147 pv e1f2 e5e4 d1g4 e4e5 f2e3
 info depth 5 score cp 905 nodes 18330 pv e1e2 e5e4 d1d3 e4e5 e2e3 e5e6
+info depth 6 score cp 910 nodes 30000 pv e1e2 e5e4 d1d3 e4e5 e2e3 e5e6 e3d4
 bestmove e1e2
 info depth 1 score cp 895 nodes 9 pv f7f8q
 info depth 2 score cp 905 nodes 69 pv e1f2 a2b3
@@ -37,6 +38,7 @@ bestmove b1c3 ponder b8c6
 info depth 1 score cp 0 nodes 31 pv b8c6
 info depth 2 score cp -50 nodes 170 pv b8c6 b1c3
 info depth 3 score cp 0 nodes 310 pv b8c6 b1c3
+info depth 4 score cp -40 nodes 1024 pv b8c6 b1c3 g8f6 d2d4
 bestmove b8c6 ponder b1c3
 info depth 1 score cp 10 nodes 20 pv b8c6
 bestmove b8c6
