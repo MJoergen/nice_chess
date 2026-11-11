@@ -68,8 +68,18 @@ The shelter is worth about 10 Elo at equal nodes, at half the weight
 of the fit, and its steps take that back. The weight from the fit is
 too large: the gap between the engine's scores and Stockfish's is
 partly the depth of the search, not the evaluation. The attacks it
-misses are quiet moves found deeper in the search, so the search,
-not the evaluation, is tried next.
+misses are quiet moves found deeper in the search, so the search
+was tried next.
+
+Late move reductions without the moves near the king: a late quiet
+move to a square within 1 or 2 squares of the opponent's king was
+searched at the full depth. It costs no steps (160.9M against 161.0M),
+and at 93000 nodes each, 2000 games, it scored +2.4 ± 12.8 (1 square)
+and -7.3 ± 12.8 (2 squares): the nodes spent on those moves are taken
+from the rest of the tree. It was not kept.
+
+At 93000 nodes a move, these changes for the king are each worth about
+10 Elo or less, the error of a 2000-game match. The work stopped here.
 
 ## 2026-11-11: Where the engine loses, against Stockfish 2000
 
