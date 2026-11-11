@@ -20,6 +20,8 @@ monitor, and on the host. See README.md.
   the pieces as glyphs into `src/ui/pieces.h` (`make pieces`).
   `release.py` scripts the release (`test_release.py` tests it, in
   `make test`).
+  `pgn.py` writes the games of `match.py` and `screen_game.py` as PGN
+  (`--pgn`; the Makefile's matches write to `games/`, not in git).
   `rate.sh` (shell) is a rating by cutechess-cli and Ordo (`make rate`).
   `prof.c` (C, on the host) counts the steps of each function in
   niceemu's trace (`make profile`). `mkbook.c` (C, on the host) makes

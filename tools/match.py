@@ -27,6 +27,10 @@ with --go2 go.
 --opt1 and --opt2 NAME=VALUE set a UCI option of an engine, such as
 UCI_Elo=1500 of Stockfish, and may be repeated.
 
+--pgn FILE appends each game to FILE, in PGN, as it ends: the moves
+in standard algebraic notation, from the start position, with the
+opening, and how the game ended.
+
 Prints each game, and the score of ENGINE1. Exits with 1 if an engine
 makes an illegal move or loses on time by more than --grace seconds, or
 if ENGINE1 scores less than --min-score.
@@ -42,6 +46,7 @@ import sys
 import time
 
 from board import Board
+from pgn import Pgn, san
 
 OPENINGS = [
     "e2e4 e7e5", "d2d4 d7d5", "c2c4 e7e5", "e2e4 c7c5", "d2d4 g8f6",
@@ -76,6 +81,22 @@ class Referee:
 
     def moves(self) -> list[str]:
         return self.ask("moves")[0].split()
+
+    def fen(self) -> str:
+        """The FEN of the position, from show."""
+        for line in self.ask("show"):
+            if line.count("/") == 7:
+                return line
+        raise RuntimeError("the referee shows no FEN")
+
+    def play(self, m: str, sans: list[str]) -> str | None:
+        """move(m), and appends m in standard algebraic notation to sans,
+        if it is legal."""
+        fen, legal = self.fen(), self.moves()
+        end = self.move(m)
+        if end != "illegal":
+            sans.append(san(fen, m, legal, self.fen(), bool(end and end.startswith("Checkmate"))))
+        return end
 
     def move(self, m: str) -> str | None:
         """Makes a move. Returns None, or how the game ended, or "illegal"."""
@@ -161,12 +182,14 @@ class Engine:
             self.p.wait()
 
 
-def play(ref: Referee, white: Engine, black: Engine, opening: str, args) -> tuple[str, str]:
-    """Plays a game, and returns its result, "1-0", "0-1", or "1/2-1/2", and why."""
+def play(ref: Referee, white: Engine, black: Engine, opening: str, args,
+         sans: list[str]) -> tuple[str, str]:
+    """Plays a game, and returns its result, "1-0", "0-1", or "1/2-1/2", and
+    why. Appends its moves to sans, in standard algebraic notation."""
     ref.ask("new")
     moves = []
     for m in opening.split():
-        ref.move(m)
+        ref.play(m, sans)
         moves.append(m)
     for e in (white, black):
         e.new_game()
@@ -188,7 +211,7 @@ def play(ref: Referee, white: Engine, black: Engine, opening: str, args) -> tupl
         if (len(moves) // 2) % args.moves == args.moves - 1 and side == 1:
             clock[0] += args.time * 1000
             clock[1] += args.time * 1000
-        end = ref.move(m)
+        end = ref.play(m, sans)
         moves.append(m)
         if end == "illegal":
             return ("0-1", "1-0")[side], f"{engines[side].name} played {m}, which is illegal"
@@ -217,7 +240,10 @@ def main() -> int:
     ap.add_argument("--eth", metavar="HOST[:PORT]", help="the board's Ethernet port, for board:")
     ap.add_argument("--port", metavar="DEVICE", help="the board's debug UART, for board:")
     ap.add_argument("--nicemon", help="a checkout of NiceMonMEGA65 (default $NICEMON)")
+    ap.add_argument("--pgn", metavar="FILE", help="append each game to FILE, in PGN")
     args = ap.parse_args()
+    pgn = Pgn(args.pgn, "match.py " + " ".join(shlex.quote(a) for a in sys.argv[1:]),
+              "MEGA65" if args.eth or args.port else "host")
 
     rng = random.Random(args.seed)
     ref = Referee(args.referee)
@@ -229,7 +255,10 @@ def main() -> int:
     for opening in OPENINGS[:args.openings]:
         for first in (e1, e2):
             white, black = (first, e2 if first is e1 else e1)
-            result, why = play(ref, white, black, opening, args)
+            sans: list[str] = []
+            result, why = play(ref, white, black, opening, args, sans)
+            pgn.write(white.name, black.name, result, sans, why,
+                      tags={"Opening": opening})
             games += 1
             points = {"1-0": 1.0, "0-1": 0.0, "1/2-1/2": 0.5}[result]
             score += points if white is e1 else 1.0 - points

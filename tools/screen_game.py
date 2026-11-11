@@ -42,6 +42,10 @@ built for the monitor) runs on the MEGA65 instead, through board.py,
 and --dump FILE saves the screen at the end for screenshot.py. The
 board's clock is real, so the engine's moves differ from run to run.
 
+--pgn FILE appends the game to FILE, in PGN, at its end, or "*" if it
+did not end: the moves in standard algebraic notation, with the score
+of --eval after each move as a comment, "[%eval 0.32]" or "[%eval #-3]".
+
 Exits with 1 if the front end makes a move other than the one pressed,
 if a move is illegal, or if the front end does not end normally.
 """
@@ -57,6 +61,7 @@ import time
 
 from board import SCREEN, Board, dump_lines
 from match import Referee
+from pgn import Pgn
 
 UP, DOWN, RIGHT, LEFT = "\x1b[A", "\x1b[B", "\x1b[C", "\x1b[D"
 
@@ -210,9 +215,15 @@ def main() -> None:
     ap.add_argument("--black", action="store_true", help="the opponent plays black")
     ap.add_argument("--eval", metavar="CMD", help="a UCI engine that scores each move")
     ap.add_argument("--eval-time", type=int, default=500, metavar="MS", help="its time a move")
+    ap.add_argument("--pgn", metavar="FILE", help="append the game to FILE, in PGN")
     args = ap.parse_args()
+    pgn = Pgn(args.pgn, "screen_game.py " + " ".join(shlex.quote(a) for a in sys.argv[1:]),
+              "MEGA65" if args.eth or args.port else "niceemu")
 
     go = f"go movetime {args.movetime}" if args.movetime else f"go nodes {args.nodes}"
+    names = [f"nice_chess level {args.level}",
+             " ".join([args.opponent or args.host_engine] + (args.opt or []) + [f"({go})"])]
+    white, black = names[::-1] if not args.black else names
     player = Player(args.opponent or args.host_engine, go, args.opt)
     judge = Player(args.eval, f"go movetime {args.eval_time}") if args.eval else None
     referee = Referee(args.host_engine)
@@ -227,6 +238,8 @@ def main() -> None:
         screen.press("s", "r")  # The front end's engine plays white, and white is at the bottom
     cursor = (4, 1)  # e2, where the front end starts it
     moves: list[str] = []
+    sans: list[str] = []
+    scores: list[str] = []
     result = None
     try:
         while len(moves) < 2 * args.max_moves:
@@ -249,12 +262,18 @@ def main() -> None:
                     sys.exit(f"screen_game.py: the front end says: {line}")
                 m = line.split()[1]
             moves.append(m)
-            result = referee.move(m)
+            result = referee.play(m, sans)
             if result == "illegal":
                 sys.exit(f"screen_game.py: {side}'s move {m} is illegal")
             if judge:
                 number = f"{(len(moves) + 1) // 2:3d}." + ("" if side == "white" else "..")
                 score = result or judge.score(moves)
+                if result or score == "?":
+                    scores.append("")
+                elif score.startswith("mate"):
+                    scores.append(f"[%eval #{int(score.split()[1])}]")
+                else:
+                    scores.append(f"[%eval {float(score):.2f}]")
                 who = "nice_chess" if (side == "black") != args.black else "opponent"
                 print(f"{number:6} {m:6} {who:11} {score}", flush=True)
             elif side == "black":
@@ -262,6 +281,12 @@ def main() -> None:
             if result:
                 break
     finally:
+        if result and result.startswith("Checkmate"):
+            outcome = ("1-0", "0-1")[(len(moves) - 1) % 2]
+        else:
+            outcome = "1/2-1/2" if result and result != "illegal" else "*"
+        pgn.write(white, black, outcome, sans,
+                  result or f"no result after {len(moves)} plies", scores)
         with open(args.keys_out, "w", encoding="latin-1", newline="") as f:
             f.write("".join(screen.keys))
         ended = screen.end(args.dump)

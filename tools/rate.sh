@@ -27,15 +27,17 @@
 #
 # The settings come from the environment, as the Makefile exports them:
 # CUTECHESS, ORDO, STOCKFISH (commands), BOOK, NODES, LEVELS, STRENGTHS,
-# ELOS, OPPONENTS, GAMES, CONCURRENCY. An empty LEVELS rates no level. The games go to build/rate/games.pgn, and the
-# rating to build/rate/ratings.txt. A new run starts a new games.pgn.
+# ELOS, OPPONENTS, GAMES, CONCURRENCY. An empty LEVELS rates no level.
+# The games go to $PGN (build/rate/games.pgn by default; make rate
+# gives each run a file of its own in games/), and the rating to
+# build/rate/ratings.txt. A run starts $PGN anew.
 # It plays a copy of the engine in build/rate/, so that a build during
 # the hours of a run does not change the player.
 set -eu
 : "${BOOK:=deps/books/8moves_v3.pgn}"
 : "${CUTECHESS:=cutechess-cli}" "${ORDO:=ordo}" "${STOCKFISH:=stockfish}"
 : "${NODES:=93000}" "${LEVELS=1 2 3 4 5}" "${STRENGTHS=}" "${ELOS:=1600 1800 2000 2200}" "${OPPONENTS=}"
-: "${GAMES:=100}" "${CONCURRENCY:=4}"
+: "${GAMES:=100}" "${CONCURRENCY:=4}" "${PGN:=build/rate/games.pgn}"
 
 case "$BOOK" in
     *.epd) format=epd ;;
@@ -45,7 +47,7 @@ esac
 
 dir=build/rate
 mkdir -p $dir
-rm -f $dir/games.pgn $dir/anchors.csv
+rm -f "$PGN" $dir/anchors.csv
 cp build/host/chess_fast $dir/chess_fast
 
 # The levels are the seeds of the gauntlet: each plays each Stockfish.
@@ -93,10 +95,11 @@ done
 
 # Each pairing plays GAMES games: GAMES/2 openings, each twice.
 "$CUTECHESS" -tournament gauntlet -seeds $seeds "$@" \
+    -event "rate.sh NODES=$NODES LEVELS=$LEVELS STRENGTHS=$STRENGTHS ELOS=$ELOS" \
     -openings file="$BOOK" format=$format order=random -repeat -games 2 \
     -rounds $((GAMES / 2)) -concurrency "$CONCURRENCY" -recover \
     -resign movecount=3 score=1000 -draw movenumber=40 movecount=8 score=10 \
-    -maxmoves 200 -pgnout $dir/games.pgn
+    -maxmoves 200 -pgnout "$PGN"
 
 # Ordo 1.2.6 does not fix the rating of an anchor of -m when it is the
 # only one, so one anchor is given by -A and -a.
@@ -107,5 +110,5 @@ if [ $(wc -l < $dir/anchors.csv) -eq 1 ]; then
 else
     anchors="-m $dir/anchors.csv"
 fi
-"$ORDO" -p $dir/games.pgn $anchors -W -D -s 1000 -o $dir/ratings.txt
+"$ORDO" -p "$PGN" $anchors -W -D -s 1000 -o $dir/ratings.txt
 cat $dir/ratings.txt

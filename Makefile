@@ -94,6 +94,14 @@ ELOS      ?= 1600 1800 2000 2200
 GAMES     ?= 100
 CONCURRENCY ?= 4
 BOOK      ?= deps/books/8moves_v3.pgn
+
+# The games of every match go to PGNDIR, in a file of their own for
+# each run, named by the target and the time it started:
+# games/rate-20261111-143000.pgn. PGNDIR is not in git, and make clean
+# keeps it.
+PGNDIR    ?= games
+STAMP     := $(shell date +%Y%m%d-%H%M%S)
+PGN        = $(PGNDIR)/$@-$(STAMP).pgn
 export CUTECHESS ORDO STOCKFISH NODES LEVELS STRENGTHS ELOS OPPONENTS GAMES CONCURRENCY BOOK
 
 .PHONY: FORCE help all test pieces host-test nice-test tools-test perft-deep screen-game match-random match-mchess2 rate openings size profile deps clean distclean
@@ -133,6 +141,9 @@ help:
 	@echo "  make board-stockfish  a game on the board's screen against Stockfish (ELO=1800, MOVETIME=1000 ms, BLACK=1: it is black)"
 	@echo "  make release-check board-test and board-match, and the stamp that tools/release.py tag needs"
 	@echo "                    (doc/RELEASE.md)"
+	@echo ""
+	@echo "The matches (match-*, rate, board-match, board-game, board-stockfish) write their games"
+	@echo "to games/TARGET-YYYYMMDD-HHMMSS.pgn (PGNDIR=DIR another directory)."
 	@echo ""
 	@echo "NICE_CPU=DIR and NICEEMU=PATH use local copies of nice_cpu and niceemu."
 
@@ -273,16 +284,19 @@ screen-game: build/nice/chess_screen.bin | $(NICEEMU)
 
 # Against random moves, at 20000 nodes a move: it must win every game.
 match-random: build/host/chess_text
-	$(PYTHON) tools/match.py --go1 "go nodes 20000" --min-score 20 \
+	@mkdir -p $(PGNDIR)
+	$(PYTHON) tools/match.py --go1 "go nodes 20000" --min-score 20 --pgn $(PGN) \
 	  build/host/chess_text build/host/chess_text random
 
 # Against mchess2, at 40 moves in 20 seconds each.
 match-mchess2: build/host/chess_text build/host/mchess2
-	$(PYTHON) tools/match.py --time 20 build/host/chess_text build/host/chess_text build/host/mchess2
+	@mkdir -p $(PGNDIR)
+	$(PYTHON) tools/match.py --time 20 --pgn $(PGN) build/host/chess_text build/host/chess_text build/host/mchess2
 
 # A rating of each of the 5 levels of the board's engine (tools/rate.sh).
 rate: build/host/chess_fast $(BOOK)
-	tools/rate.sh
+	@mkdir -p $(PGNDIR)
+	PGN=$(PGN) tools/rate.sh
 
 openings: deps/books/8moves_v3.pgn
 
@@ -324,19 +338,22 @@ board-test: build/mega65/chess_text.bin build/mega65/chess_screen.bin
 ELO ?= 1800
 MOVETIME ?= 1000
 board-stockfish: build/mega65/chess_screen.bin build/host/chess_text
-	$(PYTHON) tools/screen_game.py $(BOARDLINK) --level 3 --opponent "$(STOCKFISH)" \
+	@mkdir -p $(PGNDIR)
+	$(PYTHON) tools/screen_game.py $(BOARDLINK) --level 3 --opponent "$(STOCKFISH)" --pgn $(PGN) \
 	  --opt UCI_LimitStrength=true --opt UCI_Elo=$(ELO) --movetime $(MOVETIME) $(if $(BLACK),--black) \
 	  --eval "$(STOCKFISH)" \
 	  build/mega65/chess_screen.bin build/host/chess_text build/mega65/stockfish.keys
 
 board-game: build/mega65/chess_screen.bin build/host/chess_text
-	$(PYTHON) tools/screen_game.py $(BOARDLINK) --level $(LEVEL) --dump build/mega65/game.dump \
+	@mkdir -p $(PGNDIR)
+	$(PYTHON) tools/screen_game.py $(BOARDLINK) --level $(LEVEL) --dump build/mega65/game.dump --pgn $(PGN) \
 	  build/mega65/chess_screen.bin build/host/chess_text build/mega65/game.keys
 
 # Two games, one with each color, the board at its default time of a
 # move, 5 seconds, and the host build at 5000 nodes a move.
 board-match: build/mega65/chess_text.bin build/host/chess_text
-	$(PYTHON) tools/match.py $(BOARDLINK) --openings 1 --go1 "go nodes 5000" --go2 go \
+	@mkdir -p $(PGNDIR)
+	$(PYTHON) tools/match.py $(BOARDLINK) --openings 1 --go1 "go nodes 5000" --go2 go --pgn $(PGN) \
 	  build/host/chess_text build/host/chess_text board:build/mega65/chess_text.bin
 
 # A release (doc/RELEASE.md): the archive nice_chess-VERSION.tar.gz,

@@ -53,7 +53,16 @@ no lower than 1320. Such an engine plays on its clock, on a host
 faster than CCRL's, so it can play above its rating (LOG.md).
 Ordo rates the levels and the strengths in one pool, with each
 Stockfish anchored at its UCI_Elo, which is on the CCRL 40/4 scale.
-The games and the rating are in `build/rate/`.
+The rating is in `build/rate/ratings.txt`.
+
+Every match writes its games, in PGN, to a file of its own in `games/`
+(not in git; `PGNDIR=DIR` for another directory), named by the target
+and the time it started, such as `games/rate-20261111-143000.pgn`:
+`make rate`, `make match-random`, `make match-mchess2`, and the board's
+`board-match`, `board-game`, and `board-stockfish`. `board-stockfish`
+puts Stockfish's score after each move, as a comment. For a match
+run by hand, `tools/match.py` and `tools/screen_game.py` take
+`--pgn FILE`, and cutechess-cli `-pgnout FILE`.
 
 `make test` also runs the tests of `tools/release.py`
 (`tools/test_release.py`).
