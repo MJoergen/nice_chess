@@ -67,18 +67,20 @@ The other keys are on the screen:
 - Q: clear the screen and return to the monitor.
 
 The game starts with no time control, at level 3. There are 5 levels;
-a level sets only the time the engine takes for a move:
+a level sets the time the engine takes for a move, and below level 5,
+noise in its evaluation, as the strengths below do:
 
-| Level | Time a move | Elo (CCRL 40/4) |
-|------:|------------:|----------------:|
-| 1     | 0.6 s       | 1600            |
-| 2     | 1.7 s       | 1770            |
-| 3     | 5 s         | 1850            |
-| 4     | 15 s        | 1980            |
-| 5     | 45 s        | 2050            |
+| Level | Time a move | Noise    |
+|------:|------------:|---------:|
+| 1     | 0.6 s       | ±800 cp  |
+| 2     | 1.7 s       | ±600 cp  |
+| 3     | 5 s         | ±320 cp  |
+| 4     | 15 s        | ±170 cp  |
+| 5     | 45 s        |          |
 
-At level 3 the engine reaches depth 7 from the opening. The ratings
-are those `make rate` measured on 2026-11-09
+The noise aims at about 900 Elo (CCRL 40/4) at level 1, and steps of
+about 340 up to level 5, by estimates from the ratings of the
+strengths; the levels are not rated yet
 ([LOG.md](https://github.com/MJoergen/nice_chess/blob/main/LOG.md)).
 
 The book is on at first. The engine plays a move from the book at
@@ -178,7 +180,9 @@ deterministic.
 at a terminal; there `go` takes 1 second. After `uci` it speaks UCI,
 so a chess GUI can play it. Its option `OwnBook` turns the book on; it
 is off at first. Its option `Strength`, 1 to 5, is the strength of the
-windowed front end; it is 5 at first. It ponders: `go ponder` thinks on
+windowed front end; it is 5 at first. Its option `Noise`, 0 to 1000,
+is the noise of a level in centipawns; it is 0 at first, and counts
+only at strength 5. It ponders: `go ponder` thinks on
 the opponent's time, on the reply that its `bestmove ... ponder M`
 named.
 

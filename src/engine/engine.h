@@ -183,6 +183,12 @@ void engine_set_strength(int strength, uint32_t seed);
 // it to the limits it gives engine_search.
 uint32_t engine_strength_share(uint32_t budget);
 
+// Sets full strength, and then noise of amplitude centipawns, from
+// -amplitude to amplitude, in the evaluation, as engine_set_strength
+// does below full strength, but with all of the time or the nodes.
+// The levels of the windowed front end use it. 0 is no noise.
+void engine_set_noise(int amplitude, uint32_t seed);
+
 // The time to take for a move, under a clock with left on it, inc
 // added after each move, and movestogo moves to the next time control
 // (0 if none): a share of the time left, and most of the increment,

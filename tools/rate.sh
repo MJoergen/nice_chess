@@ -12,7 +12,9 @@
 # the time of go in the windowed front end, 1/9, 1/3, 1, 3, or 9
 # (src/ui/screen.c). The engine plays the same moves as the NICE
 # builds at the same nodes, and 172000 nodes is about 5 seconds a move
-# on the MEGA65, the time of go and of level 3 (LOG.md). Stockfish
+# on the MEGA65, the time of go and of level 3 (LOG.md). It gets the
+# level's noise too, 800, 600, 320, 170, or 0 centipawns, with the UCI
+# option Noise, as level_noise in src/ui/screen.c. Stockfish
 # gets 60+0.6, the time control its UCI_Elo was fitted at, to CCRL 40/4.
 #
 # Each strength of $STRENGTHS (none by default) plays too, with the UCI
@@ -55,14 +57,14 @@ set --
 seeds=0
 for level in $LEVELS; do
     case $level in
-        1) nodes=$((NODES / 9)) ;;
-        2) nodes=$((NODES / 3)) ;;
-        3) nodes=$NODES ;;
-        4) nodes=$((NODES * 3)) ;;
-        5) nodes=$((NODES * 9)) ;;
+        1) nodes=$((NODES / 9)) noise=800 ;;
+        2) nodes=$((NODES / 3)) noise=600 ;;
+        3) nodes=$NODES noise=320 ;;
+        4) nodes=$((NODES * 3)) noise=170 ;;
+        5) nodes=$((NODES * 9)) noise=0 ;;
         *) echo "rate.sh: LEVELS must be of 1 to 5" >&2; exit 1 ;;
     esac
-    set -- "$@" -engine name=level$level cmd=$dir/chess_fast proto=uci tc=inf nodes=$nodes
+    set -- "$@" -engine name=level$level cmd=$dir/chess_fast proto=uci tc=inf nodes=$nodes option.Noise=$noise
     seeds=$((seeds + 1))
 done
 for strength in $STRENGTHS; do

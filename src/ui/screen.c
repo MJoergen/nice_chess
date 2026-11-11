@@ -19,9 +19,9 @@
  *   S               switch sides: the engine plays the side to move
  *   R               rotate the board
  *   N               a new game
- *   + -             with no time control, give the engine more or
- *                   less time, levels 1 to 5; under a time control,
- *                   make it stronger or weaker, strengths 1 to 5
+ *   + -             with no time control, make the engine stronger
+ *                   or weaker, levels 1 to 5, by its time and noise;
+ *                   under a time control, strengths 1 to 5
  *   T               the next time control, and a new game
  *   O               the opening book on or off (on at first)
  *   P               pondering on or off (on at first)
@@ -43,14 +43,15 @@
  * T steps through the time controls: none, Blitz 3+2, Rapid 15+10,
  * and Classical 90+30, and starts a new game. With none, each side's
  * clock counts up the time it has taken, and the level sets the time
- * of the engine's move. With a time control, each clock counts down
- * from the base time and gains the increment after each of its side's
- * moves; a side whose clock reaches 0 loses, whatever the material.
- * The engine takes a share of the time on its clock
- * (engine_time_share), at its strength (engine_set_strength), 5, the
- * full one, at first; a new game has a new seed of the strength's
- * noise, the same in niceemu each time. U takes back moves, not time. N sets the
- * clocks as at the start. In niceemu the clocks count steps, at 54
+ * of the engine's move and the noise in its evaluation
+ * (engine_set_noise), none at level 5. With a time control, each
+ * clock counts down from the base time and gains the increment after
+ * each of its side's moves; a side whose clock reaches 0 loses,
+ * whatever the material. The engine takes a share of the time on its
+ * clock (engine_time_share), at its strength (engine_set_strength),
+ * 5, the full one, at first. A new game has a new seed of the noise,
+ * of the level or of the strength, the same in niceemu each time. U
+ * takes back moves, not time. N sets the clocks as at the start. In niceemu the clocks count steps, at 54
  * million a second, the MEGA65's rate, so the engine's time there is
  * what it would take on the board.
  *
@@ -146,9 +147,12 @@ static int    n_typed;
 static const char *message = "";   // A line for the last thing that went wrong
 static char   msg_buf[24];
 
-// The levels: the time of a move, as a share of platform_move_time.
+// The levels: the time of a move, as a share of platform_move_time,
+// and the noise in the evaluation, in centipawns (LOG.md, 2026-11-11).
+// tools/rate.sh has the same table.
 static const uint8_t level_num[5] = {1, 1, 1, 3, 9};
 static const uint8_t level_den[5] = {9, 3, 1, 1, 1};
+static const int16_t level_noise[5] = {800, 600, 320, 170, 0};
 static int    level = 3;
 static int    book = 1;            // The engine plays from its opening book
 
@@ -168,7 +172,7 @@ static const struct
 #define N_CONTROLS ((int) (sizeof controls / sizeof controls[0]))
 static int    control;             // The time control: an index of controls
 static int    strength = ENGINE_STRENGTH_MAX; // Under a time control
-static uint32_t game_seed;         // Of the noise below full strength
+static uint32_t game_seed;         // Of the noise of a level or a strength
 
 // The result of a game lost on time, beside the engine's results.
 enum { RESULT_TIME = 16 };
@@ -943,6 +947,16 @@ static void engine_moved(move_t m)
         expected = info.pv[1];
 }
 
+// The engine's strength: the strength of the time control, or with
+// none, the noise of the level.
+static void set_strength(void)
+{
+    if (control)
+        engine_set_strength(strength, game_seed);
+    else
+        engine_set_noise(level_noise[level - 1], game_seed);
+}
+
 static void think(void)
 {
     have_info = 0;
@@ -958,7 +972,7 @@ static void think(void)
     thinking = 1;
     draw_all();
 
-    engine_set_strength(control ? strength : ENGINE_STRENGTH_MAX, game_seed);
+    set_strength();
     set_times();
     engine_limits_t limits = {0, 0, stop_search};
     engine_moved(engine_search(&limits, on_info));
@@ -1001,7 +1015,7 @@ static void ponder(void)
     }
     snapshot(&view_next);
     expected = e;
-    engine_set_strength(control ? strength : ENGINE_STRENGTH_MAX, game_seed);
+    set_strength();
     pondering = 1;
     have_ponder_info = 0;
     ponder_miss = 0;

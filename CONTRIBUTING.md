@@ -38,7 +38,8 @@ pinned commit, which it fetches (`make openings`). It plays
 of `LEVELS` (1 2 3 4 5), at a fixed number of nodes a move: `NODES`
 (172000) is about 5 seconds a move on the MEGA65, the time of level 3,
 and levels 1, 2, 4, and 5 get 1/9, 1/3, 3, and 9 times that, their
-share of the time. At the same nodes the host and NICE builds play the
+share of the time. Each level gets its noise too, with the UCI option
+`Noise`. At the same nodes the host and NICE builds play the
 same moves. The opponents are Stockfish at each UCI_Elo of `ELOS`
 (1600 1800 2000 2200), at 60+0.6, `GAMES` (100) games for each level
 against each, `CONCURRENCY` (4) at a time: 2000 games by default,

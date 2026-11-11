@@ -32,7 +32,8 @@
  * may not make progress. The test of the phase keeps it off the path
  * of the other positions.
  *
- * Below full strength (engine_set_strength), evaluate adds noise of
+ * Below full strength (engine_set_strength), and at the levels of the
+ * windowed front end (engine_set_noise), evaluate adds noise of
  * up to plus or minus an amplitude, from a hash of the Zobrist key and
  * a seed. A position thus gets the same value each time the search
  * meets it, so the transposition table stays consistent, and the

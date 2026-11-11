@@ -28,10 +28,13 @@
  *
  * After uci, the commands are those of the UCI protocol: uci,
  * isready, ucinewgame, position, go, setoption, and quit. The
- * options are OwnBook, the book, false at first, and Strength, 1 to 5,
+ * options are OwnBook, the book, false at first; Strength, 1 to 5,
  * 5 at first (engine_set_strength): below 5, go gets a share of its
- * time and of its nodes, but all of its depth. There is no prompt, and go does
- * not make the move. setoption works before uci too.
+ * time and of its nodes, but all of its depth; and Noise, 0 to 1000,
+ * 0 at first, the noise of the windowed front end's levels in
+ * centipawns (engine_set_noise), which counts only at Strength 5.
+ * There is no prompt, and go does not make the move. setoption works
+ * before uci too.
  *
  * During a search, in both modes, the line stop stops it, and the
  * line isready is answered with readyok. Any other line waits until
@@ -63,7 +66,8 @@ static const char piece_chars[] = "kqrbnp.PNBRQK";
 static int uci_mode = 0;
 static int own_book = 0;
 static int strength = ENGINE_STRENGTH_MAX;
-static uint32_t game_seed;         // Of the noise below full strength, new for each game
+static int noise;                  // At full strength (engine_set_noise)
+static uint32_t game_seed;         // Of the noise, new for each game
 
 /***************************************************************
  * next_word
@@ -278,7 +282,17 @@ static void print_book(void)
     printf("\n");
 }
 
-// UCI: setoption name OwnBook value true|false, or name Strength value N
+// Sets the strength, or at full strength, the noise.
+static void set_strength(void)
+{
+    if (strength < ENGINE_STRENGTH_MAX)
+        engine_set_strength(strength, game_seed);
+    else
+        engine_set_noise(noise, game_seed);
+}
+
+// UCI: setoption name OwnBook value true|false, name Strength value N,
+// or name Noise value N
 static void do_setoption(char *args)
 {
     if (strcmp(next_word(&args), "name"))
@@ -292,7 +306,20 @@ static void do_setoption(char *args)
     else if (!strcmp(name, "Strength"))
     {
         strength = atoi(value);
-        engine_set_strength(strength, game_seed);
+        if (strength < 1)
+            strength = 1;
+        if (strength > ENGINE_STRENGTH_MAX)
+            strength = ENGINE_STRENGTH_MAX;
+        set_strength();
+    }
+    else if (!strcmp(name, "Noise"))
+    {
+        noise = atoi(value);
+        if (noise < 0)
+            noise = 0;
+        if (noise > 1000)
+            noise = 1000;
+        set_strength();
     }
 }
 
@@ -300,7 +327,7 @@ static void new_game(void)
 {
     engine_new_game();
     game_seed = game_seed * 1664525u + 1013904223u;
-    engine_set_strength(strength, game_seed);
+    set_strength();
 }
 
 static void do_divide(int depth)
@@ -569,7 +596,8 @@ int main(void)
             printf("id name nice_chess %s\nid author Michael Jorgensen\n"
                    "option name OwnBook type check default false\n"
                    "option name Ponder type check default false\n"
-                   "option name Strength type spin default 5 min 1 max 5\nuciok\n", nice_chess_version);
+                   "option name Strength type spin default 5 min 1 max 5\n"
+                   "option name Noise type spin default 0 min 0 max 1000\nuciok\n", nice_chess_version);
             fflush(stdout);
         }
         else if (!strcmp(cmd, "isready"))

@@ -2,6 +2,50 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-11: Noise at the lower levels
+
+The levels of the windowed front end set only the time of a move, and
+level 1 was too strong: about 1600 on 2026-11-09, and more since,
+with PeSTO's tables (about +150 at full strength) and #21 (1.61 times
+the nodes, about +60). The aim: about 900 at level 1, and even steps
+up to level 5. The change is the least that does it: each level keeps
+its time, and gets noise in the evaluation, as the strengths do.
+
+The noise was estimated from the ratings above, not measured:
+
+- The levels without noise, at the nodes of 172000 a move for level 3:
+  about 1820, 1980, 2060, 2190, and 2270 (the ratings of 2026-11-09,
+  plus about 150 for the tables, plus about 60 for 1.85 times the
+  nodes, at about 112 Elo for 3 times).
+- The cost of the noise, from the strengths of the PeSTO run: with
+  their share of the nodes taken out (about 60 Elo for 1/1.5, 120 for
+  1/2.2, 170 for 1/3, and 215 for 1/3.8, by the levels' 112 for 3
+  times), ±90 cp costs about 105 Elo, ±160 about 235, ±360 about 535,
+  and ±500 about 610; ±600 at 1/3.8 of the nodes, in the scan of
+  2026-11-10 with the old tables, about 720.
+- The targets, 900 to 2270 in 4 steps of about 340: 900, 1240, 1585,
+  1930, and 2270.
+
+| Level | Nodes | Without noise | Target | Cost | Noise |
+|------:|------:|--------------:|-------:|-----:|------:|
+| 1 | 19111 | 1820 | 900 | 920 | ±800 |
+| 2 | 57333 | 1980 | 1240 | 740 | ±600 |
+| 3 | 172000 | 2060 | 1585 | 475 | ±320 |
+| 4 | 516000 | 2190 | 1930 | 260 | ±170 |
+| 5 | 1548000 | 2270 | 2270 | 0 | 0 |
+
+Level 1 is the least sure: ±800 is beyond all the data, and 900 is
+more than 400 below the lowest UCI_Elo of Stockfish, 1320, the lowest
+anchor. Each estimate has an error of 100 or more.
+
+The engine has engine_set_noise for this: full strength, with noise.
+The text front end has the UCI option Noise, 0 to 1000, so that
+`make rate` plays each level with its noise. In `make screen-game`,
+the host engine at 2000 nodes now mates level 1 at move 39, where
+level 1 mated it at move 37 before. `tests/screen_ponder.keys` plays
+g1f3 and b1c3 the other way round, so that its game still has a ponder
+hit, with the noise of level 1.
+
 ## 2026-11-11: The nodes of 5 seconds on the board, after #21
 
 Measured as on 2026-11-04: every 11th position of mchess2's search
