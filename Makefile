@@ -69,7 +69,13 @@ VERSIONC = build/gen/version.c
 # CHECK_STATE stand in for (LOG.md, 2026-11-04). The engine keeps its
 # move lists in its own data, so the wasm stack is small. The memory is
 # three pages, 192 KB, for the transposition table's 128 KB (TT_BITS).
-NICEFLAGS = -O 2 -D NDEBUG --no-bounds-checks --stack 8192 --memory 196608 --symbols --keep
+# --trust-alignment leaves out the alignment test of each access of 4
+# bytes, as clang's alignment hints are exact. --byte-windows reaches
+# the memory through the byte windows of nice_cpu's SYSTEM.md §9, which
+# niceemu has from V2.0 on, and NiceMonMEGA65 from V2.0 on (LOG.md,
+# 2026-11-11).
+NICEFLAGS = -O 2 -D NDEBUG --no-bounds-checks --trust-alignment --byte-windows \
+            --stack 8192 --memory 196608 --symbols --keep
 # The MEGA65: the same, built for the monitor, which loads it at 0x8000.
 MONFLAGS = $(NICEFLAGS) --monitor
 
@@ -117,7 +123,7 @@ help:
 	@echo "  make all           build both front ends, for niceemu, for the MEGA65, and for the host"
 	@echo "  make test          the tests, on the host and in niceemu, and of tools/release.py"
 	@echo "  make perft-deep    the perft suite to depth 5 on the host (a minute)"
-	@echo "  make screen-game   a full game in the windowed front end, in niceemu (two minutes)"
+	@echo "  make screen-game   a full game in the windowed front end, in niceemu (a minute)"
 	@echo "  make match-random  the host build against random moves (20 games)"
 	@echo "  make match-mchess2 the host build against mchess2 (20 games, 15 minutes)"
 	@echo "  make openings      fetch the openings of make rate, 8moves_v3.pgn, into deps/books/"
@@ -290,7 +296,7 @@ perft-deep: build/host/perftsuite $(PERFTSUITE)
 	@tools/runtest.sh host_perftsuite5 perftsuite5 $(PERFTSUITE) host build/host/perftsuite 5
 
 # The keys of a game that tools/screen_game.py played with its defaults
-# (white at 2000 nodes, level 1), to checkmate by black at move 84.
+# (white at 2000 nodes, level 1), to checkmate by black at move 56.
 screen-game: build/nice/chess_screen.bin | $(NICEEMU)
 	@tools/runtest.sh nice_screen_game screen_game tests/screen_game.keys screen build/nice/chess_screen.bin
 

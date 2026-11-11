@@ -34,7 +34,7 @@ banner of the text front end, and its UCI `id name`.
 ## On the MEGA65
 
 `CHESS.BIN` runs on the MEGA65 under the monitor of
-[NiceMonMEGA65](https://github.com/MJoergen/NiceMonMEGA65), V1.9 or
+[NiceMonMEGA65](https://github.com/MJoergen/NiceMonMEGA65), V2.0 or
 later. The monitor loads it from a FAT32 SD card, so the board needs
 no host.
 

@@ -2,6 +2,35 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-11: --trust-alignment and --byte-windows (#21)
+
+Two options of nicebuild.py in nice_cpu V2.0, which the build did not
+use:
+
+- `--trust-alignment` leaves out the alignment test of every access of
+  4 bytes. clang's alignment hints are exact, so the test never fails;
+  a misaligned access would read or write the wrong word, with no
+  trap. Nothing in `src/` casts a pointer to a wider type.
+- `--byte-windows` reaches the memory through the byte windows of
+  nice_cpu's SYSTEM.md §9. niceemu has them from V2.0 on, and
+  NiceMonMEGA65 from V2.0 on (NiceMonMEGA65#90), so the MEGA65 builds
+  need that monitor. On the board, a read of a byte or a halfword
+  through a window takes a cycle more than a read of a word.
+
+With both, on the workload of `make profile` (the 24 Bratko-Kopec
+positions at 3000 nodes), the steps go from 161.93M to 135.72M
+(−16.2%), with the same `info` and `bestmove` lines. On
+`tests/search.input` they go from 202.5M to 161.9M (−20.1%). The
+MEGA65 builds need 9277 words fewer (text, 76892 to 67615) and 7665
+fewer (screen, 75413 to 67748).
+
+The fixed-node tests do not change. The timed searches of the
+windowed front end search more nodes in the same steps: the figures
+of `tests/screen.expected` and `tests/screen_ponder.expected` changed,
+not the moves, and the game of `make screen-game` is another one,
+recorded again with the defaults of `tools/screen_game.py`. Black
+mates at move 56.
+
 ## 2026-11-11: Mop-up with bishop and knight (#24)
 
 With a bishop and a knight the mate is only in a corner of the
