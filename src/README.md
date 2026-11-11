@@ -10,7 +10,8 @@
     king squares, the piece lists, and the Zobrist key up to date, and
     the null move.
   - `fen.c`: FEN input and output, and moves in coordinate notation.
-  - `eval.c`: the evaluation, by material and piece-square tables.
+  - `eval.c`: the evaluation, by material and piece-square tables,
+    and a mop-up term against a bare king.
   - `search.c`: the search, by iterative deepening, with a principal
     variation search, null-move pruning, late move reductions,
     quiescence, and move ordering with a history table.

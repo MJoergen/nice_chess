@@ -20,6 +20,15 @@
  * Friederich, from Rofchade, tuned on game results
  * (chessprogramming.org, "PeSTO's Evaluation Function").
  *
+ * When one side has only its king, and the other at least a rook or
+ * two minor pieces, a mop-up term (chessprogramming.org, "Mop-up
+ * Evaluation") helps the stronger side to mate: a bonus by the bare
+ * king's distance from the centre, and by how near the stronger
+ * king is to it. The tables pull both kings to the centre alike, and
+ * a mate can be deeper than the search, so without it the engine
+ * may not make progress. The test of the phase keeps it off the path
+ * of the other positions.
+ *
  * Below full strength (engine_set_strength), evaluate adds noise of
  * up to plus or minus an amplitude, from a hash of the Zobrist key and
  * a seed. A position thus gets the same value each time the search
@@ -222,12 +231,50 @@ static int noise(void)
     return (int) (x % (uint32_t) (2 * noise_amplitude + 1)) - noise_amplitude;
 } // end of noise
 
+// The Manhattan distance of a square from the four central squares,
+// 0 to 6.
+static int centre_distance(int sq)
+{
+    int f = file_of(sq), r = rank_of(sq);
+    return (f < 4 ? 3 - f : f - 4) + (r < 4 ? 3 - r : r - 4);
+}
+
+// True if the side (0 black, 1 white) has only its king.
+static int bare(int c)
+{
+    int n = 0;
+    for (int i = 0; i < pos.count[c]; ++i)
+        if (pos.pieces[c][i] && ++n > 1)
+            return 0;
+    return 1;
+}
+
+// The mop-up term, from white's point of view: 0 unless one side has
+// only its king. The phase is then the stronger side's alone.
+__attribute__((noinline)) static int mop_up(void)
+{
+    int weak;
+    if (bare(0))
+        weak = 0;
+    else if (bare(1))
+        weak = 1;
+    else
+        return 0;
+    int k = pos.king[weak], s = pos.king[!weak];
+    int df = file_of(k) - file_of(s), dr = rank_of(k) - rank_of(s);
+    int dist = (df < 0 ? -df : df) + (dr < 0 ? -dr : dr);
+    int v = 10 * centre_distance(k) + 4 * (14 - dist);
+    return weak ? -v : v;
+}
+
 int evaluate(void)
 {
     int phase = pos.phase < 24 ? pos.phase : 24;
     int mg = unpack_mg(pos.psqt);
     int eg = unpack_eg(pos.psqt);
     int v = (mg * phase + eg * (24 - phase)) / 24;
+    if ((unsigned) (phase - 2) <= 2) // 2 to 4
+        v += mop_up();
     if (pos.side < 0)
         v = -v;
     return noise_amplitude ? v + noise() : v;

@@ -37,6 +37,8 @@ RELEASE_URL = https://github.com/MJoergen/nice_cpu/releases/download/$(NICE_CPU_
 NICEEMU_TGZ = niceemu-$(NICE_CPU_TAG)-x86_64-linux.tar.gz
 PERFTSUITE  = deps/mchess2/perftsuite.epd
 SEARCHSUITE = deps/mchess2/searchsuite.epd
+# The nodes a move of tests/matesuite.c, around those of the levels.
+MATESUITE_NODES = 1000 3000 10000 18000 20000 30000 60000 93000
 MCHESS2_RAW = https://raw.githubusercontent.com/MJoergen/mchess2/$(MCHESS2_COMMIT)
 
 # mchess2's sources, to build it as an opponent (make match-mchess2)
@@ -246,18 +248,23 @@ build/host/searchsuite: $(ENGINE) $(HEADERS) tests/searchsuite.c
 	@mkdir -p $(@D)
 	$(CC) $(HOSTFLAGS) -o $@ $(ENGINE) tests/searchsuite.c
 
+build/host/matesuite: $(ENGINE) $(HEADERS) tests/matesuite.c
+	@mkdir -p $(@D)
+	$(CC) $(HOSTFLAGS) -o $@ $(ENGINE) tests/matesuite.c
+
 test: host-test nice-test tools-test
 
 # The tests of tools/release.py.
 tools-test:
 	$(PYTHON) -m unittest discover -s tools -p 'test_*.py'
 
-host-test: build/host/chess_text build/host/perftsuite build/host/searchsuite $(PERFTSUITE) $(SEARCHSUITE)
+host-test: build/host/chess_text build/host/perftsuite build/host/searchsuite build/host/matesuite $(PERFTSUITE) $(SEARCHSUITE)
 	@tools/runtest.sh host_text text tests/text.input host build/host/chess_text
 	@tools/runtest.sh host_search search tests/search.input host build/host/chess_text
 	@tools/runtest.sh host_book book tests/book.input host build/host/chess_text
 	@tools/runtest.sh host_perftsuite4 perftsuite4 $(PERFTSUITE) host build/host/perftsuite 4
 	@tools/runtest.sh host_searchsuite searchsuite $(SEARCHSUITE) host build/host/searchsuite 10000
+	@tools/runtest.sh host_matesuite matesuite tests/matesuite.input host build/host/matesuite $(MATESUITE_NODES)
 
 nice-test: build/nice/chess_text.bin build/nice/chess_screen.bin build/nice/perftsuite.bin $(PERFTSUITE) \
            build/test/mon_chess_text.bin build/test/mon_chess_screen.bin | $(NICEEMU)

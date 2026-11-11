@@ -2,6 +2,41 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-11: Mop-up against a bare king (#20)
+
+The engine did not always mate with king and rook against king: the
+tables pull both kings to the centre, and a mate with a rook can be
+deeper than the search. A 3- or 4-piece table was weighed and not
+used: KRK by distance to mate is about 82K entries even with the
+board's 8 symmetries, more than the 19K words left, and a table of
+win or draw only does not say how to make progress.
+
+The term (eval.c, `mop_up`): when one side has only its king and the
+phase is 2 to 4, 10 cp for each step of the bare king's Manhattan
+distance from the centre, and 4 cp for each step that the kings are
+nearer than 14. `tests/matesuite.c` plays 9 positions of KRK and KQK,
+the engine at a number of nodes against the engine at 2000, and counts
+the mates within 50 moves:
+
+| Nodes | Mated, before | Longest | Mated, with the term | Longest |
+|---:|---:|---:|---:|---:|
+| 1000 | 3 of 9 | 31 | 9 of 9 | 29 |
+| 3000 | 4 of 9 | 18 | 9 of 9 | 23 |
+| 10000 | 7 of 9 | 48 | 9 of 9 | 17 |
+| 18000 | 7 of 9 | 19 | 9 of 9 | 16 |
+| 20000 | 6 of 9 | 28 | 9 of 9 | 18 |
+| 25000 | 9 of 9 | 50 | 9 of 9 | 15 |
+| 30000 | 7 of 9 | 34 | 9 of 9 | 16 |
+| 40000 | 8 of 9 | 50 | 9 of 9 | 15 |
+| 60000 | 7 of 9 | 22 | 9 of 9 | 13 |
+| 93000 | 9 of 9 | 39 | 9 of 9 | 14 |
+
+Its cost (`make profile`): 161.04M to 161.86M steps, 0.5%. evaluate
+went from 28.0 to 33.2 steps a call; mop_up, not inlined, is called
+in 4518 of the 67079 calls, from the rook and pawn endings, at 104
+steps. Inlined, evaluate took 55.6 steps a call. The MEGA65 builds
+grew by about 280 words.
+
 ## 2026-11-11: A penalty for the king's shelter (#3)
 
 The games against Stockfish 2000 (the entry below) were looked at
