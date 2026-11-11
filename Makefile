@@ -96,7 +96,7 @@ CONCURRENCY ?= 4
 BOOK      ?= deps/books/8moves_v3.pgn
 export CUTECHESS ORDO STOCKFISH NODES LEVELS STRENGTHS ELOS OPPONENTS GAMES CONCURRENCY BOOK
 
-.PHONY: FORCE help all test pieces host-test nice-test tools-test perft-deep screen-game match-random match-mchess2 rate openings size deps clean distclean
+.PHONY: FORCE help all test pieces host-test nice-test tools-test perft-deep screen-game match-random match-mchess2 rate openings size profile deps clean distclean
 .PHONY: board-text board-screen board-test board-game board-match board-stockfish dist release-check
 help:
 	@echo "nice_chess: a chess engine for the NICE system"
@@ -114,6 +114,8 @@ help:
 	@echo "                     (STRENGTHS=\"1 2 3 4 5\" rates the strengths too, LEVELS= no level)"
 	@echo "                     (OPPONENTS=\"NAME=ELO=COMMAND ...\" adds engines anchored at ELO)"
 	@echo "  make size          the size of the MEGA65 builds, against the board's budget"
+	@echo "  make profile       the steps of each function in niceemu, on the 24 Bratko-Kopec positions at 3000 nodes"
+	@echo "                     (BIN=, PROFILE_INPUT= another program or input)"
 	@echo "  make pieces        draw the pieces again into src/ui/pieces.h (needs Pillow)"
 	@echo "  make dist          the archive of a release, and SHA256SUMS, in build/dist/ (VERSION=V1.0)"
 	@echo "  make clean         remove build/"
@@ -192,6 +194,23 @@ pieces:
 build/host/mkbook: $(CORE) $(HEADERS) tools/mkbook.c
 	@mkdir -p $(@D)
 	$(CC) $(HOSTFLAGS) -o $@ $(CORE) tools/mkbook.c
+
+build/host/prof: tools/prof.c
+	@mkdir -p $(@D)
+	$(CC) -O2 -W -Wall -Wextra -o $@ tools/prof.c
+
+# The profile: tools/prof.c over niceemu's trace. By default the text
+# front end for niceemu on the 24 Bratko-Kopec positions of the search
+# suite, at go nodes 3000 each.
+BIN           ?= build/nice/chess_text.bin
+PROFILE_INPUT ?= build/test/bk.input
+build/test/bk.input: $(SEARCHSUITE)
+	@mkdir -p $(@D)
+	(echo uci; grep 'id "BK\.' $(SEARCHSUITE) \
+	  | awk '{ print "position fen " $$1 " " $$2 " " $$3 " " $$4 " 0 1"; print "go nodes 3000" }') > $@
+
+profile: build/host/prof $(BIN) $(PROFILE_INPUT) | $(NICEEMU)
+	$(NICEEMU) -t -i $(PROFILE_INPUT) $(BIN) | build/host/prof $(basename $(BIN)).sym
 
 $(BOOKDATA): build/host/mkbook src/engine/book.txt
 	@mkdir -p $(@D)

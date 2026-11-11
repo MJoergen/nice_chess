@@ -20,8 +20,10 @@ monitor, and on the host. See README.md.
   the pieces as glyphs into `src/ui/pieces.h` (`make pieces`).
   `release.py` scripts the release (`test_release.py` tests it, in
   `make test`).
-  `rate.sh` (shell) is a rating by cutechess-cli and Ordo (`make rate`). `mkbook.c` (C, on the host) makes the table
-  of the opening book from `src/engine/book.txt`.
+  `rate.sh` (shell) is a rating by cutechess-cli and Ordo (`make rate`).
+  `prof.c` (C, on the host) counts the steps of each function in
+  niceemu's trace (`make profile`). `mkbook.c` (C, on the host) makes
+  the table of the opening book from `src/engine/book.txt`.
 - `doc/HISTORY.md`: how the port was done, by phases, and the
   decisions, after the fact. It says only what happened; plans and
   open items are GitHub issues, not files or TODO comments.

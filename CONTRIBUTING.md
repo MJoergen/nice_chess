@@ -22,6 +22,7 @@ build without asserts statically, which needs glibc's static library:
     make openings    # the openings of make rate, 8moves_v3.pgn, into deps/books/
     make rate        # a rating of each level against Stockfish's UCI_Elo levels (hours; see below)
     make size        # the size of the MEGA65 builds, against the 92K words the monitor leaves them
+    make profile     # the steps of each function in niceemu, on the 24 Bratko-Kopec positions (half a minute)
     make pieces      # draw the pieces again into src/ui/pieces.h, after a change to tools/mkpieces.py (needs Pillow)
     make dist        # the archive of a release, and SHA256SUMS, in build/dist/
 
