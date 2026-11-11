@@ -9,7 +9,8 @@
  *
  * It prints, for each number of nodes, how many of the positions it
  * mated within MAX_MOVES moves, and then the longest mate. With -v,
- * it prints each game's result.
+ * it prints each game's result, and the position at its end. Exits
+ * with 1 if a position was not mated.
  *
  * Copyright (c) 2026 Michael Jørgensen. MIT license (see LICENSE).
  ***************************************************************/
@@ -57,9 +58,13 @@ static int play(const char *fen, uint32_t nodes, int verbose)
     }
     int mated = result == ENGINE_CHECKMATE && engine_side_to_move() != strong;
     if (verbose)
-        printf("%u nodes: %s %d moves: %s\n", (unsigned) nodes,
+    {
+        char end[ENGINE_FEN_MAX];
+        engine_get_fen(end);
+        printf("%u nodes: %s %d moves: %s, at the end %s\n", (unsigned) nodes,
                mated ? "mate in" : result == ENGINE_PLAYING ? "no mate after" : "draw after",
-               moves, fen);
+               moves, fen, end);
+    }
     return mated ? moves : 0;
 }
 

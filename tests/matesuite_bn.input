@@ -1,0 +1,7 @@
+# King, bishop and knight against the bare king, in the centre and
+# in a corner of the wrong colour. The engine does not mate in all of
+# them within 50 moves (#24); matesuite_bn.expected has how many it does.
+8/8/8/4k3/8/8/8/2B1KN2 w - - 0 1
+7k/8/8/8/8/8/8/KN3B2 w - - 0 1
+2b1kn2/8/8/8/3K4/8/8/8 b - - 0 1
+k7/8/8/8/8/8/8/2B1K1N1 w - - 0 1

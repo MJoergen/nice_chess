@@ -24,7 +24,10 @@
  * two minor pieces, a mop-up term (chessprogramming.org, "Mop-up
  * Evaluation") helps the stronger side to mate: a bonus by the bare
  * king's distance from the centre, and by how near the stronger
- * king is to it. The tables pull both kings to the centre alike, and
+ * king is to it. With a bishop and a knight, the mate is only in a
+ * corner of the bishop's colour, so the bonus is by the bare king's
+ * nearness to such a corner instead, and the kings' nearness counts
+ * more. The tables pull both kings to the centre alike, and
  * a mate can be deeper than the search, so without it the engine
  * may not make progress. The test of the phase keeps it off the path
  * of the other positions.
@@ -249,6 +252,27 @@ static int bare(int c)
     return 1;
 }
 
+// With a bishop and a knight, the mate is only in a corner of the
+// bishop's colour. True if the side (0 black, 1 white) has only those,
+// and then *dark is whether the bishop is on a dark square.
+static int bishop_and_knight(int c, int *dark)
+{
+    int bishops = 0, knights = 0;
+    for (int i = 0; i < pos.count[c]; ++i)
+    {
+        int sq = pos.pieces[c][i];
+        int p = sq ? pos.board[sq] : 0;
+        p = p < 0 ? -p : p;
+        if (p == WB)
+        {
+            bishops++;
+            *dark = !((file_of(sq) + rank_of(sq)) & 1); // a1 is dark
+        }
+        knights += p == WN;
+    }
+    return bishops == 1 && knights == 1;
+}
+
 // The mop-up term, from white's point of view: 0 unless one side has
 // only its king. The phase is then the stronger side's alone.
 __attribute__((noinline)) static int mop_up(void)
@@ -263,7 +287,20 @@ __attribute__((noinline)) static int mop_up(void)
     int k = pos.king[weak], s = pos.king[!weak];
     int df = file_of(k) - file_of(s), dr = rank_of(k) - rank_of(s);
     int dist = (df < 0 ? -df : df) + (dr < 0 ? -dr : dr);
-    int v = 10 * centre_distance(k) + 4 * (14 - dist);
+    int v, dark = 0;
+    if (pos.phase == 2 && bishop_and_knight(!weak, &dark))
+    {
+        // The Manhattan distance of the bare king from the nearer
+        // corner of the bishop's colour, 0 to 7: a1 or h8 if dark,
+        // h1 or a8 if light.
+        int f = file_of(k), r = rank_of(k);
+        int c = dark ? f + r : 7 - f + r;
+        if (c > 7)
+            c = 14 - c;
+        v = 40 * (7 - c) + 20 * (14 - dist);
+    }
+    else
+        v = 10 * centre_distance(k) + 4 * (14 - dist);
     return weak ? -v : v;
 }
 

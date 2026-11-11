@@ -2,6 +2,37 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-11: Mop-up with bishop and knight (#24)
+
+With a bishop and a knight the mate is only in a corner of the
+bishop's colour. `tests/matesuite_bn.input` has 4 positions of KBNK,
+the bare king in the centre and in the wrong corner, played as in the
+entry below at 1000, 3000, 10000, 20000, 30000, 60000, and 93000
+nodes: 28 games. With the mop-up term of e611da8 only, the engine
+mated in 7 of them within 50 moves.
+
+The term was given, for KBNK, a bonus by the bare king's Manhattan
+distance from the nearer corner of the bishop's colour. Weights were
+tried (host, about 40 settings): the corner 10 to 200 cp a step,
+squared or not; the kings' distance 4 to 40 cp a step, Manhattan or
+Chebyshev; the distance from the centre 0 or 10 cp a step; and the
+knight's distance from the bare king. All mated in 14 to 23 of the
+28 games, with the failures in different positions and at different
+nodes from one setting to the next. The games that failed reached the
+50-move limit with the bare king near an edge but not mated: at these
+nodes the search reaches about depth 6, and the mate takes a long
+exact plan.
+
+A larger transposition table did not help: with 2^12 to 2^20 entries
+(2^14 is used, 32K words) the counts went up and down by about 3 with
+no trend. A search of up to 93000 nodes stores at most that many
+positions, so a larger table does not make it deeper. On the MEGA65
+the next size, 2^15, needs 32K more words, and 17K are free.
+
+Kept: 40 cp a step of the corner distance (0 to 7) and 20 cp a step of
+the kings' Manhattan distance, without the centre: 23 of 28. It costs
+146 words, and 0.02% of the steps of `make profile`.
+
 ## 2026-11-11: Mop-up against a bare king (#20)
 
 The engine did not always mate with king and rook against king: the

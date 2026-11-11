@@ -265,6 +265,7 @@ host-test: build/host/chess_text build/host/perftsuite build/host/searchsuite bu
 	@tools/runtest.sh host_perftsuite4 perftsuite4 $(PERFTSUITE) host build/host/perftsuite 4
 	@tools/runtest.sh host_searchsuite searchsuite $(SEARCHSUITE) host build/host/searchsuite 10000
 	@tools/runtest.sh host_matesuite matesuite tests/matesuite.input host build/host/matesuite $(MATESUITE_NODES)
+	@tools/runtest.sh host_matesuite_bn matesuite_bn tests/matesuite_bn.input host build/host/matesuite $(MATESUITE_NODES)
 
 nice-test: build/nice/chess_text.bin build/nice/chess_screen.bin build/nice/perftsuite.bin $(PERFTSUITE) \
            build/test/mon_chess_text.bin build/test/mon_chess_screen.bin | $(NICEEMU)
