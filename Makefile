@@ -91,11 +91,11 @@ FASTFLAGS = -O2 -W -Wall -Wextra -DNDEBUG -static
 
 # A rating, by tools/rate.sh: cutechess-cli and Ordo, and the opponents.
 # The board's search at 5 seconds a move, the time of go and of level 3,
-# is about 93000 nodes (LOG.md); the other levels get their share of it.
+# is about 172000 nodes (LOG.md); the other levels get their share of it.
 CUTECHESS ?= cutechess-cli
 ORDO      ?= ordo
 STOCKFISH ?= stockfish
-NODES     ?= 93000
+NODES     ?= 172000
 LEVELS    ?= 1 2 3 4 5
 STRENGTHS ?=
 OPPONENTS ?=

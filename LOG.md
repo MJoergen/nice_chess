@@ -2,6 +2,42 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-11: The nodes of 5 seconds on the board, after #21
+
+Measured as on 2026-11-04: every 11th position of mchess2's search
+suite, 50, each with `go movetime 5000`, on the MEGA65 R6 under
+NiceMonMEGA65 V2.0, over the serial port, with the build of 501033b
+(`--trust-alignment --byte-windows` and the new `gen_moves`). From the
+last info line of each search that ran more than 370 ms (47):
+
+| | min | 25% | median | 75% | max |
+|---|---:|---:|---:|---:|---:|
+| Nodes a second | 20335 | 32102 | 34353 | 36238 | 42450 |
+| Steps a node, niceemu | 1198 | 1436 | 1528 | 1679 | 2731 |
+| Steps a second, paired | 49.6M | 51.8M | 53.1M | 53.8M | 55.5M |
+
+So 5 seconds a move is about 172000 nodes, against 93000 on
+2026-11-04. The same positions in niceemu, with `go movetime 270000`,
+end at the same depth as on the board in 43 of the 47.
+
+Of the gain, #21 is a factor of 1.61: the build just before it
+(901d55b) takes 2466 steps a node at the median on these positions.
+The rest came before: at 2466 steps a node, the board searched about
+21500 nodes a second, 107000 in 5 seconds, so the 93000 was already
+low. The board runs 53.1M steps a second, against 51.9M on
+2026-11-04: the cycle more of a byte read through a byte window does
+not show.
+
+`make rate`'s `NODES` is now 172000, and the strengths' 3/2 of it is
+258000 a move. The ratings above, at 93000 and 139500 nodes, are of
+fewer nodes than the board now searches.
+
+The monitor's input buffer is 2048 bytes, and during a search the text
+front end reads at most a line ahead, so a run of all 50 positions
+stopped with board.py's "the program's input buffer is full". They
+went to the board in three runs of tools/board.py instead, of under
+1800 bytes each.
+
 ## 2026-11-11: gen_moves in 479 steps a call (#21)
 
 `gen_moves` took 40% of the steps of `make profile`, at 1771 steps a

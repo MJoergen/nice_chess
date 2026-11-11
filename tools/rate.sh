@@ -11,7 +11,7 @@
 # A level gets "go nodes N" for each move: $NODES times its share of
 # the time of go in the windowed front end, 1/9, 1/3, 1, 3, or 9
 # (src/ui/screen.c). The engine plays the same moves as the NICE
-# builds at the same nodes, and 93000 nodes is about 5 seconds a move
+# builds at the same nodes, and 172000 nodes is about 5 seconds a move
 # on the MEGA65, the time of go and of level 3 (LOG.md). Stockfish
 # gets 60+0.6, the time control its UCI_Elo was fitted at, to CCRL 40/4.
 #
@@ -36,7 +36,7 @@
 set -eu
 : "${BOOK:=deps/books/8moves_v3.pgn}"
 : "${CUTECHESS:=cutechess-cli}" "${ORDO:=ordo}" "${STOCKFISH:=stockfish}"
-: "${NODES:=93000}" "${LEVELS=1 2 3 4 5}" "${STRENGTHS=}" "${ELOS:=1600 1800 2000 2200}" "${OPPONENTS=}"
+: "${NODES:=172000}" "${LEVELS=1 2 3 4 5}" "${STRENGTHS=}" "${ELOS:=1600 1800 2000 2200}" "${OPPONENTS=}"
 : "${GAMES:=100}" "${CONCURRENCY:=4}" "${PGN:=build/rate/games.pgn}"
 
 case "$BOOK" in

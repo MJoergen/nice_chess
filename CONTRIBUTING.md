@@ -36,7 +36,7 @@ by default `deps/books/8moves_v3.pgn`, from fishtest's books at a
 pinned commit, which it fetches (`make openings`). It plays
 `build/host/chess_fast`, the host build without asserts, at each level
 of `LEVELS` (1 2 3 4 5), at a fixed number of nodes a move: `NODES`
-(93000) is about 5 seconds a move on the MEGA65, the time of level 3,
+(172000) is about 5 seconds a move on the MEGA65, the time of level 3,
 and levels 1, 2, 4, and 5 get 1/9, 1/3, 3, and 9 times that, their
 share of the time. At the same nodes the host and NICE builds play the
 same moves. The opponents are Stockfish at each UCI_Elo of `ELOS`
