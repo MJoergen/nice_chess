@@ -2,6 +2,75 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-11: A penalty for the king's shelter (#3)
+
+The games against Stockfish 2000 (the entry below) were looked at
+again, for the king. In 2868 positions with the engine to move out of
+the book, the opponent's queen on the board, and both scores within 4
+pawns, the engine's own score was compared with Stockfish's. The
+engine thinks itself about 0.4 pawns better than Stockfish does on
+average, more so when its own king is attacked than when the
+opponent's is:
+
+| Pieces attacking the king's zone | Own king | Opponent's king |
+|---|---|---|
+| 0 | +32 cp | +38 cp |
+| 1 | +56 | +63 |
+| 2 | +99 | +63 |
+| 3 | +159 | +83 |
+
+| Files at the king without a pawn of its side | Own king | Opponent's king |
+|---|---|---|
+| 0 | +41 cp | +59 cp |
+| 1 | +76 | +44 |
+| 2 | +202 | +57 |
+
+A least-squares fit gave about 50 cp a file without a pawn: +55 at its
+own king, -49 at the opponent's. About 9 of the 17 blunders were
+attacks on its own king. It castles earlier than its opponent: its
+king was in the centre at move 16 in 17 of 85 games, Stockfish 2000's
+in 44.
+
+The term: in the middle game only, for each of the king's file and
+the files beside it, 10 cp if its side's pawn is two ranks ahead of
+the king and not one, and 40 cp if neither rank has one; scaled by a
+percentage. It was tried and not kept.
+
+Computed in evaluate, from six squares a king, it cost 142 steps a
+call, 6.1% more steps a node (`make profile`, 161.0M to 170.8M). Kept
+up to date in make_move instead (computed again only when a king
+moves, or a pawn moves or is taken on one of the six squares, and
+restored by undo_move from the history) it cost 3.8% (167.2M), most of
+it the tests and the copy in make and undo, not the computation.
+
+Against the current build, 2000 games each, at 93000 nodes a move for
+both:
+
+| Weight | Elo |
+|---|---|
+| 25% | +9.2 ± 12.6 |
+| 35% | +9.7 ± 12.6 |
+| 50% | +18.4 ± 13.0 |
+| 100% | -3.8 ± 13.1 |
+| 150% | -30.3 ± 13.3 |
+
+And with the term's nodes cut by its cost in steps, so that both
+sides take the same time on the board:
+
+| Weight | Nodes, against 93000 | Elo |
+|---|---|---|
+| 50%, in evaluate | 87650 | -8.2 ± 12.9 |
+| 35%, in make_move | 89600 | -1.2 ± 12.9 |
+| 50%, in make_move | 89600 | -1.4 ± 12.9 |
+| 70%, in make_move | 89600 | -9.7 ± 12.8 |
+
+The shelter is worth about 10 Elo at equal nodes, at half the weight
+of the fit, and its steps take that back. The weight from the fit is
+too large: the gap between the engine's scores and Stockfish's is
+partly the depth of the search, not the evaluation. The attacks it
+misses are quiet moves found deeper in the search, so the search,
+not the evaluation, is tried next.
+
 ## 2026-11-11: Where the engine loses, against Stockfish 2000
 
 cutechess-cli played build/host/chess_fast as on the board, at 93000
