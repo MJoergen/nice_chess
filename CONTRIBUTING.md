@@ -16,7 +16,7 @@ build without asserts statically, which needs glibc's static library:
     make all         # build/nice/ for niceemu, build/mega65/ for the MEGA65, build/host/chess_text for the host
     make test        # the tests, on the host and in niceemu
     make perft-deep  # the perft suite to depth 5 on the host (about a minute)
-    make screen-game # a full game in the windowed front end, in niceemu (a minute)
+    make screen-game # a full game in the windowed front end, in niceemu (two minutes)
     make match-random   # the host build against random moves
     make match-mchess2  # the host build against mchess2 (about 15 minutes)
     make openings    # the openings of make rate, 8moves_v3.pgn, into deps/books/

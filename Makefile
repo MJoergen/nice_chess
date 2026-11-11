@@ -116,7 +116,7 @@ help:
 	@echo "  make all           build both front ends, for niceemu, for the MEGA65, and for the host"
 	@echo "  make test          the tests, on the host and in niceemu, and of tools/release.py"
 	@echo "  make perft-deep    the perft suite to depth 5 on the host (a minute)"
-	@echo "  make screen-game   a full game in the windowed front end, in niceemu (a minute)"
+	@echo "  make screen-game   a full game in the windowed front end, in niceemu (two minutes)"
 	@echo "  make match-random  the host build against random moves (20 games)"
 	@echo "  make match-mchess2 the host build against mchess2 (20 games, 15 minutes)"
 	@echo "  make openings      fetch the openings of make rate, 8moves_v3.pgn, into deps/books/"
@@ -287,8 +287,8 @@ nice-test: build/nice/chess_text.bin build/nice/chess_screen.bin build/nice/perf
 perft-deep: build/host/perftsuite $(PERFTSUITE)
 	@tools/runtest.sh host_perftsuite5 perftsuite5 $(PERFTSUITE) host build/host/perftsuite 5
 
-# The keys of a game that tools/screen_game.py played, to checkmate
-# (white at --nodes 1500).
+# The keys of a game that tools/screen_game.py played with its defaults
+# (white at 2000 nodes, level 1), to checkmate by black at move 84.
 screen-game: build/nice/chess_screen.bin | $(NICEEMU)
 	@tools/runtest.sh nice_screen_game screen_game tests/screen_game.keys screen build/nice/chess_screen.bin
 
