@@ -280,7 +280,8 @@ nice-test: build/nice/chess_text.bin build/nice/chess_screen.bin build/nice/perf
 perft-deep: build/host/perftsuite $(PERFTSUITE)
 	@tools/runtest.sh host_perftsuite5 perftsuite5 $(PERFTSUITE) host build/host/perftsuite 5
 
-# The keys of a game that tools/screen_game.py played, to checkmate.
+# The keys of a game that tools/screen_game.py played, to checkmate
+# (white at --nodes 1500).
 screen-game: build/nice/chess_screen.bin | $(NICEEMU)
 	@tools/runtest.sh nice_screen_game screen_game tests/screen_game.keys screen build/nice/chess_screen.bin
 

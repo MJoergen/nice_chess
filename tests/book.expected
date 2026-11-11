@@ -1,8 +1,8 @@
-Book: g1f3 10 c2c4 15 d2d4 46 e2e4 51
+Book: b2b3 6 g1f3 18 c2c4 19 d2d4 70 e2e4 71
 Book: c5d4 3
 info string book move
 bestmove c5d4
-Book: f3d4 3
+Book: f3d4 4
 Book: none
 bestmove d1d7
 option name OwnBook type check default false
