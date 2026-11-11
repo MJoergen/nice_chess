@@ -2,6 +2,62 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-11: Where the engine loses, against Stockfish 2000
+
+cutechess-cli played build/host/chess_fast as on the board, at 93000
+nodes a move with OwnBook on, against Stockfish 16 at UCI_Elo 2000 and
+60+0.6, 100 games from the start position, each engine white in half,
+without adjudication (games/nice-vs-sf2000-20261111-070937.pgn). The
+engine scored 53 wins, 7 draws, and 40 losses: 56.5%, +45 ± 67 Elo.
+
+`make analyze` (tools/analyze.py) had Stockfish at full strength score
+each of the 10783 positions for 1 second, 18 at a time, in about 10
+minutes. A move's loss is the drop in the mover's expected score, by
+lichess's curve: a blunder from 0.30. The opening is moves 1 to 12;
+the endgame, the positions with a phase of 8 or less after it.
+
+The moves out of the book, per 100 moves, with the mean centipawns
+lost:
+
+| Phase      | Side      | Moves | cp lost | Mistakes | Blunders |
+|------------|-----------|------:|--------:|---------:|---------:|
+| opening    | engine    | 990   | 24.8    | 0.7      | 0.2      |
+| opening    | Stockfish | 1200  | 22.9    | 0.3      | 0.2      |
+| middlegame | engine    | 2472  | 33.9    | 0.9      | 0.5      |
+| middlegame | Stockfish | 2465  | 38.9    | 1.0      | 0.4      |
+| endgame    | engine    | 1885  | 17.0    | 0.4      | 0.1      |
+| endgame    | Stockfish | 1885  | 17.7    | 0.4      | 0.3      |
+
+The middle game decides the games. Of the 40 losses, 32 fell below an
+expected score of 0.2 for good in the middle game, 7 in the endgame,
+and 1 in the opening; of the expected score given away in them, 59%
+was in the middle game, 22% in the opening, and 20% in the endgame.
+Most losses are a slide over several moves, not one blunder: there
+were 17 blunders in the 100 games, 13 of them in the middle game. The
+engine searches least deep there, a median of 6 plies, against 7 in
+the opening and 8 in the endgame.
+
+The engine saw none of its 17 blunders: after each, its own score was
+1.5 pawns or more above Stockfish's. Stockfish's reply was a capture
+in 5. The others were quiet moves, most of them an attack on the
+engine's king: g4-g5 against the knight that guarded the castled king,
+with the queen on h6 (game 96, where the engine thought itself 6.4
+pawns ahead); Ng5xf7 (game 72); Qe4 against the king in the centre
+after ...Qxc3 (game 50). The evaluation has no term for king safety,
+and the attacks are deeper than the search.
+
+The endgame is not a weakness against this opponent. 76 games reached
+one: of those that began winning for the engine (expected score 0.75
+or more) it scored 97% (36 games), of the balanced ones 58% (12), of
+the losing ones 7% (28). Its endgame moves lost as much as
+Stockfish's.
+
+The book is not skewed, but short: the engine left it after a median
+of 2 moves, and 13 games had no book move. Where it left the book,
+Stockfish's score was a median of +0.14 for the engine and never below
+-0.45 (as black, in the Sicilian, King's Indian, Slav, and Catalan).
+After move 12 the engine's expected score was a median of 0.51.
+
 ## 2026-11-11: A bonus for passed pawns (#3)
 
 A pawn with no pawn of the other side ahead of it on its own file or

@@ -20,6 +20,8 @@ monitor, and on the host. See README.md.
   the pieces as glyphs into `src/ui/pieces.h` (`make pieces`).
   `release.py` scripts the release (`test_release.py` tests it, in
   `make test`).
+  `analyze.py` has Stockfish score the games of a PGN, and reports
+  where the engine loses (`make analyze PGNFILE=FILE`).
   `pgn.py` writes the games of `match.py` and `screen_game.py` as PGN
   (`--pgn`; the Makefile's matches write to `games/`, not in git).
   `rate.sh` (shell) is a rating by cutechess-cli and Ordo (`make rate`).

@@ -104,7 +104,7 @@ STAMP     := $(shell date +%Y%m%d-%H%M%S)
 PGN        = $(PGNDIR)/$@-$(STAMP).pgn
 export CUTECHESS ORDO STOCKFISH NODES LEVELS STRENGTHS ELOS OPPONENTS GAMES CONCURRENCY BOOK
 
-.PHONY: FORCE help all test pieces host-test nice-test tools-test perft-deep screen-game match-random match-mchess2 rate openings size profile deps clean distclean
+.PHONY: FORCE help all test pieces host-test nice-test tools-test perft-deep screen-game match-random match-mchess2 rate analyze openings size profile deps clean distclean
 .PHONY: board-text board-screen board-test board-game board-match board-stockfish dist release-check
 help:
 	@echo "nice_chess: a chess engine for the NICE system"
@@ -121,6 +121,8 @@ help:
 	@echo "  make rate          a rating of each level: cutechess-cli games against Stockfish's UCI_Elo levels, and Ordo"
 	@echo "                     (STRENGTHS=\"1 2 3 4 5\" rates the strengths too, LEVELS= no level)"
 	@echo "                     (OPPONENTS=\"NAME=ELO=COMMAND ...\" adds engines anchored at ELO)"
+	@echo "  make analyze       Stockfish's scores of the games of PGNFILE=FILE, and the patterns in PLAYER's play"
+	@echo "                     (PLAYER=nice_chess; MOVETIME=1000 ms a position; about 10 minutes for 100 games)"
 	@echo "  make size          the size of the MEGA65 builds, against the board's budget"
 	@echo "  make profile       the steps of each function in niceemu, on the 24 Bratko-Kopec positions at 3000 nodes"
 	@echo "                     (BIN=, PROFILE_INPUT= another program or input)"
@@ -297,6 +299,15 @@ match-mchess2: build/host/chess_text build/host/mchess2
 rate: build/host/chess_fast $(BOOK)
 	@mkdir -p $(PGNDIR)
 	PGN=$(PGN) tools/rate.sh
+
+# The patterns in an engine's games, by Stockfish at full strength
+# (tools/analyze.py): PGNFILE=FILE, as cutechess-cli writes it, and
+# PLAYER, the engine's name in its tags. The scores are kept in
+# build/analyze/.
+PLAYER ?= nice_chess
+analyze: build/host/chess_text
+	$(if $(PGNFILE),,$(error PGNFILE=FILE names the games))
+	$(PYTHON) tools/analyze.py --stockfish "$(STOCKFISH)" --movetime $(MOVETIME) $(PGNFILE) $(PLAYER)
 
 openings: deps/books/8moves_v3.pgn
 
