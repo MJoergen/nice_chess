@@ -2,6 +2,53 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-11: A bonus for passed pawns (#3)
+
+A pawn with no pawn of the other side ahead of it on its own file or
+the files beside it, and none of its own ahead of it on its file, got
+a bonus by its rank, in the middle game and the end game: Stockfish's
+classical PassedRank, scaled to PeSTO's pawn (82 and 94), 6, 11, 10,
+40, 109, and 180 in the middle game and 13, 15, 19, 33, 80, and 117 in
+the end game, from the second rank to the seventh. The bonus was not
+kept: PeSTO's tables stay as they are.
+
+The code: make and undo kept a Zobrist key of the pawns alone, and
+the files of each side's pawns on each rank, as bits; the bonus was
+kept in a table of 256 entries by that key, of 8 bytes each. A table
+of 1024 entries did not fit the windowed front end's linear memory of
+196608 bytes. The bonus agreed with its definition, square by square,
+on 188331 positions from the search suite and random moves after them.
+
+Its cost, by `make profile` (the 24 Bratko-Kopec positions at 3000
+nodes): 169.8M steps against 161.0M, 5.5% more a node. evaluate took
+85 steps a call against 28, make_move 280 against 242, undo_move 202
+against 168. The table missed 16% of the calls, and 12% to 17% at
+93000 nodes: captures and pushes in the search make new pawn
+structures all the time. A miss first cost about 1400 steps, with the
+pawns found in the piece lists; with the pawns kept by rank in make
+and undo, about 200.
+
+cutechess-cli played build/host/chess_fast with the bonus against
+itself without, 2000 games a pairing at 93000 nodes a move, from the
+openings of 8moves_v3.pgn, each with both colors, with cutechess-cli's
+adjudication of make rate (games/*-vs-base-20261111-*.pgn):
+
+| Bonus                  | Score          | Elo           |
+|------------------------|----------------|---------------|
+| 150%                   | 608-954-438    | -60.7 ± 13.6  |
+| 100%                   | 683-829-488    | -25.4 ± 13.3  |
+| 50%                    | 762-720-518    | +7.3 ± 13.1   |
+| 25%                    | 667-717-616    | -8.7 ± 12.7   |
+| End game only, 100%    | 731-739-530    | -1.4 ± 13.0   |
+| End game only, 50%     | 739-711-550    | +4.9 ± 13.0   |
+
+A small bonus gains nothing that 2000 games show, and a large one
+loses. PeSTO's pawn tables were tuned on game results, so they already
+pay what a pawn on a rank is worth on average, and a passed pawn is
+mostly an advanced one; the bonus counts it twice. The matches give
+both sides the same nodes, so the 5.5% more steps of the board would
+cost about 5 Elo more.
+
 ## 2026-11-10: Pondering at the board's speed (#17)
 
 The host's engine was held to the board's speed for this: a build of
