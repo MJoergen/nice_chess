@@ -61,7 +61,8 @@ only when the user asks, or when a change is for the board.
 
 - The engine must keep working on NICE and on the host. The host build
   has asserts and `-DCHECK_STATE`, which checks the incremental state
-  (Zobrist key, evaluation sums) at every perft node, so it catches
+  (Zobrist key, evaluation sums) and the captures-only move list
+  against the full one at every perft node, so it catches
   engine bugs that the NICE builds, without asserts, do not.
 - NICE builds are `-O 2 -D NDEBUG --no-bounds-checks`: an access out of
   bounds is not caught there; the host build's asserts are the check.

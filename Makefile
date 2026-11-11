@@ -73,8 +73,9 @@ NICEFLAGS = -O 2 -D NDEBUG --no-bounds-checks --stack 8192 --memory 196608 --sym
 # The MEGA65: the same, built for the monitor, which loads it at 0x8000.
 MONFLAGS = $(NICEFLAGS) --monitor
 
-# The host: with asserts, and a check of the Zobrist key and the
-# evaluation's sums at every node of perft.
+# The host: with asserts, and a check of the Zobrist key, the
+# evaluation's sums, and the captures-only move list at every node
+# of perft.
 HOSTFLAGS = -O2 -W -Wall -Wextra -DCHECK_STATE
 # The host, for matches and the release: without asserts and the check,
 # which play the same moves, only faster, and linked statically, so that
