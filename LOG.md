@@ -2,6 +2,60 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-11: gen_moves in 479 steps a call (#21)
+
+`gen_moves` took 40% of the steps of `make profile`, at 1771 steps a
+call. 87% of the calls are captures-only, from `quiescence`: such a
+call took 1718 steps to find 2.4 moves, so most of the work was
+squares that give no move. The new `movegen.c` is the C version of
+#21:
+
+- Four copies of the loop over the pieces, by side and by mode: one
+  `always_inline` function takes the side and `quiet` as constants.
+- A `switch` on the piece, with each direction written out, so every
+  offset is a constant.
+- "A piece of the other side" as one unsigned compare: as unsigned
+  numbers black's pieces are above `IV`, and white's are 1 to 6.
+- A fast path for pawns. A pawn that promotes, or one that may capture
+  en passant, takes `pawn_slow`, the code of before.
+- In the captures-only rays, the capture is added by `add_capture`,
+  not inlined, so the loop of a ray keeps nothing of the move.
+
+The moves come in the same order, so the search does not change. It
+relies on what `fen.c` and `make_move` keep true: a side's piece list
+holds its king, no pawn is on the first or the eighth rank, and an en
+passant square is on the rank of the side to move.
+
+On the workload of `make profile`, `gen_moves` takes 479 steps a call,
+and `add_capture` 15; the program takes 96.28M steps, from 135.72M
+(−29.1%), with the same `info` and `bestmove` lines. With the flags of
+the entry below, that is −40.5% from 161.93M. The MEGA65 builds need
+about 2640 words more (text 70256, screen 70392).
+
+Not done (the figures are #21's):
+
+- `gen_moves` in hand-written assembly: 386 steps a call, 4.6% fewer
+  steps for the program than the C, for a second generator to keep in
+  step with the first and 2435 words more.
+- A capture helper that takes the two squares as numbers (625 steps a
+  call), every capture through a helper (531 to 538), and
+  `__builtin_expect` (the same code).
+- The math unit's CLZ, CTZ and POPCNT: they need bitboards.
+
+In #21's measure of 500 steps a call, about 124 are the loop over the pieces, 3 of
+them a piece the range check of the `switch`. 42% of the function's
+cycles are the flushes of taken jumps, and black's pawns take 5 steps
+a square to white's 3, because the translator does not fold a negative
+constant offset into the address. Those are matters for nicewasm.
+
+The timed searches of the windowed front end search more nodes in the
+same steps: `tests/screen.expected` has more nodes, and in
+`tests/screen_clock.expected` and `tests/screen_ponder.expected` the
+engine plays other moves. With a trace of the front end, the keys of
+screen_ponder still give a ponder hit (at move 2, not 1), misses, and
+the end of a ponder by a key. The game of `make screen-game` is
+recorded again: black mates at move 37.
+
 ## 2026-11-11: --trust-alignment and --byte-windows (#21)
 
 Two options of nicebuild.py in nice_cpu V2.0, which the build did not

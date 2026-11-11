@@ -296,7 +296,7 @@ perft-deep: build/host/perftsuite $(PERFTSUITE)
 	@tools/runtest.sh host_perftsuite5 perftsuite5 $(PERFTSUITE) host build/host/perftsuite 5
 
 # The keys of a game that tools/screen_game.py played with its defaults
-# (white at 2000 nodes, level 1), to checkmate by black at move 56.
+# (white at 2000 nodes, level 1), to checkmate by black at move 37.
 screen-game: build/nice/chess_screen.bin | $(NICEEMU)
 	@tools/runtest.sh nice_screen_game screen_game tests/screen_game.keys screen build/nice/chess_screen.bin
 
