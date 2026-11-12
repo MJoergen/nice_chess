@@ -14,7 +14,8 @@ monitor, and on the host. See README.md.
   that are compared) and `*.expected`. `tools/runtest.sh` runs one test.
 - `tools/`: Python 3. `match.py` plays UCI engines against each other,
   `board.py` runs a program on the board, `board_uci.py` is the board's
-  engine as a UCI engine of the host, `screen_game.py` plays a game
+  engine as a UCI engine of the host (`lichess_engine.sh` runs it for
+  lichess-bot, with the config template `lichess-bot.yml`), `screen_game.py` plays a game
   through the keys, `size.py` checks the size, `screenshot.py` draws a
   screen dump as a PNG, in the font it selects, `mkpieces.py` draws
   the pieces as glyphs into `src/ui/pieces.h` (`make pieces`).

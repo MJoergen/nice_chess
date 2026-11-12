@@ -1,0 +1,53 @@
+# lichess-bot.yml: a template of lichess-bot's config.yml, for the
+# engine on the MEGA65 (tools/lichess_engine.sh).
+#
+# Copy it to config.yml in the checkout of lichess-bot, and set
+# engine.dir to the tools directory of nice_chess, as an absolute path.
+# The token is not in this file: lichess-bot reads it from
+# $LICHESS_BOT_TOKEN, which overrides the token here. It is an API
+# token of the BOT account, with the scope bot:play. Keep it out of git.
+#
+# lichess-bot gives the keys left out here their defaults.
+
+token: ""                          # From $LICHESS_BOT_TOKEN.
+url: "https://lichess.org/"
+
+engine:
+  dir: "/path/to/nice_chess/tools/"
+  name: "lichess_engine.sh"
+  protocol: "uci"
+  ponder: false                    # The board does not read its input while it searches.
+  uci_options:
+    OwnBook: true
+#   Strength: 5                    # 1 to 5; lower is weaker.
+#   Noise: 0                       # Centipawns of noise, 0 to 1000; more is weaker.
+  draw_or_resign:
+    resign_enabled: false
+    offer_draw_enabled: false
+
+abort_time: 60                     # The board is loaded at the start of each game.
+move_overhead: 2000                # The link's time, in ms, taken from each move.
+
+challenge:
+  concurrency: 1                   # One board, one game at a time.
+  accept_bot: true
+  min_base: 300                    # Seconds; 5 minutes or more.
+  max_base: 1800
+  min_increment: 0
+  max_increment: 20
+  variants:
+    - standard
+  time_controls:
+    - blitz
+    - rapid
+    - classical
+  modes:
+    - casual
+    - rated
+
+matchmaking:
+  allow_matchmaking: false         # True to challenge other bots.
+
+greeting:
+  hello: "Hi! I'm {me}: nice_chess, on a MEGA65 with the NICE CPU."
+  goodbye: "Good game!"

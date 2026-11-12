@@ -228,6 +228,12 @@ other engines. Its docstring has a cutechess-cli example; there,
 `dir=.` keeps the path of the .bin relative to the current directory.
 The board's clock is real, and one board plays one game at a time.
 
+`tools/lichess_engine.sh` runs `board_uci.py` as lichess-bot runs an
+engine: one command, with the link in `BOARD_ETH` or `BOARD_PORT`
+(/dev/ttyUSB3 by default). `tools/lichess-bot.yml` is a template of
+lichess-bot's `config.yml` for it; the API token goes in
+`LICHESS_BOT_TOKEN`, not in a file in git.
+
 ## Matches and ratings
 
 `tools/match.py` plays two UCI engines against each other, and can run
