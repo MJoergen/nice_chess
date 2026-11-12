@@ -2,6 +2,38 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-12: A rating of each level, with noise
+
+`make rate ELOS="1320 1600 1900 2200" GAMES=200 CONCURRENCY=10`, with
+the build of 724eb49: `build/host/chess_fast` at 1/9, 1/3, 1, 3, and 9
+times 172000 nodes a move, with the noise of each level (±800, ±600,
+±320, ±170, and 0 cp), against Stockfish 16 at UCI_Elo 1320, 1600,
+1900, and 2200, at 60+0.6. 200 games for each level against each
+Stockfish, from 8moves_v3.pgn, each opening with both colors: 4000
+games, 800 a level. cutechess-cli 1.5.1, Ordo 1.2.6. It took 9 hours
+10 minutes, from 2026-11-11 19:47, 10 games at a time on 20 cores.
+There were no losses on time and no illegal moves.
+
+| Level | Nodes a move | Noise | sf1320 | sf1600 | sf1900 | sf2200 | All | Ordo | Target |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 19111 | ±800 | 4.0% | 1.2% | 0.0% | 0.2% | 1.4% | 789 ± 99 | 900 |
+| 2 | 57333 | ±600 | 28.0% | 10.0% | 3.5% | 0.5% | 10.5% | 1185 ± 44 | 1240 |
+| 3 | 172000 | ±320 | 79.5% | 47.0% | 26.0% | 9.2% | 40.4% | 1633 ± 33 | 1585 |
+| 4 | 516000 | ±170 | 92.8% | 76.2% | 61.8% | 35.0% | 66.4% | 1964 ± 33 | 1930 |
+| 5 | 1548000 | 0 | 98.2% | 90.5% | 82.8% | 68.2% | 84.9% | 2240 ± 37 | 2270 |
+
+Ordo rated the levels in one pool, with each Stockfish anchored at its
+UCI_Elo. Each rating is within about 110 of the estimate of
+2026-11-11, and levels 2 to 5 within 60. The steps from level 1 up are
+396, 448, 331, and 276: 1451 Elo from 1 to 5, against the 1370 aimed
+at, and less even than the 340 a step of the estimate. The step from
+3 to 2 is the widest, and from 5 to 4 the narrowest.
+
+Level 1 is the least sure. It scored 11 points in 800 games, 8 of
+them against Stockfish 1320, more than 500 above it; the ± 99 of
+Ordo does not count the error of the anchor so far below its lowest
+UCI_Elo.
+
 ## 2026-11-11: Noise at the lower levels
 
 The levels of the windowed front end set only the time of a move, and
