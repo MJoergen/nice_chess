@@ -70,18 +70,18 @@ The game starts with no time control, at level 3. There are 5 levels;
 a level sets the time the engine takes for a move, and below level 5,
 noise in its evaluation, as the strengths below do:
 
-| Level | Time a move | Noise    |
-|------:|------------:|---------:|
-| 1     | 0.6 s       | ±800 cp  |
-| 2     | 1.7 s       | ±600 cp  |
-| 3     | 5 s         | ±320 cp  |
-| 4     | 15 s        | ±170 cp  |
-| 5     | 45 s        |          |
+| Level | Time a move | Noise    | Elo (CCRL 40/4) |
+|------:|------------:|---------:|----------------:|
+| 1     | 0.6 s       | ±800 cp  | 790             |
+| 2     | 1.7 s       | ±600 cp  | 1190            |
+| 3     | 5 s         | ±320 cp  | 1630            |
+| 4     | 15 s        | ±170 cp  | 1960            |
+| 5     | 45 s        |          | 2240            |
 
-The noise aims at about 900 Elo (CCRL 40/4) at level 1, and steps of
-about 340 up to level 5, by estimates from the ratings of the
-strengths; the levels are not rated yet
-([LOG.md](https://github.com/MJoergen/nice_chess/blob/main/LOG.md)).
+The ratings are those `make rate` measured on 2026-11-12
+([LOG.md](https://github.com/MJoergen/nice_chess/blob/main/LOG.md)),
+each within about 40, and level 1 within about 100. Level 1 is the
+least sure: it is far below the weakest of Stockfish's levels.
 
 The book is on at first. The engine plays a move from the book at
 once, at any level, and picks it at random by the moves' weights, so
