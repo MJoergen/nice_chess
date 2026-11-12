@@ -115,14 +115,14 @@ early, and keeps the rest of its time:
 
 | Strength | Noise    | Share of the time | Elo (CCRL 40/4) |
 |---------:|---------:|------------------:|----------------:|
-| 5        |          | all               | 1850            |
-| 4        | ±90 cp   | 1/1.5             | 1730            |
-| 3        | ±160 cp  | 1/2.2             | 1580            |
-| 2        | ±360 cp  | 1/3               | 1280            |
-| 1        | ±500 cp  | 1/3.8             | 1140            |
+| 5        |          | all               | 2080            |
+| 4        | ±90 cp   | 1/1.5             | 1950            |
+| 3        | ±160 cp  | 1/2.2             | 1750            |
+| 2        | ±360 cp  | 1/3               | 1450            |
+| 1        | ±500 cp  | 1/3.8             | 1280            |
 
 The ratings are those `make rate` measured at Blitz's time on the
-board, on 2026-11-10 (LOG.md).
+board, on 2026-11-12 (LOG.md), each within about 40.
 
 The noise of a position is the same within a game, and differs from
 game to game.

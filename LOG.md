@@ -2,6 +2,33 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-12: A rating of each strength, after #21
+
+`make rate LEVELS= STRENGTHS="1 2 3 4 5" ELOS="1320 1600 1900 2200"
+GAMES=200 CONCURRENCY=10`, with the engine of 724eb49: each strength
+at its share of 258000 nodes a move, Blitz 3+2's first move on the
+board, with its noise, against Stockfish 16 at UCI_Elo 1320, 1600,
+1900, and 2200, at 60+0.6. 200 games for each strength against each
+Stockfish, from 8moves_v3.pgn, each opening with both colors: 4000
+games, 800 a strength. It took 9 hours 10 minutes, from 05:14, 10
+games at a time on 20 cores. There were no losses on time and no
+illegal moves.
+
+| Strength | Noise | Share | sf1320 | sf1600 | sf1900 | sf2200 | All | Ordo | 2026-11-10 |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 5 | | all | 95.0% | 86.2% | 66.8% | 53.5% | 75.4% | 2082 ± 32 | 1852 |
+| 4 | ±90 | 1/1.5 | 93.5% | 78.2% | 54.5% | 36.8% | 65.8% | 1950 ± 33 | 1729 |
+| 3 | ±160 | 1/2.2 | 86.0% | 58.8% | 38.5% | 18.0% | 50.3% | 1752 ± 32 | 1576 |
+| 2 | ±360 | 1/3 | 63.2% | 27.2% | 14.2% | 2.2% | 26.8% | 1448 ± 33 | 1280 |
+| 1 | ±500 | 1/3.8 | 41.5% | 14.5% | 5.5% | 2.2% | 15.9% | 1284 ± 37 | 1136 |
+
+Every strength is 150 to 230 above the rating of 2026-11-10, at
+139500 nodes a move with the old tables: PeSTO's tables, #21, and the
+nodes of 172000 for 5 seconds. Full strength gained the most. The
+steps from strength 1 up are 165, 304, 198, and 132: 798 Elo from 1
+to 5, against 717 before. The step from 2 to 3 is still about twice
+the others.
+
 ## 2026-11-12: A rating of each level, with noise
 
 `make rate ELOS="1320 1600 1900 2200" GAMES=200 CONCURRENCY=10`, with
