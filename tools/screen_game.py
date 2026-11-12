@@ -233,7 +233,7 @@ def main() -> None:
         screen = BoardScreen(args.nicemon, link, args.screen_bin)
     else:
         screen = Screen(args.emu, args.screen_bin)
-    screen.press(*(["-"] * (3 - args.level) + ["+"] * (args.level - 3)))
+    screen.press(*(["+"] * (args.level - 1)))
     if args.black:
         screen.press("s", "r")  # The front end's engine plays white, and white is at the bottom
     cursor = (4, 1)  # e2, where the front end starts it

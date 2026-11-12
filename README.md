@@ -66,9 +66,9 @@ The other keys are on the screen:
 - ESC: make the engine move now.
 - Q: clear the screen and return to the monitor.
 
-The game starts with no time control, at level 3. There are 5 levels;
-a level sets the time the engine takes for a move, and below level 5,
-noise in its evaluation, as the strengths below do:
+The game starts with no time control, at level 1, the weakest. There
+are 5 levels; a level sets the time the engine takes for a move, and
+below level 5, noise in its evaluation, as the strengths below do:
 
 | Level | Time a move | Noise    | Elo (CCRL 40/4) |
 |------:|------------:|---------:|----------------:|
@@ -107,11 +107,11 @@ quarters of the increment, but never more than half of it. U takes
 back moves, not time. N starts the game again, with the same time
 control.
 
-Under a time control, + and − set the engine's strength, from 1 to 5,
-the full strength and the default. Below 5, the engine adds noise to
-its evaluation of each position, so it misjudges some, and it takes
-only a share of its time, so it sees fewer tactics. It then moves
-early, and keeps the rest of its time:
+Under a time control, + and − set the engine's strength, from 1 to 5:
+1, the weakest, at first, and 5 the full strength. Below 5, the
+engine adds noise to its evaluation of each position, so it misjudges
+some, and it takes only a share of its time, so it sees fewer
+tactics. It then moves early, and keeps the rest of its time:
 
 | Strength | Noise    | Share of the time | Elo (CCRL 40/4) |
 |---------:|---------:|------------------:|----------------:|

@@ -49,7 +49,7 @@
  * each of its side's moves; a side whose clock reaches 0 loses,
  * whatever the material. The engine takes a share of the time on its
  * clock (engine_time_share), at its strength (engine_set_strength),
- * 5, the full one, at first. A new game has a new seed of the noise,
+ * 1, the weakest, at first. A new game has a new seed of the noise,
  * of the level or of the strength, the same in niceemu each time. U
  * takes back moves, not time. N sets the clocks as at the start. In niceemu the clocks count steps, at 54
  * million a second, the MEGA65's rate, so the engine's time there is
@@ -153,7 +153,7 @@ static char   msg_buf[24];
 static const uint8_t level_num[5] = {1, 1, 1, 3, 9};
 static const uint8_t level_den[5] = {9, 3, 1, 1, 1};
 static const int16_t level_noise[5] = {800, 600, 320, 170, 0};
-static int    level = 3;
+static int    level = 1;
 static int    book = 1;            // The engine plays from its opening book
 
 // The time controls: a base time and an increment, in seconds. The
@@ -171,7 +171,7 @@ static const struct
 };
 #define N_CONTROLS ((int) (sizeof controls / sizeof controls[0]))
 static int    control;             // The time control: an index of controls
-static int    strength = ENGINE_STRENGTH_MAX; // Under a time control
+static int    strength = 1;       // Under a time control
 static uint32_t game_seed;         // Of the noise of a level or a strength
 
 // The result of a game lost on time, beside the engine's results.
