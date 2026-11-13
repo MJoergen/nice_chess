@@ -355,9 +355,16 @@ static void do_divide(int depth)
  * after soft_time, as the next would likely not finish, and it
  * stops at hard_time. While it ponders, it has neither, and keeps
  * them in ponder_soft and ponder_hard for the ponderhit.
+ *
+ * A search with no limit, that of go infinite, or of go ponder
+ * before its ponderhit, ends on stop. It also ends when a line
+ * that poll_input does not hear waits, such as quit, and at the
+ * end of the input: poll_input reads no more then, so no stop
+ * would come.
  ***************************************************************/
 static uint32_t start_time, info_time; // info_time: the start, for info
 static uint32_t soft_time, hard_time; // In microseconds; 0 for no limit
+static int bounded;                  // The search has a depth or a count of nodes
 static int pondering;
 static uint32_t ponder_soft, ponder_hard;
 static engine_info_t last_info;      // Of the last iteration
@@ -387,7 +394,11 @@ static int heard(int r)
 
 static int stop_search(void)
 {
-    return (hard_time && elapsed() >= hard_time) || heard(poll_input());
+    if ((hard_time && elapsed() >= hard_time) || heard(poll_input()))
+        return 1;
+    // With no limit, a line that waits, or the end of the input (see
+    // above).
+    return !hard_time && !bounded && (in_ready || in_ended);
 }
 
 static int print_info(const engine_info_t *in)
@@ -459,6 +470,7 @@ static move_t do_go(char *args)
         else if (!strcmp(w, "ponder"))    pondering = 1;
     }
 
+    bounded = limits.depth || limits.nodes;
     soft_time = hard_time = 0;
     if (movetime)
         soft_time = hard_time = ms_to_us(movetime);

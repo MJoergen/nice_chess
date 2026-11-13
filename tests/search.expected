@@ -43,4 +43,9 @@ info depth 4 score cp -27 nodes 1024 pv g8f6 b1c3 b8c6 f1d3
 bestmove g8f6 ponder b1c3
 info depth 1 score cp 1 nodes 21 pv g8f6
 bestmove g8f6
+info depth 1 score cp 36 nodes 39 pv g1f3
+info depth 2 score cp 0 nodes 69 pv g1f3
+info depth 3 score cp 0 nodes 180 pv g1f3
+info depth 4 score cp 0 nodes 230 pv g1f3
+bestmove g1f3
 exit 0

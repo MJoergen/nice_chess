@@ -27,8 +27,9 @@ During a search the program reads its input, every 1024 nodes: stop
 ends the search, ponderhit turns go ponder into the search of the move,
 and isready is answered. On the board, the answer to stop and to
 isready comes within 40 ms (LOG.md). Any other line waits for the end
-of the search, and so do the lines after it: a quit during go ponder
-or go infinite is not heard, nor a stop after it.
+of the search, and so do the lines after it. A search with no limit,
+that of go infinite, or of go ponder before its ponderhit, ends when
+such a line comes, such as quit.
 
 The prompts "> " of the program are taken off its lines, and the
 monitor's "Returned" line is not passed on. On quit, or the end of

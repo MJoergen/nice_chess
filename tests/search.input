@@ -23,4 +23,6 @@ stop
 position startpos moves d2d4
 go ponder depth 1
 ponderhit
+position startpos moves e2e4 e7e5
+go ponder
 quit

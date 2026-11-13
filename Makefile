@@ -269,6 +269,7 @@ tools-test:
 host-test: build/host/chess_text build/host/perftsuite build/host/searchsuite build/host/matesuite $(PERFTSUITE) $(SEARCHSUITE)
 	@tools/runtest.sh host_text text tests/text.input host build/host/chess_text
 	@tools/runtest.sh host_search search tests/search.input host build/host/chess_text
+	@tools/runtest.sh host_search_end search_end tests/search_end.input host build/host/chess_text
 	@tools/runtest.sh host_book book tests/book.input host build/host/chess_text
 	@tools/runtest.sh host_perftsuite4 perftsuite4 $(PERFTSUITE) host build/host/perftsuite 4
 	@tools/runtest.sh host_searchsuite searchsuite $(SEARCHSUITE) host build/host/searchsuite 10000
@@ -284,6 +285,7 @@ nice-test: build/nice/chess_text.bin build/nice/chess_screen.bin build/nice/perf
 	@tools/runtest.sh nice_screen_undo screen_undo tests/screen_undo.keys screen build/nice/chess_screen.bin
 	@tools/runtest.sh nice_text text tests/text.input nice build/nice/chess_text.bin
 	@tools/runtest.sh nice_search search tests/search.input nice build/nice/chess_text.bin
+	@tools/runtest.sh nice_search_end search_end tests/search_end.input nice build/nice/chess_text.bin
 	@tools/runtest.sh nice_book book tests/book.input nice build/nice/chess_text.bin
 	@tools/runtest.sh nice_perftsuite3 perftsuite3 $(PERFTSUITE) nice build/nice/perftsuite.bin
 	@tools/runtest.sh mega65_screen screen tests/screen.keys screen build/test/mon_chess_screen.bin
@@ -293,6 +295,7 @@ nice-test: build/nice/chess_text.bin build/nice/chess_screen.bin build/nice/perf
 	@tools/runtest.sh mega65_screen_undo screen_undo tests/screen_undo.keys screen build/test/mon_chess_screen.bin
 	@tools/runtest.sh mega65_text text tests/text.input nice build/test/mon_chess_text.bin
 	@tools/runtest.sh mega65_search search tests/search.input nice build/test/mon_chess_text.bin
+	@tools/runtest.sh mega65_search_end search_end tests/search_end.input nice build/test/mon_chess_text.bin
 	@tools/runtest.sh mega65_book book tests/book.input nice build/test/mon_chess_text.bin
 
 perft-deep: build/host/perftsuite $(PERFTSUITE)
