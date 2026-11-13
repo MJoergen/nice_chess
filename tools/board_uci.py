@@ -21,8 +21,14 @@ option.OwnBook=true plays the first moves from the engine's book.
 The board's clock is real, and its time management is its own, from
 wtime and btime. The time a move takes on the link counts against it,
 so a time control with a margin, or movetime, suits it. One board plays
-one game at a time. The program does not read its input while it
-searches, so stop does not cut a search short.
+one game at a time.
+
+During a search the program reads its input, every 1024 nodes: stop
+ends the search, ponderhit turns go ponder into the search of the move,
+and isready is answered. On the board, the answer to stop and to
+isready comes within 40 ms (LOG.md). Any other line waits for the end
+of the search, and so do the lines after it: a quit during go ponder
+or go infinite is not heard, nor a stop after it.
 
 The prompts "> " of the program are taken off its lines, and the
 monitor's "Returned" line is not passed on. On quit, or the end of

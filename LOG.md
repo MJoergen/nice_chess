@@ -2,6 +2,58 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-13: The board hears its input during a search
+
+BOT.md, `tools/lichess-bot.yml`, and `tools/board_uci.py` said that
+the board does not read its input while it searches, and gave that as
+the reason for `ponder: false`. The sentence is of ec3089a, of
+2026-11-04, hours before the search began to read the console (#9,
+5c84cc1). Pondering in UCI (#17) was measured on the host only.
+
+`build/mega65/chess_text.bin` of 1be89f7 on the board, over Ethernet,
+through `tools/board_uci.py`. The times are on the PC, from the write
+of the line to the read of the answer:
+
+| Search | Line, 3 to 4 seconds in | Answer | After |
+|---|---|---|---:|
+| `go infinite` | `isready` | `readyok` | 28 ms |
+| `go infinite` | `stop` | `bestmove` | 35 ms |
+| `go ponder wtime 60000 btime 60000` | `ponderhit` | `bestmove` | 2056 ms |
+| `go ponder wtime 60000 btime 60000` | `stop` | `bestmove` | 8 ms |
+| `go ponder wtime 60000 btime 60000` | `quit` | none | |
+
+So the board hears `stop`, `ponderhit`, and `isready` during a search,
+as the host does. After the `ponderhit` the search went on for the
+time of a move: a `go` with the same clocks, in another position, took
+1617 ms.
+
+The `quit` was not heard: `poll_input` leaves a line that is not one
+of the three for the main loop, and then reads no more, so a `stop`
+sent after it was not read either. `board_uci.py` gave up after its 10
+seconds, and the program searched on, at depth 10 after 96 seconds,
+until the debug link's `hold` and `go` put the board back at the
+monitor's prompt.
+
+One game followed, through python-chess 1.11.2, as lichess-bot
+(65f88bc) drives an engine: `tools/lichess_engine.sh` with `OwnBook`,
+and `play` with `ponder=True`, at 120+2 with 2 seconds of overhead
+off the clock. The opponent was `build/host/chess_fast` at 20000 nodes
+a move, which waited 0 to 4 seconds before each move. The board won
+in 27 moves (games/board-ponder-pychess-20261113.pgn); the game was
+ended as resigned after four scores of 700 cp or more. Of its 22
+`go ponder`, 12 ended with `ponderhit` and 10 with `stop`, each
+followed by its `bestmove`. Its moves out of the book took up to 5.6
+seconds, and it had 83 of its 120 seconds left at the end.
+
+lichess-bot ends a game with python-chess's `ping` and `quit`. While
+the engine ponders, the ping sends `stop` before its `isready`, so the
+`quit` comes after the `bestmove`: on the board the ping took 30 ms
+and the quit 16 ms, 4 seconds into a ponder search, and the board was
+at the monitor's prompt after them. So lichess-bot can have the board
+ponder: `ponder: false` is a choice, not a need. The `quit` that is
+not heard is one with no `stop` before it, as from the end of
+`board_uci.py`'s stdin.
+
 ## 2026-11-12: A rating of each strength, after #21
 
 `make rate LEVELS= STRENGTHS="1 2 3 4 5" ELOS="1320 1600 1900 2200"
