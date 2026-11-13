@@ -62,9 +62,20 @@ class Referee:
     def __init__(self, cmd: str):
         self.p = subprocess.Popen(shlex.split(cmd), stdin=subprocess.PIPE,
                                   stdout=subprocess.PIPE, text=True, bufsize=1)
+        self.known: dict[str, list[str]] = {}  # What show and moves printed
 
     def ask(self, cmd: str) -> list[str]:
-        """Sends a command, and returns the lines it printed."""
+        """Sends a command, and returns the lines it printed. It asks
+        show and moves once for a position: what they printed is kept
+        until another command, which may change the position."""
+        if cmd not in ("show", "moves"):
+            self.known.clear()
+            return self.send(cmd)
+        if cmd not in self.known:
+            self.known[cmd] = self.send(cmd)
+        return self.known[cmd]
+
+    def send(self, cmd: str) -> list[str]:
         self.p.stdin.write(f"{cmd}\n{SYNC}\n")
         self.p.stdin.flush()
         lines = []
@@ -89,9 +100,11 @@ class Referee:
                 return line
         raise RuntimeError("the referee shows no FEN")
 
-    def play(self, m: str, sans: list[str]) -> str | None:
+    def play(self, m: str, sans: list[str] | None) -> str | None:
         """move(m), and appends m in standard algebraic notation to sans,
-        if it is legal."""
+        if it is legal. With no sans, it is move(m)."""
+        if sans is None:
+            return self.move(m)
         fen, legal = self.fen(), self.moves()
         end = self.move(m)
         if end != "illegal":
@@ -183,9 +196,10 @@ class Engine:
 
 
 def play(ref: Referee, white: Engine, black: Engine, opening: str, args,
-         sans: list[str]) -> tuple[str, str]:
+         sans: list[str] | None) -> tuple[str, str]:
     """Plays a game, and returns its result, "1-0", "0-1", or "1/2-1/2", and
-    why. Appends its moves to sans, in standard algebraic notation."""
+    why. Appends its moves to sans, if there is one, in standard algebraic
+    notation."""
     ref.ask("new")
     moves = []
     for m in opening.split():
@@ -255,9 +269,9 @@ def main() -> int:
     for opening in OPENINGS[:args.openings]:
         for first in (e1, e2):
             white, black = (first, e2 if first is e1 else e1)
-            sans: list[str] = []
+            sans: list[str] | None = [] if args.pgn else None  # Only the PGN has them
             result, why = play(ref, white, black, opening, args, sans)
-            pgn.write(white.name, black.name, result, sans, why,
+            pgn.write(white.name, black.name, result, sans or [], why,
                       tags={"Opening": opening})
             games += 1
             points = {"1-0": 1.0, "0-1": 0.0, "1/2-1/2": 0.5}[result]
