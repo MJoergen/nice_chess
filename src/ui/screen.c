@@ -830,6 +830,7 @@ static void undo(void)
         --n_played;
     } while (n_played > 0 && engine_side_to_move() != human);
     snapshot(&view);
+    expected = 0; // It was of the position before
     have_info = 0;
     clear_selection();
 }

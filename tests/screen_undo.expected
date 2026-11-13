@@ -1,0 +1,8 @@
+move e2e4
+move d7d5
+move f1b5
+move c8d7
+move g1f3
+move g8f6
+fen rnbqkb1r/ppp1pppp/5n2/3p4/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3
+exit 0
