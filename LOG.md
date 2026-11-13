@@ -2,6 +2,53 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-13: The fixes after the review of dev-V1.1
+
+A review of the branch gave 12 findings. What was measured for those
+that changed how a program behaves:
+
+- The windowed front end, the move the engine expects: `undo` did not
+  clear it, and `ponder` makes it without a check. With P off, a move,
+  U, and P on, the engine pondered a move of a position that was no
+  longer on the board. The keys `o p e2e4 f1b5 u p g1f3` in niceemu
+  ended with three bishops a side,
+  `rnbqkbnr/pppbpppp/8/1B6/4p3/5N2/PPPP1PPP/RNBQKB1R`: the move expected
+  after f1b5 c8d7, b5d7, was made with no bishop on b5 and none on d7.
+  `undo` now clears it. `tests/screen_undo.keys` is those keys.
+- The text front end, a search with no limit: `go ponder` or
+  `go infinite` and then `quit` did not end, as the search hears only
+  stop, ponderhit, and isready, and reads no more once another line
+  waits. Nor did it end at the end of the input. The host build ran
+  until it was killed, in each of the three cases. Such a search now
+  ends at the next read, 1024 nodes on, when another line waits or the
+  input has ended. A search with a limit is as before:
+  `go movetime 300` and then `quit` takes its 300 ms, and `go depth 5`
+  at the end of the input reaches depth 5. `tests/search.input` has
+  `go ponder` and `quit`, and `tests/search_end.input` `go infinite` at
+  the end of the input. On the board, the bestmove came 17 ms after a
+  `quit` during `go ponder`, and 30 ms after another line, `debug on`,
+  during `go infinite`. As before, it came 10 ms after `stop`, a
+  `ponderhit` started the clock of the search, and `go movetime 2000`
+  with `quit` behind it took 2.03 seconds. `make board-test` passes.
+- The windowed front end's main loop took the position from the engine
+  each time round, with its legal moves, though `play`, `new_game`, and
+  `undo` had done so. 200 cursor keys in niceemu: 12.31M steps before
+  and 7.68M after, so a key takes 37,000 steps in place of 60,000, 0.7
+  ms on the board in place of 1.1.
+- `tools/match.py`'s referee asked the text front end for the FEN and
+  the legal moves again for each move, and made the move's SAN with no
+  PGN to write. 20 games of random moves, with no PGN: 0.54 seconds
+  before and 0.17 after, with the same result. The PGN of 6 games at
+  800 nodes is the same as before.
+- `tools/analyze.py` took a move with no comment for a move of the
+  book, and cutechess-cli gives the moves of its openings the comment
+  `book`. In 6 games of the rating of 2026-11-12, each side had 72
+  moves in the opening before, 48 of them of the opening file, and 24
+  after; the engine's mean loss there was 34.8 centipawns before and
+  77.5 after, and the report's part on the book was not printed
+  before. A Stockfish that ended left `analyze.py` waiting for its
+  lines for ever; it is an error now.
+
 ## 2026-11-13: The mop-up term with pawns, and with more pieces
 
 The review asked two things of the mop-up term (eval.c, `mop_up`).
