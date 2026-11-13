@@ -67,9 +67,9 @@ A stronger engine, time controls, strengths, and pondering.
   `tools/lichess_engine.sh` runs it for lichess-bot, with the template
   `tools/lichess-bot.yml`. [BOT.md](BOT.md) says how.
 
-Built with nice_cpu V2.0, and checked on the MEGA65 under NiceMonMEGA65
-V2.0: `make board-test` passed, and the board won both games of
-`make board-match`.
+Built with nice_cpu V2.0, and checked on a MEGA65 R3 under
+NiceMonMEGA65 V2.0.1: `make board-test` passed, and the board won both
+games of `make board-match`.
 
 ## V1.0 (2026-11-09)
 
