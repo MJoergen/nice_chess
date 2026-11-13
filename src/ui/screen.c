@@ -180,6 +180,8 @@ enum { RESULT_TIME = 16 };
 // The position the screen shows, and its legal moves. While the engine
 // ponders, its own board is in the search, so what is drawn, and the
 // player's moves, come from here. snapshot takes it from the engine.
+// play, new_game, and undo call it when they change the position, and
+// a ponder hit takes view_next, so the main loop does not.
 typedef struct
 {
     int    piece[64];
@@ -1210,7 +1212,6 @@ int main(void)
 
     while (1)
     {
-        snapshot(&view);
         clock_switch();
         draw_all();
         if (game_result() == ENGINE_PLAYING && view.side != human)
