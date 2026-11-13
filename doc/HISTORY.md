@@ -150,3 +150,45 @@ compared the engine's timed moves, which the board's real clock and
 niceemu's steps decide differently (`d721171`). With both fixed, the
 board passed `make board-test` and won both games of `make board-match`,
 under NiceMonMEGA65 V1.9 over the debug UART.
+
+## From V1.0 to V1.1
+
+The work from 2026-11-09 to 2026-11-13, by subject. The measurements
+are in LOG.md, by date.
+
+**nice_cpu V2.0** (`89af1a4`, `7a77285`): the pin was raised, and the
+NICE builds use two of nicebuild.py's options, `--trust-alignment` and
+`--byte-windows` (#21): 16% fewer steps and about 8000 words fewer. The
+byte windows need niceemu V2.0 and NiceMonMEGA65 V2.0.
+
+**The engine** (2026-11-10 to 2026-11-13): PeSTO's tables in place of
+the hand-set ones (`73dade0`), +142 Elo at equal nodes. `gen_moves`
+rewritten for the steps it takes (#21, `501033b`), from 1771 steps a
+call to 479; with the options above, the board searches about 172000
+nodes in 5 seconds, against 93000. A mop-up term against a bare king
+(#20, `e611da8`), and towards the bishop's corner with bishop and
+knight (#24, `1e4af5f`). 62 more lines in the book (`f98f270`), from
+`tools/analyze.py`'s look at 100 games against Stockfish 2000.
+Tried and not kept: a bonus for passed pawns, a penalty for the king's
+shelter, and late move reductions without the moves near the king
+(#3); each was worth 10 Elo or less, or lost.
+
+**The windowed front end** (2026-11-09 to 2026-11-13): time controls
+(#18, `c38a459`); strengths 1 to 5 under them, by noise and a share
+of the time (#19, `42be9e1`, `14f70c1`); pondering (#17, `31deae1`,
+`6e2dd64`), which the text front end has in UCI too (`4ccf90d`); and
+noise at levels 1 to 4 (`724eb49`), so that the levels span about 790
+to 2240 Elo, rated against Stockfish by `make rate` on 2026-11-12. It
+starts at level 1 (`30cdf21`).
+
+**The board as a lichess bot** (#26, 2026-11-12 and 2026-11-13):
+`tools/lichess_engine.sh` and a template of lichess-bot's config
+(`0b4fa44`), BOT.md (`1be89f7`), and `tools/screen_uci.py`
+(`eee6a74`), which plays the windowed front end through its keys as a
+UCI engine. On the board it won a game at 120+2 against the host build,
+as lichess-bot drives an engine.
+
+**The review** (2026-11-13): a review of the branch before V1.1 gave
+12 findings. Undo did not clear the move the engine expected
+(`a34023f`), and a search with no limit did not end at `quit` or at the
+end of the input (`4a30fdf`); both are fixed, with tests.
