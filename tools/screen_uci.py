@@ -83,7 +83,8 @@ from board import Board
 
 ESC = "\x1b"
 START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-# The noise of the levels, in centipawns, as in src/ui/screen.c.
+# The noise of the levels, in centipawns: a copy of level_noise in
+# src/ui/screen.c, which tools/test_levels.py compares with it.
 LEVEL_NOISE = [800, 600, 320, 170, 0]
 
 

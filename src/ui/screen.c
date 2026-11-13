@@ -149,7 +149,8 @@ static char   msg_buf[24];
 
 // The levels: the time of a move, as a share of platform_move_time,
 // and the noise in the evaluation, in centipawns (LOG.md, 2026-11-11).
-// tools/rate.sh has the same table.
+// tools/rate.sh, tools/screen_uci.py, and README.md have copies of the
+// table, which tools/test_levels.py compares with it.
 static const uint8_t level_num[5] = {1, 1, 1, 3, 9};
 static const uint8_t level_den[5] = {9, 3, 1, 1, 1};
 static const int16_t level_noise[5] = {800, 600, 320, 170, 0};

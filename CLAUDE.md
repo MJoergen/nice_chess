@@ -23,7 +23,11 @@ monitor, and on the host. See README.md.
   `release.py` scripts the release (`test_release.py` tests it, in
   `make test`).
   `analyze.py` has Stockfish score the games of a PGN, and reports
-  where the engine loses (`make analyze PGNFILE=FILE`).
+  where the engine loses (`make analyze PGNFILE=FILE`;
+  `test_analyze.py` tests it).
+  `test_levels.py` compares the copies of the tables of the levels and
+  the strengths (`rate.sh`, `screen_uci.py`, README.md) with the C
+  source, in `make test`: change a table in all of them.
   `pgn.py` writes the games of `match.py` and `screen_game.py` as PGN
   (`--pgn`; the Makefile's matches write to `games/`, not in git).
   `rate.sh` (shell) is a rating by cutechess-cli and Ordo (`make rate`).

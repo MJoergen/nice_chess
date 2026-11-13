@@ -67,8 +67,11 @@ puts Stockfish's score after each move, as a comment. For a match
 run by hand, `tools/match.py` and `tools/screen_game.py` take
 `--pgn FILE`, and cutechess-cli `-pgnout FILE`.
 
-`make test` also runs the tests of `tools/release.py`
-(`tools/test_release.py`).
+`make test` also runs the tests of the tools, `tools/test_*.py`: of
+`release.py`, of `analyze.py`, and `test_levels.py`, which compares the
+copies of the tables of the levels and the strengths, in
+`tools/rate.sh`, `tools/screen_uci.py`, and README.md, with the C
+source.
 
 The front ends show `VERSION`: the release tag on a tagged commit, and
 what `git describe` says between tags. `build/gen/version.c` holds it.

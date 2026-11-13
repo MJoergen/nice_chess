@@ -9,13 +9,14 @@
 # with each Stockfish anchored at its UCI_Elo.
 #
 # A level gets "go nodes N" for each move: $NODES times its share of
-# the time of go in the windowed front end, 1/9, 1/3, 1, 3, or 9
-# (src/ui/screen.c). The engine plays the same moves as the NICE
-# builds at the same nodes, and 172000 nodes is about 5 seconds a move
-# on the MEGA65, the time of go and of level 3 (LOG.md). It gets the
-# level's noise too, 800, 600, 320, 170, or 0 centipawns, with the UCI
-# option Noise, as level_noise in src/ui/screen.c. Stockfish
-# gets 60+0.6, the time control its UCI_Elo was fitted at, to CCRL 40/4.
+# the time of go in the windowed front end. The engine plays the same
+# moves as the NICE builds at the same nodes, and 172000 nodes is about
+# 5 seconds a move on the MEGA65, the time of go and of level 3
+# (LOG.md). It gets the level's noise too, with the UCI option Noise.
+# The shares and the noise, below, are a copy of the table of the
+# levels in src/ui/screen.c, which tools/test_levels.py compares with
+# it. Stockfish gets 60+0.6, the time control its UCI_Elo was fitted
+# at, to CCRL 40/4.
 #
 # Each strength of $STRENGTHS (none by default) plays too, with the UCI
 # option Strength, at 3/2 of $NODES a move: about 7.5 seconds on the

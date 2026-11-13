@@ -262,7 +262,7 @@ build/host/matesuite: $(ENGINE) $(HEADERS) tests/matesuite.c
 
 test: host-test nice-test tools-test
 
-# The tests of tools/release.py.
+# The tests of the tools: tools/test_*.py.
 tools-test:
 	$(PYTHON) -m unittest discover -s tools -p 'test_*.py'
 
