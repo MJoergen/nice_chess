@@ -228,7 +228,16 @@ other engines. Its docstring has a cutechess-cli example; there,
 `dir=.` keeps the path of the .bin relative to the current directory.
 The board's clock is real, and one board plays one game at a time.
 
-`tools/lichess_engine.sh` runs `board_uci.py` as lichess-bot runs an
+`tools/screen_uci.py --eth IP build/mega65/chess_screen.bin` loads the
+windowed front end into the board, and is a UCI engine that plays it
+through its keys, so the board's screen shows the game. It types the
+opponent's moves, reads the engine's from the console, and presses Esc
+when the time of a move is up. Its option `Level` is the front end's
+level, 5 at first. With `--text build/mega65/chess_text.bin`, the text
+front end plays on if the windowed one cannot. With no link it plays
+`build/nice/chess_screen.bin` in niceemu, as `make screen-uci` does.
+
+`tools/lichess_engine.sh` runs `screen_uci.py` as lichess-bot runs an
 engine: one command, with the link in `BOARD_ETH` or `BOARD_PORT`
 (/dev/ttyUSB3 by default). `tools/lichess-bot.yml` is a template of
 lichess-bot's `config.yml` for it; the API token goes in

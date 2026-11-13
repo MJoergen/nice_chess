@@ -2,6 +2,66 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-13: The windowed front end as lichess-bot's engine
+
+`tools/lichess_engine.sh` ran the text front end, through
+`tools/board_uci.py`, so the MEGA65's screen showed nothing of a game.
+`tools/screen_uci.py` is a UCI engine that plays the windowed front end
+by its keys instead, and `lichess_engine.sh` now runs it. The front end
+is as it was: all of it is in the keys that a player has.
+
+The time of a move. The front end has its own time controls, three of
+them, and its own flag, which would not be lichess's. So it plays with
+none, at level 5, which takes up to 45 seconds a move, and the script
+presses Esc when the time of the move, from go's clock, is up. On the
+board, during `go infinite`, `stop` gave the `bestmove` after 81 ms,
+and `isready` its answer after 6 ms.
+
+A position by its moves. The keys make the moves of one side, and the
+engine answers each at once. For the other side's move, the script
+presses S while the engine thinks: the engine moves, then moves for
+the other side too, both hurried by Esc, and U takes the two moves
+back, with the side to move now the keys'. A game of 20 plies was set
+up in 2.9 seconds on the board, with the book on, and one of 7 plies
+ended with the right FEN. In niceemu, 12 positions of 2 to 12 random
+plies, 7 of them with the book, all ended with python-chess's
+position.
+
+The first version turned pondering off for this, with P, and on again
+at the end. Its second game in niceemu ended with g6h5, a capture on
+h5, where nothing stood. `undo` does not clear `expected`, the move
+the engine expects, so after the engine's moves, U, and P, the front
+end ponders on a move of another position, on its own board, as the
+code review of the branch had found. With pondering left on, the
+search of each pondering clears `expected` before the U, and the
+positions above were right.
+
+The end of a game. When the program ends, the monitor writes
+"Returned 00000000" and its prompt over the board, and the pieces show
+as letters, in the ROM's font. So on quit the script leaves the front
+end running, and the screen keeps the last position.
+
+One game on the board, over the debug UART, as lichess-bot plays one:
+`tools/lichess_engine.sh` under python-chess 1.11.2, with `OwnBook`,
+at 120+2 with 2 seconds of overhead off the clock, as black against
+`build/host/chess_fast` at 20000 nodes a move, which waited 0 to 4
+seconds before each move. The board won in 40 moves
+(games/board-screen-uci-20261113.pgn); the game was ended as resigned
+after four scores of -700 cp or less of the host's engine. No move
+took more than 0.09 seconds over its time, 5.56 seconds at the most,
+and the board had 49 of its 120 seconds left. The ping at the end
+took 6 ms and the quit 15 ms.
+
+The load of the windowed front end takes 9.6 seconds over the debug
+UART, at the start of each game. A position by its FEN went to the
+text front end, loaded in its place, which answered after 10.1
+seconds, and the next go after 1.1.
+
+`make screen-uci` plays two games in niceemu, at level 1, against the
+host build at 2000 nodes a move, from an opening of two plies, with no
+text front end: 93 seconds. The Ethernet port stopped answering during
+the day, so the runs on the board were over /dev/ttyUSB1.
+
 ## 2026-11-13: The board hears its input during a search
 
 BOT.md, `tools/lichess-bot.yml`, and `tools/board_uci.py` said that
@@ -35,8 +95,9 @@ until the debug link's `hold` and `go` put the board back at the
 monitor's prompt.
 
 One game followed, through python-chess 1.11.2, as lichess-bot
-(65f88bc) drives an engine: `tools/lichess_engine.sh` with `OwnBook`,
-and `play` with `ponder=True`, at 120+2 with 2 seconds of overhead
+(65f88bc) drives an engine: `tools/lichess_engine.sh`, which then ran
+`board_uci.py`, with `OwnBook`, and `play` with `ponder=True`, at
+120+2 with 2 seconds of overhead
 off the clock. The opponent was `build/host/chess_fast` at 20000 nodes
 a move, which waited 0 to 4 seconds before each move. The board won
 in 27 moves (games/board-ponder-pychess-20261113.pgn); the game was

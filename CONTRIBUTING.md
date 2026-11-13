@@ -17,6 +17,7 @@ build without asserts statically, which needs glibc's static library:
     make test        # the tests, on the host and in niceemu
     make perft-deep  # the perft suite to depth 5 on the host (about a minute)
     make screen-game # a full game in the windowed front end, in niceemu (about a minute)
+    make screen-uci  # the windowed front end as a UCI engine, by its keys, in niceemu (about 2 minutes)
     make match-random   # the host build against random moves
     make match-mchess2  # the host build against mchess2 (about 15 minutes)
     make openings    # the openings of make rate, 8moves_v3.pgn, into deps/books/
@@ -60,7 +61,7 @@ The rating is in `build/rate/ratings.txt`.
 Every match writes its games, in PGN, to a file of its own in `games/`
 (not in git; `PGNDIR=DIR` for another directory), named by the target
 and the time it started, such as `games/rate-20261111-143000.pgn`:
-`make rate`, `make match-random`, `make match-mchess2`, and the board's
+`make rate`, `make match-random`, `make match-mchess2`, `make screen-uci`, and the board's
 `board-match`, `board-game`, and `board-stockfish`. `board-stockfish`
 puts Stockfish's score after each move, as a comment. For a match
 run by hand, `tools/match.py` and `tools/screen_game.py` take
@@ -75,7 +76,7 @@ what `git describe` says between tags. `build/gen/version.c` holds it.
 `*.expected` files do not depend on it.
 
 GitHub Actions runs `make test`, `make perft-deep`, `make screen-game`,
-`make match-random`, and `make size` on every push
+`make screen-uci`, `make match-random`, and `make size` on every push
 ([.github/workflows/test.yml](.github/workflows/test.yml)). The tests
 on the board are in [README.md](README.md#the-board-from-a-host).
 

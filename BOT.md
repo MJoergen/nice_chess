@@ -3,9 +3,11 @@
 This is how to play the engine on the MEGA65 on lichess.org, as a BOT
 account, with [lichess-bot](https://github.com/lichess-bot-devs/lichess-bot).
 lichess-bot runs on a PC. It talks to lichess, and starts
-`tools/lichess_engine.sh` for each game. That script loads the text
-front end into the board over the link, and passes the UCI lines both
-ways (`tools/board_uci.py`).
+`tools/lichess_engine.sh` for each game. That script loads the
+windowed front end into the board over the link, and plays it through
+its keys (`tools/screen_uci.py`): it types the opponent's moves, and
+reads the engine's from the console. So the MEGA65's screen shows the
+game as it is played.
 
 ## What it needs
 
@@ -13,7 +15,8 @@ ways (`tools/board_uci.py`).
   port or its debug UART, and a checkout of NiceMonMEGA65 (`NICEMON`,
   `../NiceMonMEGA65` by default). See [README.md](README.md).
 - nice_chess built: `make deps`, then `make all`. The bot plays
-  `build/mega65/chess_text.bin`, not a file on the SD card.
+  `build/mega65/chess_screen.bin`, not a file on the SD card, and
+  `build/mega65/chess_text.bin` if the windowed front end cannot go on.
 - Python 3.11 or later, for lichess-bot.
 - A lichess account for the bot that has never played a game.
 
@@ -53,17 +56,19 @@ This is done once.
 
 ## Checking the engine on the board
 
-The board must be at the monitor's prompt, with no program running:
-quit a front end that runs (Q in the windowed one, `quit` in the text
-one). Then, from nice_chess:
+From nice_chess:
 
     printf 'uci\nisready\nposition startpos\ngo movetime 3000\nquit\n' |
         BOARD_ETH=192.168.1.65 tools/lichess_engine.sh
 
-It prints `id name ...`, `uciok`, `readyok`, lines of `info`, and a
-`bestmove`. `BOARD_ETH` is the board's Ethernet port, as HOST[:PORT].
+It prints `id name ...`, `uciok`, `readyok`, and after 3 seconds a
+`bestmove`, and the MEGA65's screen shows the board with white's first
+move. `BOARD_ETH` is the board's Ethernet port, as HOST[:PORT].
 Without it, the script uses the debug UART in `BOARD_PORT`, such as
-`/dev/ttyUSB1`.
+`/dev/ttyUSB1`. The load resets the board, so a program that runs
+there, such as the front end of the last game, ends. With
+`BOARD_DEBUG=1` the script also prints the keys it presses and the
+front end's moves.
 
 ## Running it
 
@@ -96,12 +101,36 @@ has the other keys of `matchmaking`.
 
 ## How it plays
 
-The engine plays from its book first (`OwnBook`), at full strength.
-`Strength` (1 to 5) and `Noise` (0 to 1000 centipawns) under
-`engine.uci_options` make it weaker; README.md has their ratings.
-lichess-bot takes `move_overhead`, 2 seconds, off the time of each
-move, for the link. The engine does not ponder: the board does not
-read its input while it searches.
+The engine plays in the windowed front end, at level 5, its full
+strength, from its book first (`OwnBook`). `Level` (1 to 5) under
+`engine.uci_options` makes it weaker, by the noise of the level and
+the time of its move; README.md has the levels and their ratings.
+
+lichess keeps the clock of the game. The front end has no time control
+here: the clocks on the screen count up the time each side has taken.
+lichess-bot gives the engine its clock with each move, less
+`move_overhead`, 2 seconds, for the link. `screen_uci.py` gives the
+move a thirtieth of the engine's time and three quarters of its
+increment, which is the most the text front end takes, and then
+presses Esc, which makes the engine move. A move takes no more than
+the time of the level, 45 seconds at level 5.
+
+The engine ponders, as the windowed front end does: it thinks on the
+opponent's time, about the move it expects. `engine.ponder` stays
+false. That is lichess-bot's pondering, by UCI's `go ponder`, which
+`screen_uci.py` does not take.
+
+The opponent's side is at the bottom of the screen, as the player's
+is. After a game the front end stays, with the last position on the
+screen, until the next game is loaded, or Q on the MEGA65's keyboard
+ends it. The clock of the side to move runs on there if the game ended
+in a way the front end does not see, such as a resignation.
+
+A game that goes on after lichess-bot starts again is set up through
+the keys, in a few seconds. If the windowed front end cannot go on
+with a game, the script loads the text front end, which plays on, and
+the screen no longer shows the game: that is so after a key pressed on
+the MEGA65's keyboard has changed the game there.
 
 A new bot's rating is 1500, and moves to its strength over its first
 games. Leave `rated` out of `challenge.modes` to play casual games
@@ -112,6 +141,8 @@ only.
 - The board is the bot's. lichess-bot loads the program into it at
   the start of each game, so run nothing else on it. Stop the bot
   first.
+- The MEGA65's keyboard is the game's: a key pressed there goes to the
+  front end, as the script's keys do. Leave it alone during a game.
 - The PC and the link stay up. A game whose link drops is lost on
   time.
 - Losses on time again and again, or errors of the engine in the

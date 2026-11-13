@@ -113,7 +113,7 @@ STAMP     := $(shell date +%Y%m%d-%H%M%S)
 PGN        = $(PGNDIR)/$@-$(STAMP).pgn
 export CUTECHESS ORDO STOCKFISH NODES LEVELS STRENGTHS ELOS OPPONENTS GAMES CONCURRENCY BOOK
 
-.PHONY: FORCE help all test pieces host-test nice-test tools-test perft-deep screen-game match-random match-mchess2 rate analyze openings size profile deps clean distclean
+.PHONY: FORCE help all test pieces host-test nice-test tools-test perft-deep screen-game screen-uci match-random match-mchess2 rate analyze openings size profile deps clean distclean
 .PHONY: board-text board-screen board-test board-game board-match board-stockfish dist release-check
 help:
 	@echo "nice_chess: a chess engine for the NICE system"
@@ -124,6 +124,7 @@ help:
 	@echo "  make test          the tests, on the host and in niceemu, and of tools/release.py"
 	@echo "  make perft-deep    the perft suite to depth 5 on the host (a minute)"
 	@echo "  make screen-game   a full game in the windowed front end, in niceemu (a minute)"
+	@echo "  make screen-uci    the windowed front end as a UCI engine, by its keys, in niceemu (2 games, 2 minutes)"
 	@echo "  make match-random  the host build against random moves (20 games)"
 	@echo "  make match-mchess2 the host build against mchess2 (20 games, 15 minutes)"
 	@echo "  make openings      fetch the openings of make rate, 8moves_v3.pgn, into deps/books/"
@@ -153,7 +154,7 @@ help:
 	@echo "  make release-check board-test and board-match, and the stamp that tools/release.py tag needs"
 	@echo "                    (doc/RELEASE.md)"
 	@echo ""
-	@echo "The matches (match-*, rate, board-match, board-game, board-stockfish) write their games"
+	@echo "The matches (match-*, screen-uci, rate, board-match, board-game, board-stockfish) write their games"
 	@echo "to games/TARGET-YYYYMMDD-HHMMSS.pgn (PGNDIR=DIR another directory)."
 	@echo ""
 	@echo "NICE_CPU=DIR and NICEEMU=PATH use local copies of nice_cpu and niceemu."
@@ -299,6 +300,16 @@ perft-deep: build/host/perftsuite $(PERFTSUITE)
 # (white at 2000 nodes, level 1), to checkmate by white at move 39.
 screen-game: build/nice/chess_screen.bin | $(NICEEMU)
 	@tools/runtest.sh nice_screen_game screen_game tests/screen_game.keys screen build/nice/chess_screen.bin
+
+# tools/screen_uci.py plays the windowed front end by its keys, in
+# niceemu at level 1, against the host build at 2000 nodes a move: two
+# games from an opening, which it sets up through the keys too. With no
+# text front end to play on with, a move the front end does not take,
+# or one that is not legal, fails it.
+screen-uci: build/nice/chess_screen.bin build/host/chess_text | $(NICEEMU)
+	@mkdir -p $(PGNDIR)
+	$(PYTHON) tools/match.py --openings 1 --go1 go --opt1 Level=1 --go2 "go nodes 2000" --pgn $(PGN) \
+	  build/host/chess_text "$(PYTHON) tools/screen_uci.py build/nice/chess_screen.bin" build/host/chess_text
 
 # Against random moves, at 20000 nodes a move: it must win every game.
 match-random: build/host/chess_text

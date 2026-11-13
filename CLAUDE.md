@@ -14,9 +14,10 @@ monitor, and on the host. See README.md.
   that are compared) and `*.expected`. `tools/runtest.sh` runs one test.
 - `tools/`: Python 3. `match.py` plays UCI engines against each other,
   `board.py` runs a program on the board, `board_uci.py` is the board's
-  engine as a UCI engine of the host (`lichess_engine.sh` runs it for
-  lichess-bot, with the config template `lichess-bot.yml`), `screen_game.py` plays a game
-  through the keys, `size.py` checks the size, `screenshot.py` draws a
+  text front end as a UCI engine of the host, `screen_uci.py` the
+  windowed front end, played through its keys (`lichess_engine.sh` runs
+  it for lichess-bot, with the config template `lichess-bot.yml`),
+  `screen_game.py` plays a game through the keys, `size.py` checks the size, `screenshot.py` draws a
   screen dump as a PNG, in the font it selects, `mkpieces.py` draws
   the pieces as glyphs into `src/ui/pieces.h` (`make pieces`).
   `release.py` scripts the release (`test_release.py` tests it, in
@@ -51,7 +52,7 @@ monitor, and on the host. See README.md.
     make all            # build everything
     make test           # host and niceemu tests; run after every change
     make size           # the MEGA65 builds against the 92K-word budget
-    make perft-deep screen-game match-random   # slower; in CI too
+    make perft-deep screen-game screen-uci match-random   # slower; in CI too
     make dist           # the archive of a release in build/dist/ (VERSION=V1.0)
     make release-check ETH=IP   # board-test and board-match, the stamp for release.py tag
 

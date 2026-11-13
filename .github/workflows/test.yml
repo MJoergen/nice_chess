@@ -19,6 +19,8 @@ jobs:
         run: make perft-deep
       - name: A full game in the windowed front end
         run: make screen-game
+      - name: The windowed front end as a UCI engine
+        run: make screen-uci
       - name: Against random moves
         run: make match-random
       - name: Size

@@ -16,11 +16,10 @@ engine:
   dir: "/path/to/nice_chess/tools/"
   name: "lichess_engine.sh"
   protocol: "uci"
-  ponder: false                    # The board does not read its input while it searches.
+  ponder: false                    # The windowed front end ponders by itself (BOT.md).
   uci_options:
     OwnBook: true
-#   Strength: 5                    # 1 to 5; lower is weaker.
-#   Noise: 0                       # Centipawns of noise, 0 to 1000; more is weaker.
+#   Level: 5                       # 1 to 5; lower is weaker (README.md).
   draw_or_resign:
     resign_enabled: false
     offer_draw_enabled: false
