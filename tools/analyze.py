@@ -16,8 +16,9 @@ Stockfish's centipawns by lichess's curve: an inaccuracy from 0.10, a
 mistake from 0.20, a blunder from 0.30. The opening is moves 1 to 12;
 the endgame, after it, the positions whose phase, as the engine counts
 it (knight and bishop 1, rook 2, queen 4), is 8 or less; the
-middlegame is the rest. A move of ENGINE without a comment is a move
-of its book.
+middlegame is the rest. A move with the comment "book" is of
+cutechess-cli's openings, and a move of ENGINE without a comment is a
+move of its own book: neither is in the losses.
 
 The report gives, for ENGINE and its opponent: the losses by phase;
 in ENGINE's lost games, the expected score it gave away in each phase,
@@ -58,17 +59,18 @@ def parse_pgn(path: str) -> list[dict]:
         if head:
             games.append({"head": dict(head), "text": " ".join(text)})
 
-    for line in open(path, encoding="utf-8", errors="replace"):
-        line = line.rstrip("\n")
-        if line.startswith("[Event ") and (head or text):
-            flush()
-            head.clear()
-            text.clear()
-        m = re.match(r'\[(\w+) "(.*)"\]', line)
-        if m:
-            head[m.group(1)] = m.group(2)
-        elif line.strip():
-            text.append(line)
+    with open(path, encoding="utf-8", errors="replace") as f:
+        for line in f:
+            line = line.rstrip("\n")
+            if line.startswith("[Event ") and (head or text):
+                flush()
+                head.clear()
+                text.clear()
+            m = re.match(r'\[(\w+) "(.*)"\]', line)
+            if m:
+                head[m.group(1)] = m.group(2)
+            elif line.strip():
+                text.append(line)
     flush()
     for g in games:
         sans, comments = [], []
@@ -111,39 +113,59 @@ def score_positions(job: tuple[str, list[str], int]) -> list[tuple]:
     sf = subprocess.Popen([cmd], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                           text=True, bufsize=1)
 
-    def send(s: str) -> None:
-        sf.stdin.write(s + "\n")
-        sf.stdin.flush()
+    def ended() -> RuntimeError:
+        return RuntimeError(f"analyze.py: {cmd} has ended, with exit status {sf.wait()}")
 
-    send("uci")
-    send("setoption name Threads value 1")
-    send("setoption name Hash value 64")
-    send("isready")
-    while sf.stdout.readline().strip() != "readyok":
-        pass
-    out = []
-    for fen in fens:
-        send("ucinewgame")
-        send(f"position fen {fen}")
-        send(f"go movetime {movetime}")
-        score, pv, best = 0, [], None
-        while True:
-            w = sf.stdout.readline().split()
-            if w[:1] == ["bestmove"]:
-                best = w[1] if len(w) > 1 and w[1] != "(none)" else None
-                break
-            if "score" in w:
-                i = w.index("score")
-                n = int(w[i + 2])
-                score = n if w[i + 1] == "cp" else (MATE - abs(n)) * (1 if n > 0 else -1)
-                if "pv" in w:
-                    pv = w[w.index("pv") + 1:][:5]
-        if fen.split()[1] == "b":
-            score = -score
-        out.append((fen, score, best, pv))
-    send("quit")
-    sf.wait()
-    return out
+    def send(s: str) -> None:
+        try:
+            sf.stdin.write(s + "\n")
+            sf.stdin.flush()
+        except BrokenPipeError:
+            raise ended() from None
+
+    def recv() -> str:
+        line = sf.stdout.readline()
+        if not line:  # The end of its output
+            raise ended()
+        return line
+
+    try:
+        send("uci")
+        send("setoption name Threads value 1")
+        send("setoption name Hash value 64")
+        send("isready")
+        while recv().strip() != "readyok":
+            pass
+        out = []
+        for fen in fens:
+            send("ucinewgame")
+            send(f"position fen {fen}")
+            send(f"go movetime {movetime}")
+            score, pv, best = 0, [], None
+            while True:
+                w = recv().split()
+                if w[:1] == ["bestmove"]:
+                    best = w[1] if len(w) > 1 and w[1] != "(none)" else None
+                    break
+                if "score" in w:
+                    i = w.index("score")
+                    n = int(w[i + 2])
+                    score = n if w[i + 1] == "cp" else (MATE - abs(n)) * (1 if n > 0 else -1)
+                    if "pv" in w:
+                        pv = w[w.index("pv") + 1:][:5]
+            if fen.split()[1] == "b":
+                score = -score
+            out.append((fen, score, best, pv))
+        send("quit")
+        return out
+    finally:
+        # The end of its input ends it too, if quit did not get there.
+        for f in (sf.stdin, sf.stdout):
+            try:
+                f.close()
+            except BrokenPipeError:
+                pass
+        sf.wait()
 
 
 def W(cp: float) -> float:
@@ -174,6 +196,13 @@ def is_capture(fen: str, move: str) -> bool:
     to = (ord(move[2]) - 97, int(move[3]) - 1)
     pawn = board.get(frm, " ").lower() == "p"
     return to in board or (pawn and to[0] != frm[0]) or len(move) == 5
+
+
+def is_book(comment: str, ours: bool) -> bool:
+    """Whether a move with this comment is of a book, not of a search:
+    "book" is cutechess-cli's, of its openings, for either side; no
+    comment is the engine's own, as it gives no score with the move."""
+    return comment == "book" or (ours and comment == "")
 
 
 def own_score(comment: str) -> float | None:
@@ -210,7 +239,7 @@ def report(games: list[dict], evals: dict, me: str) -> None:
         last_book = -1
         for i, m in enumerate(moves):
             ours = (i % 2 == 0) == white
-            if ours and g["comments"][i] == "":
+            if is_book(g["comments"][i], ours):
                 last_book = i
                 continue
             sign = 1 if i % 2 == 0 else -1
