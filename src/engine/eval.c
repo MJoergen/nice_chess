@@ -20,17 +20,21 @@
  * Friederich, from Rofchade, tuned on game results
  * (chessprogramming.org, "PeSTO's Evaluation Function").
  *
- * When one side has only its king, and the other at least a rook or
- * two minor pieces, a mop-up term (chessprogramming.org, "Mop-up
- * Evaluation") helps the stronger side to mate: a bonus by the bare
- * king's distance from the centre, and by how near the stronger
- * king is to it. With a bishop and a knight, the mate is only in a
- * corner of the bishop's colour, so the bonus is by the bare king's
- * nearness to such a corner instead, and the kings' nearness counts
- * more. The tables pull both kings to the centre alike, and
- * a mate can be deeper than the search, so without it the engine
- * may not make progress. The test of the phase keeps it off the path
- * of the other positions.
+ * When one side has only its king, and the other pieces of a phase
+ * of 2 to 4, from a rook or two minor pieces to a queen or two
+ * rooks, with pawns or without, a mop-up term (chessprogramming.org,
+ * "Mop-up Evaluation") helps the stronger side to mate: a bonus by
+ * the bare king's distance from the centre, and by how near the
+ * stronger king is to it. With a bishop and a knight, the mate is
+ * only in a corner of the bishop's colour, so the bonus is by the
+ * bare king's nearness to such a corner instead, and the kings'
+ * nearness counts more; that is so with pawns beside them too, where
+ * it mates more often than the other bonus. The tables pull both
+ * kings to the centre alike, and a mate can be deeper than the
+ * search, so without the term the engine may not make progress. With
+ * more pieces than a phase of 4 the search mates without it, and the
+ * test of the phase keeps it off the path of the other positions
+ * (LOG.md, 2026-11-13).
  *
  * Below full strength (engine_set_strength), and at the levels of the
  * windowed front end (engine_set_noise), evaluate adds noise of
@@ -254,8 +258,10 @@ static int bare(int c)
 }
 
 // With a bishop and a knight, the mate is only in a corner of the
-// bishop's colour. True if the side (0 black, 1 white) has only those,
-// and then *dark is whether the bishop is on a dark square.
+// bishop's colour. True if the side (0 black, 1 white) has one of
+// each, and then *dark is whether the bishop is on a dark square. At
+// a phase of 2, where mop_up asks, they are its only pieces; it may
+// have pawns too.
 static int bishop_and_knight(int c, int *dark)
 {
     int bishops = 0, knights = 0;

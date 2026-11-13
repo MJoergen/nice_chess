@@ -2,6 +2,49 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-13: The mop-up term with pawns, and with more pieces
+
+The review asked two things of the mop-up term (eval.c, `mop_up`).
+With a bishop, a knight, and pawns against the bare king it gives the
+bonus of the corner, as with bishop and knight alone, up to 520 cp:
+does that keep the engine from its pawn? And the term is off above a
+phase of 4, such as with queen and knight, or two rooks and a knight:
+does the engine mate there?
+
+Both were measured with `tests/matesuite.c`, on random legal
+positions, half of them with black as the stronger side: the engine at
+a number of nodes against the bare king at 2000, and the count of the
+mates within 50 moves.
+
+Bishop, knight, and one pawn, 112 positions:
+
+| Nodes | The corner's bonus, as it is | The other bonus, when there is a pawn |
+|---:|---:|---:|
+| 1000 | 109 of 112 | 102 of 112 |
+| 3000 | 109 of 112 | 100 of 112 |
+| 10000 | 111 of 112 | 109 of 112 |
+| 30000 | 111 of 112 | 111 of 112 |
+
+More pieces than a phase of 4, 48 positions, 6 each of queen and
+knight, two rooks and a knight, queen and rook, two queens, queen and
+bishop, two rooks and a bishop, queen and two knights, and rook,
+bishop, and two knights:
+
+| Nodes | No term, as it is | Longest | The term from a phase of 2 | Longest |
+|---:|---:|---:|---:|---:|
+| 1000 | 48 of 48 | 26 | 48 of 48 | 37 |
+| 3000 | 48 of 48 | 17 | 48 of 48 | 44 |
+| 10000 | 48 of 48 | 17 | 48 of 48 | 13 |
+| 30000 | 48 of 48 | 12 | 48 of 48 | 10 |
+
+The term is kept as it is. With a pawn the corner's bonus mates more
+often than the other one, 440 of 448 games against 422. With more
+pieces the search mates without the term, in all 192 games, and with
+it the mates at 1000 and 3000 nodes are longer; the term there would
+also cost its test in each evaluation of a middle game. The comments
+in eval.c said otherwise, "at least a rook or two minor pieces" and
+"has only those", and now say what the code does.
+
 ## 2026-11-13: The windowed front end as lichess-bot's engine
 
 `tools/lichess_engine.sh` ran the text front end, through
