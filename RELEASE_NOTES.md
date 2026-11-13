@@ -68,8 +68,9 @@ A stronger engine, time controls, strengths, and pondering.
   `tools/lichess-bot.yml`. [BOT.md](BOT.md) says how.
 
 Built with nice_cpu V2.0, and checked on a MEGA65 R3 under
-NiceMonMEGA65 V2.0.1: `make board-test` passed, and the board won both
-games of `make board-match`.
+NiceMonMEGA65 V2.0.1: `make board-test` passed, and in
+`make board-match` the board drew one game, by the 50-move rule, and
+won the other, with no illegal move.
 
 ## V1.0 (2026-11-09)
 
