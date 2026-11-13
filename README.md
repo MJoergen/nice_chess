@@ -232,7 +232,8 @@ The board's clock is real, and one board plays one game at a time.
 engine: one command, with the link in `BOARD_ETH` or `BOARD_PORT`
 (/dev/ttyUSB3 by default). `tools/lichess-bot.yml` is a template of
 lichess-bot's `config.yml` for it; the API token goes in
-`LICHESS_BOT_TOKEN`, not in a file in git.
+`LICHESS_BOT_TOKEN`, not in a file in git. [BOT.md](BOT.md) says how
+to set up and run the board as a lichess bot.
 
 ## Matches and ratings
 

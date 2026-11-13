@@ -34,6 +34,7 @@ monitor, and on the host. See README.md.
   open items are GitHub issues, not files or TODO comments.
 - `doc/RELEASE.md`: how to make a release; `RELEASE_NOTES.md`: what
   changed in each release, newest first. Add a section for every new tag.
+- `BOT.md`: how to run the board as a lichess bot, with lichess-bot.
 - `LOG.md`: investigations (measurements, options weighed), newest
   first, dated.
 - `CONTRIBUTING.md`: building and the tests, for human contributors.
