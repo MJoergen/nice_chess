@@ -176,7 +176,7 @@ extern int32_t psqt[13][64];            // By piece + 6 and sq64, packed and sig
 extern const int32_t phase_value[13];   // By piece + 6
 void eval_init(void);
 int  evaluate(void);                    // From the point of view of the side to move
-void eval_set_noise(int amplitude, uint32_t seed); // Noise in evaluate, 0 for none
+int  eval_set_noise(int amplitude, uint32_t seed); // Noise in evaluate, 0 for none; true if it changes
 
 // tt.c: the transposition table, of 1 << TT_BITS entries of 8 bytes,
 // 128 KB. The NICE builds' linear memory (NICEFLAGS) must hold it.

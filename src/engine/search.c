@@ -85,8 +85,6 @@ static const struct { int16_t noise; uint8_t divisor; } strengths[ENGINE_STRENGT
     { 90, 15},
 };
 static int      strength = ENGINE_STRENGTH_MAX;
-static int      noise_set;         // The noise in the evaluation, as set
-static uint32_t noise_seed;
 
 static inline int iabs(int x) { return x < 0 ? -x : x; }
 
@@ -537,12 +535,8 @@ uint32_t engine_time_share(uint32_t left, uint32_t inc, uint32_t movestogo)
 // table, whose scores are of the noise before, if it changes.
 static void set_noise(int amplitude, uint32_t seed)
 {
-    if (amplitude == noise_set && (amplitude == 0 || seed == noise_seed))
-        return;
-    noise_set = amplitude;
-    noise_seed = seed;
-    eval_set_noise(amplitude, seed);
-    tt_clear();
+    if (eval_set_noise(amplitude, seed))
+        tt_clear();
 }
 
 void engine_set_strength(int s, uint32_t seed)

@@ -7,7 +7,7 @@
 
 #include "internal.h"
 
-#ifdef CHECK_STATE
+#if defined(CHECK_STATE) && !defined(NDEBUG) // Only an assert calls it
 /***************************************************************
  * captures_consistent
  * True if gen_captures gives the moves of list that capture or

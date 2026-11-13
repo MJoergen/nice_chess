@@ -212,18 +212,18 @@ void eval_init(void)
     }
 } // end of eval_init
 
-/***************************************************************
- * evaluate
- * Returns the value of the position in centipawns, from the point
- * of view of the side to move.
- ***************************************************************/
+// The noise that evaluate adds (see the top): its amplitude in
+// centipawns, 0 for none, and its seed.
 static int      noise_amplitude;
 static uint32_t noise_seed;
 
-void eval_set_noise(int amplitude, uint32_t seed)
+// Returns true if the values of evaluate change by it.
+int eval_set_noise(int amplitude, uint32_t seed)
 {
+    int changed = amplitude != noise_amplitude || (amplitude && seed != noise_seed);
     noise_amplitude = amplitude;
     noise_seed = seed;
+    return changed;
 } // end of eval_set_noise
 
 // From -noise_amplitude to noise_amplitude, by a hash of the Zobrist
@@ -311,6 +311,11 @@ __attribute__((noinline)) static int mop_up(void)
     return weak ? -v : v;
 }
 
+/***************************************************************
+ * evaluate
+ * Returns the value of the position in centipawns, from the point
+ * of view of the side to move.
+ ***************************************************************/
 int evaluate(void)
 {
     int phase = pos.phase < 24 ? pos.phase : 24;
