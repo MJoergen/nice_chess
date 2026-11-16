@@ -23,5 +23,7 @@ jobs:
         run: make screen-uci
       - name: Against random moves
         run: make match-random
+      - name: The minimal build against random moves
+        run: make match-mini
       - name: Size
         run: make size

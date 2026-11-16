@@ -10,8 +10,10 @@ the lowest address of the .bin file, 0x8000 for a program built with
 
 - the code: the translated program, the runtime, and libc, most of
   which comes before ___wasm_memory, and some after the memory;
-- the linear memory: its pages, the wasm stack, the data segments, and
-  the zero-initialized data after them;
+- the linear memory: its pages, or the bytes of them that the program
+  reserves (nicebuild.py --memory-bytes, which the listing program.nasm
+  states), the wasm stack, the data segments, and the zero-initialized
+  data after them;
 - the end of the image, which the .bin file gives, and the end of the
   program with all of its linear memory.
 
@@ -118,6 +120,20 @@ def read_bin(path: str) -> tuple[int, int]:
     return low, top
 
 
+def read_reserved(path: str) -> int | None:
+    """The bytes of the linear memory that the program reserves, if
+    nicebuild.py --memory-bytes reserved only a part of its pages."""
+    try:
+        with open(path) as f:
+            for line in f:
+                m = re.match(r"^; Linear memory: the first (\d+) bytes of", line)
+                if m:
+                    return int(m.group(1))
+    except FileNotFoundError:
+        pass
+    return None
+
+
 def read_sym(path: str, name: str) -> int:
     with open(path) as f:
         for line in f:
@@ -161,6 +177,9 @@ def main() -> None:
     image_end -= low
     w = read_wasm(base + ".wasm")
     mem_words = w["pages"] * PAGE_WORDS
+    reserved = read_reserved(base + ".nasm")
+    if reserved is not None:
+        mem_words = (reserved + 3) // 4
     data_words = (w["data_end"] - w["data_start"] + 3) // 4
     stack_words = w["stack"] // 4
 
@@ -168,7 +187,11 @@ def main() -> None:
     print(f"base address:     0x{low:08x}")
     print(f"code and runtime:     {membase + after:6d} words  "
           f"({membase} before ___wasm_memory, {after} after the memory)")
-    print(f"linear memory:        {mem_words:6d} words  ({w['pages']} pages)")
+    if reserved is None:
+        print(f"linear memory:        {mem_words:6d} words  ({w['pages']} pages)")
+    else:
+        print(f"linear memory:        {mem_words:6d} words  (the first {reserved} bytes "
+              f"of {w['pages']} pages)")
     print(f"  wasm stack:         {stack_words:6d} words  (bytes 0 to {w['stack']})")
     print(f"  data segments:      {data_words:6d} words  (bytes {w['data_start']} to {w['data_end']})")
     print(f"  free after data:    {mem_words - (w['data_end'] + 3) // 4:6d} words  "

@@ -52,4 +52,7 @@ int platform_pollc(void);
 // byte, so that platform_pollc sees the bytes after it.
 int platform_getc(void);
 
+// Writes a byte to the console. On a PC it is written at once.
+void platform_putc(int c);
+
 #endif // PLATFORM_H

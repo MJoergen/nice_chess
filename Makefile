@@ -50,8 +50,11 @@ MCHESS2_SRC = main.cc CBoard.cc CMove.cc ai.cc CMoveList.cc CPerft.cc \
 # The MEGA65 gives a program under the monitor the words 0x8000 to
 # 0x1EFFF, 92K, for its image, its linear memory, and the NICE stack,
 # which the monitor's routines share and use at most 32 words of
-# (NiceMonMEGA65 V1.2.1). The Nexys4DDR would give 28K.
+# (NiceMonMEGA65 V1.2.1).
 BUDGET = 94176
+# The Nexys4DDR gives 0x8000 to 0xEFFF, 28K words, less the same 32, and
+# 13 more, which BASIC's SYS keeps on the stack (NiceMonMEGA65 V2.2.1).
+NEXYS_BUDGET = 28627
 
 # The engine, and the table of its opening book, which tools/mkbook.c
 # makes from src/engine/book.txt with the engine's own keys.
@@ -78,6 +81,14 @@ NICEFLAGS = -O 2 -D NDEBUG --no-bounds-checks --trust-alignment --byte-windows \
             --stack 8192 --memory 196608 --symbols --keep
 # The MEGA65: the same, built for the monitor, which loads it at 0x8000.
 MONFLAGS = $(NICEFLAGS) --monitor
+# The minimal build (src/ui/mini.c), for the Nexys4DDR's 28K words
+# (#28): optimized for size, a transposition table of 256 entries
+# (TT_BITS), and one page of memory, of which it reserves only up to
+# the end of its static data (--memory-bytes auto). The wasm stack stays
+# 8 KB, as the opening book keeps about 3 KB of moves on it.
+MINIFLAGS = -O z -D NDEBUG -D TT_BITS=8 --no-bounds-checks --trust-alignment --byte-windows \
+            --stack 8192 --memory 65536 --memory-bytes auto --symbols --keep
+MINI = src/ui/mini.c src/ui/miniuci.c
 
 # The host: with asserts, and a check of the Zobrist key, the
 # evaluation's sums, and the captures-only move list at every node
@@ -113,19 +124,21 @@ STAMP     := $(shell date +%Y%m%d-%H%M%S)
 PGN        = $(PGNDIR)/$@-$(STAMP).pgn
 export CUTECHESS ORDO STOCKFISH NODES LEVELS STRENGTHS ELOS OPPONENTS GAMES CONCURRENCY BOOK
 
-.PHONY: FORCE help all test pieces host-test nice-test tools-test perft-deep screen-game screen-uci match-random match-mchess2 rate analyze openings size profile deps clean distclean
+.PHONY: FORCE help all test pieces host-test nice-test tools-test perft-deep screen-game screen-uci match-random match-mini match-mchess2 rate analyze openings size profile deps clean distclean
 .PHONY: board-text board-screen board-test board-game board-match board-stockfish dist release-check
 help:
 	@echo "nice_chess: a chess engine for the NICE system"
 	@echo ""
 	@echo "  make help          show this text (the default)"
 	@echo "  make deps          fetch nice_cpu $(NICE_CPU_TAG), niceemu $(NICE_CPU_TAG), and mchess2's test suites into deps/"
-	@echo "  make all           build both front ends, for niceemu, for the MEGA65, and for the host"
+	@echo "  make all           build both front ends, for niceemu, for the MEGA65, and for the host,"
+	@echo "                     and the minimal build, for niceemu, for the Nexys4DDR, and for the host"
 	@echo "  make test          the tests, on the host and in niceemu, and of tools/release.py"
 	@echo "  make perft-deep    the perft suite to depth 5 on the host (a minute)"
 	@echo "  make screen-game   a full game in the windowed front end, in niceemu (a minute)"
 	@echo "  make screen-uci    the windowed front end as a UCI engine, by its keys, in niceemu (2 games, 2 minutes)"
 	@echo "  make match-random  the host build against random moves (20 games)"
+	@echo "  make match-mini    the minimal build in niceemu against random moves (2 games, a minute)"
 	@echo "  make match-mchess2 the host build against mchess2 (20 games, 15 minutes)"
 	@echo "  make openings      fetch the openings of make rate, 8moves_v3.pgn, into deps/books/"
 	@echo "  make rate          a rating of each level: cutechess-cli games against Stockfish's UCI_Elo levels, and Ordo"
@@ -133,7 +146,7 @@ help:
 	@echo "                     (OPPONENTS=\"NAME=ELO=COMMAND ...\" adds engines anchored at ELO)"
 	@echo "  make analyze       Stockfish's scores of the games of PGNFILE=FILE, and the patterns in PLAYER's play"
 	@echo "                     (PLAYER=nice_chess; MOVETIME=1000 ms a position; about 10 minutes for 100 games)"
-	@echo "  make size          the size of the MEGA65 builds, against the board's budget"
+	@echo "  make size          the size of the MEGA65 builds and of the Nexys4DDR's, against the boards' budgets"
 	@echo "  make profile       the steps of each function in niceemu, on the 24 Bratko-Kopec positions at 3000 nodes"
 	@echo "                     (BIN=, PROFILE_INPUT= another program or input)"
 	@echo "  make pieces        draw the pieces again into src/ui/pieces.h (needs Pillow)"
@@ -176,7 +189,8 @@ $(VERSIONC): FORCE
 FORCE:
 
 all: build/nice/chess_text.bin build/nice/chess_screen.bin build/host/chess_text \
-     build/mega65/chess_text.bin build/mega65/chess_screen.bin
+     build/mega65/chess_text.bin build/mega65/chess_screen.bin \
+     build/nice/chess_mini.bin build/nexys/chess_mini.bin build/host/chess_mini
 
 build/nice/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
@@ -194,6 +208,14 @@ build/mega65/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/ui/piece
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(MONFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/screen.c src/platform/nice.c
 
+build/nice/chess_mini.bin: $(ENGINE) $(HEADERS) $(MINI) src/ui/miniuci.h src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
+	@mkdir -p $(@D)
+	$(NICEBUILD) $(MINIFLAGS) -o $@ $(ENGINE) $(VERSIONC) $(MINI) src/platform/nice.c
+
+build/nexys/chess_mini.bin: $(ENGINE) $(HEADERS) $(MINI) src/ui/miniuci.h src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
+	@mkdir -p $(@D)
+	$(NICEBUILD) $(MINIFLAGS) --monitor -o $@ $(ENGINE) $(VERSIONC) $(MINI) src/platform/nice.c
+
 # nice_cpu's stand-in for a monitor at 0, which runs a program at 0x8000
 # as the monitor does, so that the MEGA65 builds run in niceemu too,
 # joined after it (a .bin file is address and word pairs).
@@ -202,6 +224,10 @@ build/nice/monstub.bin: $(NICE_CPU)/runtime/test/monitor.nasm $(TOOLCHAIN)
 	$(PYTHON) $(NICE_CPU)/assembler/niceasm.py -o $@ $<
 
 build/test/mon_%.bin: build/nice/monstub.bin build/mega65/%.bin
+	@mkdir -p $(@D)
+	cat $^ > $@
+
+build/test/nexys_%.bin: build/nice/monstub.bin build/nexys/%.bin
 	@mkdir -p $(@D)
 	cat $^ > $@
 
@@ -244,6 +270,10 @@ build/host/chess_text: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/host.c $(
 	@mkdir -p $(@D)
 	$(CC) $(HOSTFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/text.c src/platform/host.c
 
+build/host/chess_mini: $(ENGINE) $(HEADERS) $(MINI) src/ui/miniuci.h src/platform/host.c $(VERSIONC)
+	@mkdir -p $(@D)
+	$(CC) $(HOSTFLAGS) -DTT_BITS=8 -o $@ $(ENGINE) $(VERSIONC) $(MINI) src/platform/host.c
+
 build/host/chess_fast: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/host.c $(VERSIONC)
 	@mkdir -p $(@D)
 	$(CC) $(FASTFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/text.c src/platform/host.c
@@ -266,18 +296,20 @@ test: host-test nice-test tools-test
 tools-test:
 	$(PYTHON) -m unittest discover -s tools -p 'test_*.py'
 
-host-test: build/host/chess_text build/host/perftsuite build/host/searchsuite build/host/matesuite $(PERFTSUITE) $(SEARCHSUITE)
+host-test: build/host/chess_text build/host/chess_mini build/host/perftsuite build/host/searchsuite build/host/matesuite $(PERFTSUITE) $(SEARCHSUITE)
 	@tools/runtest.sh host_text text tests/text.input host build/host/chess_text
 	@tools/runtest.sh host_search search tests/search.input host build/host/chess_text
 	@tools/runtest.sh host_search_end search_end tests/search_end.input host build/host/chess_text
 	@tools/runtest.sh host_book book tests/book.input host build/host/chess_text
+	@tools/runtest.sh host_mini mini tests/mini.input host build/host/chess_mini
 	@tools/runtest.sh host_perftsuite4 perftsuite4 $(PERFTSUITE) host build/host/perftsuite 4
 	@tools/runtest.sh host_searchsuite searchsuite $(SEARCHSUITE) host build/host/searchsuite 10000
 	@tools/runtest.sh host_matesuite matesuite tests/matesuite.input host build/host/matesuite $(MATESUITE_NODES)
 	@tools/runtest.sh host_matesuite_bn matesuite_bn tests/matesuite_bn.input host build/host/matesuite $(MATESUITE_NODES)
 
 nice-test: build/nice/chess_text.bin build/nice/chess_screen.bin build/nice/perftsuite.bin $(PERFTSUITE) \
-           build/test/mon_chess_text.bin build/test/mon_chess_screen.bin | $(NICEEMU)
+           build/test/mon_chess_text.bin build/test/mon_chess_screen.bin \
+           build/nice/chess_mini.bin build/test/nexys_chess_mini.bin | $(NICEEMU)
 	@tools/runtest.sh nice_screen screen tests/screen.keys screen build/nice/chess_screen.bin
 	@tools/runtest.sh nice_screen_book screen_book tests/screen_book.keys screen build/nice/chess_screen.bin
 	@tools/runtest.sh nice_screen_clock screen_clock tests/screen_clock.keys screen build/nice/chess_screen.bin
@@ -297,6 +329,8 @@ nice-test: build/nice/chess_text.bin build/nice/chess_screen.bin build/nice/perf
 	@tools/runtest.sh mega65_search search tests/search.input nice build/test/mon_chess_text.bin
 	@tools/runtest.sh mega65_search_end search_end tests/search_end.input nice build/test/mon_chess_text.bin
 	@tools/runtest.sh mega65_book book tests/book.input nice build/test/mon_chess_text.bin
+	@tools/runtest.sh nice_mini mini tests/mini.input nice build/nice/chess_mini.bin
+	@tools/runtest.sh nexys_mini mini tests/mini.input nice build/test/nexys_chess_mini.bin
 
 perft-deep: build/host/perftsuite $(PERFTSUITE)
 	@tools/runtest.sh host_perftsuite5 perftsuite5 $(PERFTSUITE) host build/host/perftsuite 5
@@ -321,6 +355,13 @@ match-random: build/host/chess_text
 	@mkdir -p $(PGNDIR)
 	$(PYTHON) tools/match.py --go1 "go nodes 20000" --min-score 20 --pgn $(PGN) \
 	  build/host/chess_text build/host/chess_text random
+
+# The minimal build in niceemu against random moves, at its default
+# go, 20000 nodes: two games, which it must win.
+match-mini: build/nice/chess_mini.bin build/host/chess_text | $(NICEEMU)
+	@mkdir -p $(PGNDIR)
+	$(PYTHON) tools/match.py --openings 1 --go1 go --min-score 2 --pgn $(PGN) \
+	  build/host/chess_text "$(NICEEMU) --step-time build/nice/chess_mini.bin" random
 
 # Against mchess2, at 40 moves in 20 seconds each.
 match-mchess2: build/host/chess_text build/host/mchess2
@@ -351,11 +392,14 @@ deps/mchess2/src/%:
 	@mkdir -p $(@D)
 	curl -sSfL -o $@ $(MCHESS2_RAW)/$*
 
-size: build/mega65/chess_text.bin build/mega65/chess_screen.bin build/test/mon_chess_text.bin build/test/mon_chess_screen.bin | $(NICEEMU)
+size: build/mega65/chess_text.bin build/mega65/chess_screen.bin build/test/mon_chess_text.bin build/test/mon_chess_screen.bin \
+      build/nexys/chess_mini.bin build/test/nexys_chess_mini.bin | $(NICEEMU)
 	$(PYTHON) tools/size.py --emu $(NICEEMU) --input tests/size.input --run build/test/mon_chess_text.bin \
 	  --budget $(BUDGET) --check build/mega65/chess_text.bin
 	$(PYTHON) tools/size.py --emu $(NICEEMU) --input tests/screen.keys --run build/test/mon_chess_screen.bin \
 	  --budget $(BUDGET) --check build/mega65/chess_screen.bin
+	$(PYTHON) tools/size.py --emu $(NICEEMU) --input tests/mini.input --run build/test/nexys_chess_mini.bin \
+	  --budget $(NEXYS_BUDGET) --check build/nexys/chess_mini.bin
 
 # The board. load.py loads a program under the monitor and types r, which
 # runs it; what it prints then comes on the line, such as nc IP 4510 or
@@ -405,19 +449,22 @@ board-match: build/mega65/chess_text.bin build/host/chess_text
 # end, the builds for niceemu, with -niceemu after nice_chess and
 # nice_chess-text, which do not run under the monitor, the static
 # host build without asserts as nice_chess, a UCI engine for x86_64
-# Linux, and README.md, RELEASE_NOTES.md, and LICENSE; and SHA256SUMS.
+# Linux, the minimal build for the Nexys4DDR as
+# nexys/nice_chess-nexys-VERSION.bin, and README.md, RELEASE_NOTES.md,
+# and LICENSE; and SHA256SUMS.
 # The release workflow runs it with VERSION set to the tag, after the
 # tests and make size.
 DIST = build/dist
 dist: build/mega65/chess_text.bin build/mega65/chess_screen.bin build/nice/chess_text.bin \
-      build/nice/chess_screen.bin build/host/chess_fast
+      build/nice/chess_screen.bin build/nexys/chess_mini.bin build/host/chess_fast
 	rm -rf $(DIST)
 	mkdir -p $(DIST)/nice_chess-$(VERSION)/mega65 $(DIST)/nice_chess-$(VERSION)/niceemu \
-	  $(DIST)/nice_chess-$(VERSION)/linux-x86_64
+	  $(DIST)/nice_chess-$(VERSION)/linux-x86_64 $(DIST)/nice_chess-$(VERSION)/nexys
 	cp build/mega65/chess_screen.bin $(DIST)/nice_chess-$(VERSION)/mega65/nice_chess-$(VERSION).bin
 	cp build/mega65/chess_text.bin $(DIST)/nice_chess-$(VERSION)/mega65/nice_chess-text-$(VERSION).bin
 	cp build/nice/chess_screen.bin $(DIST)/nice_chess-$(VERSION)/niceemu/nice_chess-niceemu-$(VERSION).bin
 	cp build/nice/chess_text.bin $(DIST)/nice_chess-$(VERSION)/niceemu/nice_chess-text-niceemu-$(VERSION).bin
+	cp build/nexys/chess_mini.bin $(DIST)/nice_chess-$(VERSION)/nexys/nice_chess-nexys-$(VERSION).bin
 	cp build/host/chess_fast $(DIST)/nice_chess-$(VERSION)/linux-x86_64/nice_chess
 	cp README.md RELEASE_NOTES.md LICENSE $(DIST)/nice_chess-$(VERSION)/
 	tar czf $(DIST)/nice_chess-$(VERSION).tar.gz -C $(DIST) --owner=0 --group=0 nice_chess-$(VERSION)

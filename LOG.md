@@ -2,6 +2,31 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-16: The minimal build for the Nexys4DDR
+
+The build of #28, `build/nexys/chess_mini.bin`: `src/ui/mini.c` and
+`src/ui/miniuci.c`, at `-O z`, `TT_BITS=8`, with the book, one page of
+memory of which `--memory-bytes auto` reserves up to `__heap_base`.
+
+- Size, by `make size`: 9907 words of code before the memory, and 565
+  of the runtime after it, 10472 in all. The memory reserved is 13736
+  words of the page's 16384: the wasm stack 2048, the data 2178, and
+  the zero-initialized data 9510. The peak NICE stack on
+  `tests/mini.input` is 277 words, and the peak wasm stack 776. So the
+  build needs 24485 of the 28627 words of its budget, and 4142 are
+  left, against about 1100 that the UDP peer of #27 needs.
+- Speed: `go`, 20000 nodes, took 31381609 steps from the position of
+  Kiwipete, 29418859 from a Ruy Lopez after 12 moves, and 42481724
+  from position 3 of the perft suite: 0.5 to 0.8 seconds at 54
+  million steps a second. The text front end at `-O 2`, with
+  `TT_BITS=14`, took 24755606 steps from Kiwipete, with the same move;
+  the minimal build takes 27% more.
+- `make match-mini`: the build in niceemu won both games against
+  random moves, each move checked by the host build as the referee,
+  in 41 seconds.
+- The host build, niceemu's, and the Nexys4DDR's under the stand-in
+  monitor give the same replies to `tests/mini.input`.
+
 ## 2026-11-16: nice_cpu V2.2
 
 The pin went from V2.0 to V2.2, for `--memory-bytes` (nice_cpu#165),

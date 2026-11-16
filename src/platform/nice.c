@@ -66,3 +66,8 @@ int platform_getc(void)
 {
     return nice_getc();
 }
+
+void platform_putc(int c)
+{
+    nice_putc(c);
+}

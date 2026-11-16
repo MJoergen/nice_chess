@@ -9,7 +9,8 @@ monitor, and on the host. See README.md.
 - `src/`: the code; `src/README.md` says what each file does.
   `src/engine/` is the core: no I/O, no clock, no malloc, so the same
   files build for NICE and for the host. `src/platform/` (clock, key
-  poll) and `src/ui/` (`text.c`, `screen.c`) are around it.
+  poll) and `src/ui/` (`text.c`, `screen.c`, and `mini.c`, the minimal
+  build for the Nexys4DDR) are around it.
 - `tests/`: the inputs of the tests, `*.grep` (the lines of the output
   that are compared) and `*.expected`. `tools/runtest.sh` runs one test.
 - `tools/`: Python 3. `match.py` plays UCI engines against each other,

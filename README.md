@@ -27,6 +27,8 @@ in each, and what it needs. The archive's directory has:
   `nice_chess-niceemu-TAG.bin` and `nice_chess-text-niceemu-TAG.bin`.
   They are built for niceemu alone, and do not run under the MEGA65's
   monitor.
+- `nexys/nice_chess-nexys-TAG.bin`: the minimal build, for the
+  Nexys4DDR under NiceMonMEGA65's monitor (On the Nexys4DDR, below).
 - `linux-x86_64/nice_chess`: the text front end on the host, linked
   statically: the same commands at a terminal, and a UCI engine for a
   chess GUI.
@@ -48,6 +50,19 @@ such as:
 
     load nice_chess-V1.2.bin
     r
+
+## On the Nexys4DDR
+
+Under NiceMonMEGA65's monitor the Nexys4DDR gives a program 28K words,
+too few for the front ends. `nice_chess-nexys-TAG.bin` is a minimal
+build for it: the same engine, optimized for size, with a
+transposition table of 256 entries and the opening book. It has no
+screen and no clock. On the console it speaks a part of UCI: `uci`,
+`isready`, `ucinewgame`, `position startpos|fen FEN [moves M...]`,
+`go [nodes N]`, and `quit`. `go` plays a move of the book, or searches
+20000 nodes, under a second. Where the game has ended, `go` replies
+with `info string result` and the result, and `bestmove 0000`. It has
+not run on a Nexys4DDR yet.
 
 ## Playing
 
@@ -203,7 +218,9 @@ lists what that needs, and the tests:
 `build/mega65/chess_screen.bin` is `nice_chess-TAG.bin` of a release,
 and `build/mega65/chess_text.bin` `nice_chess-text-TAG.bin`; both load
 from the SD card under any name that ends in `.bin`. The monitor gives
-a program 92K words of RAM.
+a program 92K words of RAM. `build/nexys/chess_mini.bin` is
+`nice_chess-nexys-TAG.bin`, and `build/nice/chess_mini.bin` and
+`build/host/chess_mini` are the same build for niceemu and the host.
 
 ## The board from a host
 

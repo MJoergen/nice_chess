@@ -22,8 +22,8 @@
     `book.txt` has its lines, from which `tools/mkbook.c` makes the
     table, `build/gen/book_data.c`, with the engine's own keys.
 - `platform/`: the clock, the default time of a move, the rate of the
-  players' clocks, and reads of the console, a byte at a time, which
-  wait or not: `nice.c` for NICE, `host.c` for a PC, behind
+  players' clocks, reads of the console, a byte at a time, which
+  wait or not, and writes: `nice.c` for NICE, `host.c` for a PC, behind
   `platform.h`. On NICE the time of a
   move is 300 million steps in niceemu and 5 seconds on a board, which
   `nice.c` tells apart by the ratio of the cycle counter to the
@@ -36,6 +36,11 @@
   for stop, and for ponderhit after `go ponder`. A search with no limit
   also ends when another line comes, such as quit, and at the end of
   the input.
+- `ui/mini.c`: the minimal front end, for the Nexys4DDR's 28K words.
+  It reads a line of the console, and writes the reply of
+  `ui/miniuci.c`, which runs a subset of UCI, a line in and a reply
+  out, with no I/O and no printf. A front end on the network can take
+  mini.c's place.
 - `ui/screen.c`: the windowed front end, on the 80x25 screen, for NICE
   only. Its keys are listed at the top of the file and on the screen.
   It copies the character ROM into the font RAM, writes the pieces over
@@ -53,7 +58,8 @@
 Both front ends are built twice for NICE: for niceemu, at address 0,
 and for the MEGA65 under NiceMonMEGA65's monitor, at `0x8000`
 (`nicebuild.py --monitor`), where the text front end's output goes to
-the screen and the line both, through the monitor.
+the screen and the line both, through the monitor. The minimal front
+end is built for niceemu, and for the Nexys4DDR under the monitor.
 
 The engine started as `runtime/libc/test/mchess.c` of
 [nice_cpu](https://github.com/MJoergen/nice_cpu) at tag `V1.2`, by the

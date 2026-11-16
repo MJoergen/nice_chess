@@ -1,0 +1,27 @@
+uci
+isready
+ucinewgame
+position startpos moves e2e4 c7c5 g1f3 b8c6 d2d4
+go
+position startpos moves e2e4 e7e5 g1f3 b8c6 f1b5 a7a6 b5a4 g8f6 e1g1 f8e7 f1e1 b7b5 a4b3 d7d6 c2c3 e8g8 h2h3 c6a5 b3c2 c7c5 d2d4 d8c7 b1d2
+go nodes 5000
+position fen r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 1
+go nodes 3000
+position fen 7k/6Q1/6K1/8/8/8/8/8 b - - 0 1
+go
+position fen 7k/5Q2/6K1/8/8/8/8/8 b - - 0 1
+go
+position fen 7k/8/8/8/8/8/8/K7 w - - 100 80
+go
+position startpos moves g1f3 g8f6 f3g1 f6g8 g1f3 g8f6 f3g1 f6g8
+go
+position fen 8/P6k/8/8/8/8/8/K7 w - - 0 1
+go nodes 1000
+position startpos moves e2e5
+position fen 8/P6k/8/8/8/8/8/K7 w - - 0 1 moves a1b1x
+position fen 8/8/8 w - - 0 1
+   go   nodes   2000   wtime 1000
+unknown command
+position startpos moves e2e4 c7c5
+quit
+go

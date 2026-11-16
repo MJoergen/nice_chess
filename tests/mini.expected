@@ -1,0 +1,21 @@
+id name nice_chess VERSION mini
+id author Michael Jorgensen
+uciok
+readyok
+bestmove c5d4
+bestmove a5c4
+bestmove f3f7
+info string result 1-0 checkmate
+bestmove 0000
+info string result 1/2-1/2 stalemate
+bestmove 0000
+info string result 1/2-1/2 fifty moves
+bestmove 0000
+info string result 1/2-1/2 repetition
+bestmove 0000
+bestmove a7a8q
+info string illegal move
+info string illegal move
+info string invalid FEN
+bestmove a7a8q
+exit 0

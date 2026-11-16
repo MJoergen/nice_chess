@@ -13,16 +13,17 @@ build without asserts statically, which needs glibc's static library:
 
     make             # list the targets
     make deps        # nice_cpu V2.2 and niceemu V2.2, and mchess2's test suites, into deps/
-    make all         # build/nice/ for niceemu, build/mega65/ for the MEGA65, build/host/chess_text for the host
+    make all         # build/nice/ for niceemu, build/mega65/ for the MEGA65, build/nexys/ for the Nexys4DDR, build/host/ for the host
     make test        # the tests, on the host and in niceemu
     make perft-deep  # the perft suite to depth 5 on the host (about a minute)
     make screen-game # a full game in the windowed front end, in niceemu (about a minute)
     make screen-uci  # the windowed front end as a UCI engine, by its keys, in niceemu (about 2 minutes)
     make match-random   # the host build against random moves
+    make match-mini     # the minimal build in niceemu against random moves (about a minute)
     make match-mchess2  # the host build against mchess2 (about 15 minutes)
     make openings    # the openings of make rate, 8moves_v3.pgn, into deps/books/
     make rate        # a rating of each level against Stockfish's UCI_Elo levels (hours; see below)
-    make size        # the size of the MEGA65 builds, against the 92K words the monitor leaves them
+    make size        # the size of the MEGA65 builds and of the Nexys4DDR's, against the 92K and 28K words the monitor leaves them
     make analyze PGNFILE=FILE  # Stockfish's scores of the games, and the patterns in the engine's play
     make profile     # the steps of each function in niceemu, on the 24 Bratko-Kopec positions (half a minute)
     make pieces      # draw the pieces again into src/ui/pieces.h, after a change to tools/mkpieces.py (needs Pillow)

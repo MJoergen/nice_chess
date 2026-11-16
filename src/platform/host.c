@@ -52,3 +52,10 @@ int platform_getc(void)
     unsigned char c;
     return read(0, &c, 1) == 1 ? c : -1;
 }
+
+void platform_putc(int c)
+{
+    unsigned char b = (unsigned char) c;
+    if (write(1, &b, 1) != 1)
+        return;
+}
