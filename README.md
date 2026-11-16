@@ -23,8 +23,10 @@ in each, and what it needs. The archive's directory has:
   `nice_chess-TAG.bin`, the windowed front end, and
   `nice_chess-text-TAG.bin`, the text front end. Up to V1.1 they were
   `CHESS.BIN` and `CHESST.BIN`.
-- `niceemu/`: both front ends for niceemu, under the same names (In
-  niceemu, below).
+- `niceemu/`: both front ends for niceemu (In niceemu, below):
+  `nice_chess-niceemu-TAG.bin` and `nice_chess-text-niceemu-TAG.bin`.
+  They are built for niceemu alone, and do not run under the MEGA65's
+  monitor.
 - `linux-x86_64/nice_chess`: the text front end on the host, linked
   statically: the same commands at a terminal, and a UCI engine for a
   chess GUI.
@@ -157,8 +159,8 @@ The front ends for niceemu run in the niceemu of nice_cpu's
 window build, `niceemu-window-V2.0-x86_64-linux.tar.gz`, runs both.
 From the archive:
 
-    niceemu --step-time niceemu/nice_chess-text-TAG.bin
-    niceemu --window --step-time niceemu/nice_chess-TAG.bin
+    niceemu --step-time niceemu/nice_chess-text-niceemu-TAG.bin
+    niceemu --window --step-time niceemu/nice_chess-niceemu-TAG.bin
 
 In the window, the keys are those of the MEGA65: the arrows, Enter,
 and Backspace for INST/DEL.

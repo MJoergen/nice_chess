@@ -28,8 +28,9 @@ release workflow sets `VERSION` to the tag.
       the windowed and the text front ends for the MEGA65, under
       NiceMonMEGA65's monitor, which loads them from the SD card by
       these long names;
-    - `niceemu/nice_chess-V1.0.bin` and `niceemu/nice_chess-text-V1.0.bin`,
-      the same front ends for niceemu;
+    - `niceemu/nice_chess-niceemu-V1.0.bin` and
+      `niceemu/nice_chess-text-niceemu-V1.0.bin`, the same front ends
+      for niceemu, which do not run under the monitor;
     - `linux-x86_64/nice_chess`, the text front end on the host,
       without asserts and linked statically, as a UCI engine;
     - `README.md`, `RELEASE_NOTES.md`, and `LICENSE`.
@@ -157,7 +158,7 @@ niceemu from it.
     (cd build/release/V1.0 && sha256sum -c SHA256SUMS && tar xzf nice_chess-V1.0.tar.gz)
     printf 'go depth 3\nquit\n' | build/release/V1.0/nice_chess-V1.0/linux-x86_64/nice_chess
     printf 'go depth 3\nquit\n' | deps/niceemu-V2.0-x86_64-linux/niceemu --step-time \
-        build/release/V1.0/nice_chess-V1.0/niceemu/nice_chess-text-V1.0.bin
+        build/release/V1.0/nice_chess-V1.0/niceemu/nice_chess-text-niceemu-V1.0.bin
 
 A tag is never moved, and a release is not deleted. A fix is the next
 release, or the release notes say what is wrong.

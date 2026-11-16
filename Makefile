@@ -400,9 +400,10 @@ board-match: build/mega65/chess_text.bin build/host/chess_text
 	  build/host/chess_text build/host/chess_text board:build/mega65/chess_text.bin
 
 # A release (doc/RELEASE.md): the archive nice_chess-VERSION.tar.gz,
-# whose directory holds the MEGA65 builds and the builds for niceemu,
-# each as nice_chess-VERSION.bin, the windowed front end, and
-# nice_chess-text-VERSION.bin, the text front end, the static
+# whose directory holds the MEGA65 builds, nice_chess-VERSION.bin the
+# windowed front end and nice_chess-text-VERSION.bin the text front
+# end, the builds for niceemu, with -niceemu after nice_chess and
+# nice_chess-text, which do not run under the monitor, the static
 # host build without asserts as nice_chess, a UCI engine for x86_64
 # Linux, and README.md, RELEASE_NOTES.md, and LICENSE; and SHA256SUMS.
 # The release workflow runs it with VERSION set to the tag, after the
@@ -415,8 +416,8 @@ dist: build/mega65/chess_text.bin build/mega65/chess_screen.bin build/nice/chess
 	  $(DIST)/nice_chess-$(VERSION)/linux-x86_64
 	cp build/mega65/chess_screen.bin $(DIST)/nice_chess-$(VERSION)/mega65/nice_chess-$(VERSION).bin
 	cp build/mega65/chess_text.bin $(DIST)/nice_chess-$(VERSION)/mega65/nice_chess-text-$(VERSION).bin
-	cp build/nice/chess_screen.bin $(DIST)/nice_chess-$(VERSION)/niceemu/nice_chess-$(VERSION).bin
-	cp build/nice/chess_text.bin $(DIST)/nice_chess-$(VERSION)/niceemu/nice_chess-text-$(VERSION).bin
+	cp build/nice/chess_screen.bin $(DIST)/nice_chess-$(VERSION)/niceemu/nice_chess-niceemu-$(VERSION).bin
+	cp build/nice/chess_text.bin $(DIST)/nice_chess-$(VERSION)/niceemu/nice_chess-text-niceemu-$(VERSION).bin
 	cp build/host/chess_fast $(DIST)/nice_chess-$(VERSION)/linux-x86_64/nice_chess
 	cp README.md RELEASE_NOTES.md LICENSE $(DIST)/nice_chess-$(VERSION)/
 	tar czf $(DIST)/nice_chess-$(VERSION).tar.gz -C $(DIST) --owner=0 --group=0 nice_chess-$(VERSION)
