@@ -157,7 +157,7 @@ niceemu from it.
     gh release download V1.0 --dir build/release/V1.0
     (cd build/release/V1.0 && sha256sum -c SHA256SUMS && tar xzf nice_chess-V1.0.tar.gz)
     printf 'go depth 3\nquit\n' | build/release/V1.0/nice_chess-V1.0/linux-x86_64/nice_chess
-    printf 'go depth 3\nquit\n' | deps/niceemu-V2.0-x86_64-linux/niceemu --step-time \
+    printf 'go depth 3\nquit\n' | deps/niceemu-V2.2-x86_64-linux/niceemu --step-time \
         build/release/V1.0/nice_chess-V1.0/niceemu/nice_chess-text-niceemu-V1.0.bin
 
 A tag is never moved, and a release is not deleted. A fix is the next

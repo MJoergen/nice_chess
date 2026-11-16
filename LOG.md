@@ -2,6 +2,24 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-16: nice_cpu V2.2
+
+The pin went from V2.0 to V2.2, for `--memory-bytes` (nice_cpu#165),
+before the minimal build of #28.
+
+- Size, by `make size`: the text front end has 21095 words of code,
+  40 more than at V2.0, and 2421 of data, 4 more. The windowed front
+  end has 20797 and 4001, 12 and 4 more. The peak stacks do not change.
+- Speed: `go nodes 200000` from the position of Kiwipete took
+  276832391 steps, 7390 more than at V2.0, with the same move, score,
+  and principal variation. That is 0.003%.
+- V2.2's `nicebuild.py` joins the float library of the FPU, which
+  NiceMonMEGA65 does not have. The text front end built with
+  `--no-fpu` is the same, word for word, so no float library is
+  joined, and the MEGA65 builds take no `--no-fpu`.
+- `make test`, `perft-deep`, `screen-game`, `screen-uci`, and
+  `match-random` pass, and no `*.expected` file changes.
+
 ## 2026-11-13: The fixes after the review of dev-V1.1
 
 A review of the branch gave 12 findings. What was measured for those

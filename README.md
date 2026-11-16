@@ -154,9 +154,9 @@ board. `go depth 4` or `go nodes 20000` are quicker. `book on` makes
 ## In niceemu
 
 The front ends for niceemu run in the niceemu of nice_cpu's
-[V2.0 release](https://github.com/MJoergen/nice_cpu/releases/tag/V2.0):
-`niceemu-V2.0-x86_64-linux.tar.gz` runs the text front end, and the
-window build, `niceemu-window-V2.0-x86_64-linux.tar.gz`, runs both.
+[V2.2 release](https://github.com/MJoergen/nice_cpu/releases/tag/V2.2):
+`niceemu-V2.2-x86_64-linux.tar.gz` runs the text front end, and the
+window build, `niceemu-window-V2.2-x86_64-linux.tar.gz`, runs both.
 From the archive:
 
     niceemu --step-time niceemu/nice_chess-text-niceemu-TAG.bin
@@ -198,7 +198,7 @@ From a checkout, `make deps all` fetches nice_cpu and niceemu into
 [CONTRIBUTING.md](https://github.com/MJoergen/nice_chess/blob/main/CONTRIBUTING.md)
 lists what that needs, and the tests:
 
-    deps/niceemu-V2.0-x86_64-linux/niceemu --step-time build/nice/chess_text.bin
+    deps/niceemu-V2.2-x86_64-linux/niceemu --step-time build/nice/chess_text.bin
 
 `build/mega65/chess_screen.bin` is `nice_chess-TAG.bin` of a release,
 and `build/mega65/chess_text.bin` `nice_chess-text-TAG.bin`; both load

@@ -35,7 +35,10 @@ date in make and undo.
    at first, V1.6 for the font of #12, and V2.0 after V1.0, for
    `nice_screen_clear` in the monitor's colors (nice_cpu#148). V2.0
    adds 2681 words to the text front end, for the float conversions of
-   its `printf`, and changes no output. From V1.3 niceemu's microsecond
+   its `printf`, and changes no output. V2.2 after V1.1, for
+   `--memory-bytes` (nice_cpu#165), with which the minimal build for
+   the Nexys4DDR (#28) reserves only the memory it uses. V2.2 changes
+   no output, and adds 40 words to the text front end. From V1.3 niceemu's microsecond
    counter counts the host's time, so the tests and tools run it with
    `--step-time`, where it counts steps as before.
 2. No copy of mchess2 in this repository. mchess2 is archived, and the
