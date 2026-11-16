@@ -132,8 +132,8 @@ with a game, the script loads the text front end, which plays on, and
 the screen no longer shows the game: that is so after a key pressed on
 the MEGA65's keyboard has changed the game there.
 
-A new bot's rating is 1500, and moves to its strength over its first
-games. Leave `rated` out of `challenge.modes` to play casual games
+A new bot's rating is provisional, 3000, and moves to its strength
+over its first rated games. Leave `rated` out of `challenge.modes` to play casual games
 only.
 
 ## While it runs
