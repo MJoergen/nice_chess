@@ -58,10 +58,12 @@ void platform_putc(int c);
 // The network: one UDP endpoint, at one local port, for remote play
 // (ui/remote.c). An IP address is a uint32_t, A.B.C.D as A in bits
 // 31..24, and 255.255.255.255 sends to everyone on the network. The
-// errors are negative. On a PC, host.c binds the endpoint to the
-// address in the environment variable NICE_CHESS_IP, or to every
-// address of the PC without it, so that two programs on one PC can
-// have the same port at 127.0.0.1 and 127.0.0.2.
+// errors are negative. On NICE, nice.c built with -D NICE_NET calls
+// the UDP entries of NiceMonMEGA65's monitor, and without it, or
+// without the monitor, the endpoint does not open. On a PC, host.c
+// binds the endpoint to the address in the environment variable
+// NICE_CHESS_IP, or to every address of the PC without it, so that two
+// programs on one PC can have the same port at 127.0.0.1 and 127.0.0.2.
 
 // Opens the endpoint at the port. Returns 0, or an error.
 int platform_net_open(unsigned port);

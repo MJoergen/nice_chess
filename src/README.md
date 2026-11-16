@@ -24,7 +24,9 @@
 - `platform/`: the clock, the default time of a move, the rate of the
   players' clocks, reads of the console, a byte at a time, which
   wait or not, and writes: `nice.c` for NICE, `host.c` for a PC, behind
-  `platform.h`, and a UDP endpoint for remote play, in `host.c` so far.
+  `platform.h`, and a UDP endpoint for remote play: a socket in `host.c`,
+  and in `nice.c`, built with `-D NICE_NET`, the monitor's UDP entries,
+  through the stubs of `net.nasm`.
   On NICE the time of a
   move is 300 million steps in niceemu and 5 seconds on a board, which
   `nice.c` tells apart by the ratio of the cycle counter to the
@@ -48,7 +50,9 @@
   the repeats, and checks the other side's moves and FEN against the
   engine.
 - `ui/peer.c`: a player of remote play whose engine plays its side. It
-  answers a NEW, or sends one, and prints the moves of the game.
+  answers a NEW, or sends one, and prints the moves of the game. It is
+  built for the host, for the Nexys4DDR (`build/nexys/chess_peer.bin`),
+  and for the MEGA65 (`build/mega65/chess_peer.bin`).
   On the host, `tools/remote_test.py` plays two of them against each
   other over the loopback.
 - `ui/screen.c`: the windowed front end, on the 80x25 screen, for NICE

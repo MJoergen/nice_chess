@@ -135,7 +135,7 @@ help:
 	@echo "  make deps          fetch nice_cpu $(NICE_CPU_TAG), niceemu $(NICE_CPU_TAG), and mchess2's test suites into deps/"
 	@echo "  make all           build both front ends, for niceemu, for the MEGA65, and for the host,"
 	@echo "                     the minimal build, for niceemu, for the Nexys4DDR, and for the host,"
-	@echo "                     and the player of remote play whose engine plays, for the host"
+	@echo "                     and the player of remote play whose engine plays, for the host, the Nexys4DDR, and the MEGA65"
 	@echo "  make test          the tests, on the host and in niceemu, and of tools/release.py"
 	@echo "  make perft-deep    the perft suite to depth 5 on the host (a minute)"
 	@echo "  make remote-relay  remote play on the host, through a relay that drops and doubles datagrams (30 seconds)"
@@ -194,7 +194,8 @@ FORCE:
 
 all: build/nice/chess_text.bin build/nice/chess_screen.bin build/host/chess_text \
      build/mega65/chess_text.bin build/mega65/chess_screen.bin \
-     build/nice/chess_mini.bin build/nexys/chess_mini.bin build/host/chess_mini build/host/chess_peer
+     build/nice/chess_mini.bin build/nexys/chess_mini.bin build/host/chess_mini build/host/chess_peer \
+     build/nexys/chess_peer.bin build/mega65/chess_peer.bin
 
 build/nice/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
@@ -226,6 +227,18 @@ build/nexys/chess_mini.bin: $(ENGINE) $(HEADERS) $(MINI) src/ui/miniuci.h src/pl
 build/nice/monstub.bin: $(NICE_CPU)/runtime/test/monitor.nasm $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(PYTHON) $(NICE_CPU)/assembler/niceasm.py -o $@ $<
+
+# Remote play's player whose engine plays (src/ui/peer.c), with the
+# monitor's UDP entries (src/platform/net.nasm): for the Nexys4DDR, in
+# its 28K words, as the minimal build, and for the MEGA65.
+PEERNET = -D NICE_NET --asm src/platform/net.nasm
+build/nexys/chess_peer.bin: $(ENGINE) $(HEADERS) $(PEER) src/ui/remote.h src/platform/nice.c src/platform/net.nasm $(VERSIONC) $(TOOLCHAIN)
+	@mkdir -p $(@D)
+	$(NICEBUILD) $(MINIFLAGS) --monitor $(PEERNET) -o $@ $(ENGINE) $(VERSIONC) $(PEER) src/platform/nice.c
+
+build/mega65/chess_peer.bin: $(ENGINE) $(HEADERS) $(PEER) src/ui/remote.h src/platform/nice.c src/platform/net.nasm $(VERSIONC) $(TOOLCHAIN)
+	@mkdir -p $(@D)
+	$(NICEBUILD) $(MONFLAGS) $(PEERNET) -o $@ $(ENGINE) $(VERSIONC) $(PEER) src/platform/nice.c
 
 build/test/mon_%.bin: build/nice/monstub.bin build/mega65/%.bin
 	@mkdir -p $(@D)
@@ -410,13 +423,16 @@ deps/mchess2/src/%:
 	curl -sSfL -o $@ $(MCHESS2_RAW)/$*
 
 size: build/mega65/chess_text.bin build/mega65/chess_screen.bin build/test/mon_chess_text.bin build/test/mon_chess_screen.bin \
-      build/nexys/chess_mini.bin build/test/nexys_chess_mini.bin | $(NICEEMU)
+      build/nexys/chess_mini.bin build/test/nexys_chess_mini.bin build/nexys/chess_peer.bin | $(NICEEMU)
 	$(PYTHON) tools/size.py --emu $(NICEEMU) --input tests/size.input --run build/test/mon_chess_text.bin \
 	  --budget $(BUDGET) --check build/mega65/chess_text.bin
 	$(PYTHON) tools/size.py --emu $(NICEEMU) --input tests/screen.keys --run build/test/mon_chess_screen.bin \
 	  --budget $(BUDGET) --check build/mega65/chess_screen.bin
 	$(PYTHON) tools/size.py --emu $(NICEEMU) --input tests/mini.input --run build/test/nexys_chess_mini.bin \
 	  --budget $(NEXYS_BUDGET) --check build/nexys/chess_mini.bin
+	@# The peer, without a run: in niceemu it has no network, and stops.
+	@# Its NICE stack is about the minimal build's, 277 words.
+	$(PYTHON) tools/size.py --budget $(NEXYS_BUDGET) --check build/nexys/chess_peer.bin
 
 # The board. load.py loads a program under the monitor and types r, which
 # runs it; what it prints then comes on the line, such as nc IP 4510 or

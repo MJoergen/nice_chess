@@ -2,6 +2,26 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-16: Remote play between the boards (#27)
+
+`src/ui/peer.c`, the player whose engine plays, with `src/ui/remote.c`,
+built for both boards with the monitor's UDP entries (`-D NICE_NET`),
+both under NiceMonMEGA65 V2.2: the R3 at 192.168.1.65, the Nexys4DDR
+at 192.168.1.66.
+
+- Size: the Nexys4DDR's build needs 26223 words of its 28627, before
+  the NICE stack, about 280 words: 12137 words of code before the
+  memory, 2232 more than the minimal build. About 2100 words are left.
+- The Nexys4DDR against the host's peer, over the LAN, at 5000 nodes a
+  move: the host sent HELLO? and NEW, and the game went to checkmate,
+  with the same moves in both logs.
+- The R3 (white, 20000 nodes) against the Nexys4DDR (black, 5000
+  nodes): 113 plies to checkmate by white, in under a minute, with
+  no error and no gone, and the same moves in both logs.
+- The board tools of a NiceMonMEGA65 checkout on dev-V2.2.1 type
+  `SYS 0x8000`, which the V2.2 monitor does not know (#29); a checkout
+  at tag V2.2 ran them.
+
 ## 2026-11-16: The minimal build for the Nexys4DDR
 
 The build of #28, `build/nexys/chess_mini.bin`: `src/ui/mini.c` and
