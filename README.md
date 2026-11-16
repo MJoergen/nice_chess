@@ -20,10 +20,11 @@ Each [release](https://github.com/MJoergen/nice_chess/releases) has
 in each, and what it needs. The archive's directory has:
 
 - `mega65/`: both front ends for the MEGA65:
-  `CHESS.BIN`, the windowed front end, and `CHESST.BIN`, the text
-  front end. They have 8.3 names, so the monitor loads them from the SD
-  card.
-- `niceemu/`: both front ends for niceemu (In niceemu, below).
+  `nice_chess-TAG.bin`, the windowed front end, and
+  `nice_chess-text-TAG.bin`, the text front end. Up to V1.1 they were
+  `CHESS.BIN` and `CHESST.BIN`.
+- `niceemu/`: both front ends for niceemu, under the same names (In
+  niceemu, below).
 - `linux-x86_64/nice_chess`: the text front end on the host, linked
   statically: the same commands at a terminal, and a UCI engine for a
   chess GUI.
@@ -33,16 +34,17 @@ banner of the text front end, and its UCI `id name`.
 
 ## On the MEGA65
 
-`CHESS.BIN` runs on the MEGA65 under the monitor of
+`nice_chess-TAG.bin` runs on the MEGA65 under the monitor of
 [NiceMonMEGA65](https://github.com/MJoergen/NiceMonMEGA65), V2.0 or
 later. The monitor loads it from a FAT32 SD card, so the board needs
 no host.
 
 On a PC, make the folder `NICE` in the root of the card and copy
-`CHESS.BIN` from the release into it. Put the card in the MEGA65 and
-type at the monitor's prompt:
+`mega65/nice_chess-TAG.bin` from the release into it. Put the card in
+the MEGA65 and type at the monitor's prompt, with the release's tag,
+such as:
 
-    load CHESS.BIN
+    load nice_chess-V1.2.bin
     r
 
 ## Playing
@@ -137,8 +139,8 @@ it; on the host, pondering was worth about 60 Elo at 10+0.1 (LOG.md).
 
 ## The text front end
 
-`CHESST.BIN` is the text front end. It loads from the SD card the same
-way as `CHESS.BIN`, but its terminal is the debug UART, or
+`nice_chess-text-TAG.bin` is the text front end. It loads from the SD
+card the same way as `nice_chess-TAG.bin`, but its terminal is the debug UART, or
 `nc IP 4510` over Ethernet, so it needs a host.
 
 Type `help` for the commands. Moves are in coordinate notation, such
@@ -155,8 +157,8 @@ The front ends for niceemu run in the niceemu of nice_cpu's
 window build, `niceemu-window-V2.0-x86_64-linux.tar.gz`, runs both.
 From the archive:
 
-    niceemu --step-time niceemu/chess_text.bin
-    niceemu --window --step-time niceemu/chess_screen.bin
+    niceemu --step-time niceemu/nice_chess-text-TAG.bin
+    niceemu --window --step-time niceemu/nice_chess-TAG.bin
 
 In the window, the keys are those of the MEGA65: the arrows, Enter,
 and Backspace for INST/DEL.
@@ -196,9 +198,10 @@ lists what that needs, and the tests:
 
     deps/niceemu-V2.0-x86_64-linux/niceemu --step-time build/nice/chess_text.bin
 
-`build/mega65/chess_screen.bin` is `CHESS.BIN`; renamed to an 8.3
-name, it loads from the SD card. The monitor gives a program 92K words
-of RAM.
+`build/mega65/chess_screen.bin` is `nice_chess-TAG.bin` of a release,
+and `build/mega65/chess_text.bin` `nice_chess-text-TAG.bin`; both load
+from the SD card under any name that ends in `.bin`. The monitor gives
+a program 92K words of RAM.
 
 ## The board from a host
 
