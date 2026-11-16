@@ -55,4 +55,27 @@ int platform_getc(void);
 // Writes a byte to the console. On a PC it is written at once.
 void platform_putc(int c);
 
+// The network: one UDP endpoint, at one local port, for remote play
+// (ui/remote.c). An IP address is a uint32_t, A.B.C.D as A in bits
+// 31..24, and 255.255.255.255 sends to everyone on the network. The
+// errors are negative. On a PC, host.c binds the endpoint to the
+// address in the environment variable NICE_CHESS_IP, or to every
+// address of the PC without it, so that two programs on one PC can
+// have the same port at 127.0.0.1 and 127.0.0.2.
+
+// Opens the endpoint at the port. Returns 0, or an error.
+int platform_net_open(unsigned port);
+
+// Sends n bytes as a datagram to the IP address, at the port of the
+// endpoint. Returns 0, or an error.
+int platform_net_send(uint32_t ip, const char *buf, int n);
+
+// Copies up to n bytes of the next datagram to buf, and its source's
+// IP address to *ip. Does not wait. Returns the number of bytes, 0 if
+// none waits, or an error.
+int platform_net_recv(char *buf, int n, uint32_t *ip);
+
+// Closes the endpoint.
+void platform_net_close(void);
+
 #endif // PLATFORM_H

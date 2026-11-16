@@ -21,6 +21,9 @@ monitor, and on the host. See README.md.
   `screen_game.py` plays a game through the keys, `size.py` checks the size, `screenshot.py` draws a
   screen dump as a PNG, in the font it selects, `mkpieces.py` draws
   the pieces as glyphs into `src/ui/pieces.h` (`make pieces`).
+  `remote_test.py` plays two host builds of `src/ui/peer.c` against
+  each other over UDP on the loopback, through a relay that drops
+  datagrams with `--relay` (`make remote-relay`).
   `release.py` scripts the release (`test_release.py` tests it, in
   `make test`).
   `analyze.py` has Stockfish score the games of a PGN, and reports

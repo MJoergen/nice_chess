@@ -24,7 +24,8 @@
 - `platform/`: the clock, the default time of a move, the rate of the
   players' clocks, reads of the console, a byte at a time, which
   wait or not, and writes: `nice.c` for NICE, `host.c` for a PC, behind
-  `platform.h`. On NICE the time of a
+  `platform.h`, and a UDP endpoint for remote play, in `host.c` so far.
+  On NICE the time of a
   move is 300 million steps in niceemu and 5 seconds on a board, which
   `nice.c` tells apart by the ratio of the cycle counter to the
   microsecond counter. The players' clocks count 54 million steps as a
@@ -41,6 +42,15 @@
   `ui/miniuci.c`, which runs a subset of UCI, a line in and a reply
   out, with no I/O and no printf. A front end on the network can take
   mini.c's place.
+- `ui/remote.c`: remote play (#27), a game against another board over
+  UDP, through the platform's network. `remote.h` specifies the
+  protocol. It sends each message again until its ACK comes, ignores
+  the repeats, and checks the other side's moves and FEN against the
+  engine.
+- `ui/peer.c`: a player of remote play whose engine plays its side. It
+  answers a NEW, or sends one, and prints the moves of the game.
+  On the host, `tools/remote_test.py` plays two of them against each
+  other over the loopback.
 - `ui/screen.c`: the windowed front end, on the 80x25 screen, for NICE
   only. Its keys are listed at the top of the file and on the screen.
   It copies the character ROM into the font RAM, writes the pieces over

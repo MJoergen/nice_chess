@@ -89,6 +89,8 @@ MONFLAGS = $(NICEFLAGS) --monitor
 MINIFLAGS = -O z -D NDEBUG -D TT_BITS=8 --no-bounds-checks --trust-alignment --byte-windows \
             --stack 8192 --memory 65536 --memory-bytes auto --symbols --keep
 MINI = src/ui/mini.c src/ui/miniuci.c
+# Remote play's player whose engine plays (#27), on the host for now.
+PEER = src/ui/peer.c src/ui/remote.c
 
 # The host: with asserts, and a check of the Zobrist key, the
 # evaluation's sums, and the captures-only move list at every node
@@ -124,7 +126,7 @@ STAMP     := $(shell date +%Y%m%d-%H%M%S)
 PGN        = $(PGNDIR)/$@-$(STAMP).pgn
 export CUTECHESS ORDO STOCKFISH NODES LEVELS STRENGTHS ELOS OPPONENTS GAMES CONCURRENCY BOOK
 
-.PHONY: FORCE help all test pieces host-test nice-test tools-test perft-deep screen-game screen-uci match-random match-mini match-mchess2 rate analyze openings size profile deps clean distclean
+.PHONY: FORCE help all test pieces host-test nice-test tools-test perft-deep remote-relay screen-game screen-uci match-random match-mini match-mchess2 rate analyze openings size profile deps clean distclean
 .PHONY: board-text board-screen board-test board-game board-match board-stockfish dist release-check
 help:
 	@echo "nice_chess: a chess engine for the NICE system"
@@ -132,9 +134,11 @@ help:
 	@echo "  make help          show this text (the default)"
 	@echo "  make deps          fetch nice_cpu $(NICE_CPU_TAG), niceemu $(NICE_CPU_TAG), and mchess2's test suites into deps/"
 	@echo "  make all           build both front ends, for niceemu, for the MEGA65, and for the host,"
-	@echo "                     and the minimal build, for niceemu, for the Nexys4DDR, and for the host"
+	@echo "                     the minimal build, for niceemu, for the Nexys4DDR, and for the host,"
+	@echo "                     and the player of remote play whose engine plays, for the host"
 	@echo "  make test          the tests, on the host and in niceemu, and of tools/release.py"
 	@echo "  make perft-deep    the perft suite to depth 5 on the host (a minute)"
+	@echo "  make remote-relay  remote play on the host, through a relay that drops and doubles datagrams (30 seconds)"
 	@echo "  make screen-game   a full game in the windowed front end, in niceemu (a minute)"
 	@echo "  make screen-uci    the windowed front end as a UCI engine, by its keys, in niceemu (2 games, 2 minutes)"
 	@echo "  make match-random  the host build against random moves (20 games)"
@@ -190,7 +194,7 @@ FORCE:
 
 all: build/nice/chess_text.bin build/nice/chess_screen.bin build/host/chess_text \
      build/mega65/chess_text.bin build/mega65/chess_screen.bin \
-     build/nice/chess_mini.bin build/nexys/chess_mini.bin build/host/chess_mini
+     build/nice/chess_mini.bin build/nexys/chess_mini.bin build/host/chess_mini build/host/chess_peer
 
 build/nice/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
@@ -274,6 +278,12 @@ build/host/chess_mini: $(ENGINE) $(HEADERS) $(MINI) src/ui/miniuci.h src/platfor
 	@mkdir -p $(@D)
 	$(CC) $(HOSTFLAGS) -DTT_BITS=8 -o $@ $(ENGINE) $(VERSIONC) $(MINI) src/platform/host.c
 
+# The player of remote play whose engine plays (src/ui/peer.c), which
+# the remote tests run twice, over the loopback.
+build/host/chess_peer: $(ENGINE) $(HEADERS) $(PEER) src/ui/remote.h src/platform/host.c $(VERSIONC)
+	@mkdir -p $(@D)
+	$(CC) $(HOSTFLAGS) -DTT_BITS=8 -o $@ $(ENGINE) $(VERSIONC) $(PEER) src/platform/host.c
+
 build/host/chess_fast: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/host.c $(VERSIONC)
 	@mkdir -p $(@D)
 	$(CC) $(FASTFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/text.c src/platform/host.c
@@ -296,12 +306,13 @@ test: host-test nice-test tools-test
 tools-test:
 	$(PYTHON) -m unittest discover -s tools -p 'test_*.py'
 
-host-test: build/host/chess_text build/host/chess_mini build/host/perftsuite build/host/searchsuite build/host/matesuite $(PERFTSUITE) $(SEARCHSUITE)
+host-test: build/host/chess_text build/host/chess_mini build/host/chess_peer build/host/perftsuite build/host/searchsuite build/host/matesuite $(PERFTSUITE) $(SEARCHSUITE)
 	@tools/runtest.sh host_text text tests/text.input host build/host/chess_text
 	@tools/runtest.sh host_search search tests/search.input host build/host/chess_text
 	@tools/runtest.sh host_search_end search_end tests/search_end.input host build/host/chess_text
 	@tools/runtest.sh host_book book tests/book.input host build/host/chess_text
 	@tools/runtest.sh host_mini mini tests/mini.input host build/host/chess_mini
+	@$(PYTHON) tools/remote_test.py host_remote build/host/chess_peer
 	@tools/runtest.sh host_perftsuite4 perftsuite4 $(PERFTSUITE) host build/host/perftsuite 4
 	@tools/runtest.sh host_searchsuite searchsuite $(SEARCHSUITE) host build/host/searchsuite 10000
 	@tools/runtest.sh host_matesuite matesuite tests/matesuite.input host build/host/matesuite $(MATESUITE_NODES)
@@ -331,6 +342,12 @@ nice-test: build/nice/chess_text.bin build/nice/chess_screen.bin build/nice/perf
 	@tools/runtest.sh mega65_book book tests/book.input nice build/test/mon_chess_text.bin
 	@tools/runtest.sh nice_mini mini tests/mini.input nice build/nice/chess_mini.bin
 	@tools/runtest.sh nexys_mini mini tests/mini.input nice build/test/nexys_chess_mini.bin
+
+# Remote play (#27): the game of host_remote, through a relay that
+# drops every fifth datagram and doubles every seventh, which must
+# change nothing. Each drop costs the 500 ms of a resend.
+remote-relay: build/host/chess_peer
+	@$(PYTHON) tools/remote_test.py host_remote_relay build/host/chess_peer --relay
 
 perft-deep: build/host/perftsuite $(PERFTSUITE)
 	@tools/runtest.sh host_perftsuite5 perftsuite5 $(PERFTSUITE) host build/host/perftsuite 5
