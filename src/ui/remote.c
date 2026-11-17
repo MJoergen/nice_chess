@@ -258,7 +258,9 @@ static const char *const words[] = {
 };
 
 // Parses the datagram in `in` from ip into msg. Returns 0 if it is not
-// a message to report, after the HELLO? and ACK, which it handles.
+// a message to report, after the HELLO?, the ACK, and the repeats,
+// which it handles. While a message is held, a new one is dropped
+// unacknowledged, and comes again.
 static int parse(uint32_t ip)
 {
     const char *s = in;
@@ -271,10 +273,12 @@ static int parse(uint32_t ip)
         send_hello(ip, "HELLO!");
         return 0;
     }
-    memset(&msg, 0, sizeof msg);
-    msg.ip = ip;
+    if (held && !strcmp(w, "HELLO!"))
+        return 0;
     if (!strcmp(w, "HELLO!"))
     {
+        memset(&msg, 0, sizeof msg);
+        msg.ip = ip;
         msg.type = REMOTE_HELLO;
         msg.version = (int) number(&s, &ok);
         if (*s == ' ')
@@ -305,6 +309,10 @@ static int parse(uint32_t ip)
         send_ack(ip, seq);
         return 0;
     }
+    if (held)
+        return 0;
+    memset(&msg, 0, sizeof msg);
+    msg.ip = ip;
     for (int i = 1; i < (int) (sizeof words / sizeof words[0]); i++)
         if (!strcmp(w, words[i]))
             msg.type = REMOTE_HELLO + i;
@@ -341,23 +349,26 @@ static int parse(uint32_t ip)
 const remote_msg_t *remote_poll(void)
 {
     resend();
-    if (held)
-        return &msg;
     uint32_t ip;
-    // A few datagrams a call, so that a burst does not wait.
-    for (int i = 0; i < 4; i++)
+    // A few datagrams a call, so that a burst does not wait. While a
+    // message is held, the ACKs are still taken in.
+    for (int i = 0; i < 4 && !held; i++)
     {
         int n = platform_net_recv(in, MSG_MAX, &ip);
         if (n <= 0)
             break;
         in[n] = '\0';
-        if (parse(ip))
-        {
-            held = 1;
-            return &msg;
-        }
+        held = parse(ip);
     }
-    return NULL;
+    for (int i = 0; i < 4 && held; i++)
+    {
+        int n = platform_net_recv(in, MSG_MAX, &ip);
+        if (n <= 0)
+            break;
+        in[n] = '\0';
+        parse(ip);
+    }
+    return held ? &msg : NULL;
 }
 
 void remote_done(void)

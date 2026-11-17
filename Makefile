@@ -204,17 +204,17 @@ build/nice/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/ui/remote.c sr
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(NICEFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/text.c src/ui/remote.c src/platform/nice.c
 
-build/nice/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/ui/pieces.h src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
+build/nice/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/ui/pieces.h src/ui/remote.c src/ui/remote.h src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
-	$(NICEBUILD) $(NICEFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/screen.c src/platform/nice.c
+	$(NICEBUILD) $(NICEFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/screen.c src/ui/remote.c src/platform/nice.c
 
 build/mega65/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/ui/remote.c src/platform/nice.c src/platform/net.nasm $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(MONFLAGS) $(PEERNET) -o $@ $(ENGINE) $(VERSIONC) src/ui/text.c src/ui/remote.c src/platform/nice.c
 
-build/mega65/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/ui/pieces.h src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
+build/mega65/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/ui/pieces.h src/ui/remote.c src/ui/remote.h src/platform/nice.c src/platform/net.nasm $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
-	$(NICEBUILD) $(MONFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/screen.c src/platform/nice.c
+	$(NICEBUILD) $(MONFLAGS) $(PEERNET) -o $@ $(ENGINE) $(VERSIONC) src/ui/screen.c src/ui/remote.c src/platform/nice.c
 
 build/nice/chess_mini.bin: $(ENGINE) $(HEADERS) $(MINI) src/ui/miniuci.h src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)

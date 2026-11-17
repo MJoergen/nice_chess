@@ -25,8 +25,25 @@
  *   T               the next time control, and a new game
  *   O               the opening book on or off (on at first)
  *   P               pondering on or off (on at first)
+ *   L               remote play: look for boards, and play the first
+ *                   that answers; again, the next one, or leave
  *   Q               quit, and clear the screen
  * The letters of commands act only when no move is being typed.
+ *
+ * Remote play (remote.h): with another board chosen by L, N asks it
+ * for a game, with this board playing the side the player has, and
+ * the time control; a board that asks this one starts a game at once.
+ * The other board then plays the other side, and in the game:
+ *   M               the engine (the machine) plays this side, or the
+ *                   player again
+ *   U               ask to take back this side's last move, before the
+ *                   other board replies; or agree to its asking
+ *   =               offer a draw, or accept the other board's offer
+ *   X               resign
+ * (A to H are the files of a typed move, so no command has them.)
+ * S is off. Each board keeps the clocks itself. The other board's move
+ * is checked, by its ply, its legality, and the FEN after it. The
+ * engine ponders on the other board's time, as on the player's.
  *
  * The pieces are glyphs of 3x3 characters, drawn by tools/mkpieces.py
  * (pieces.h): a white piece as its outline, and a black piece filled,
@@ -86,6 +103,7 @@
 #include "../engine/engine.h"
 #include "../platform/platform.h"
 #include "pieces.h"
+#include "remote.h"
 #include "version.h"
 
 /***************************************************************
@@ -117,6 +135,7 @@ enum
     ROW_STATUS = 3, ROW_LEVEL = 4, ROW_PONDER = 5,
     ROW_INFO = 6, ROW_PV = 7,                 // PV: two rows
     ROW_MOVES = 10, MOVE_ROWS = 9,            // Two columns of 9 moves
+    ROW_NET = 19,                             // Remote play
     ROW_INPUT = 20, ROW_MSG = 21, ROW_HELP = 22 // Help: three rows
 };
 
@@ -175,8 +194,32 @@ static int    control;             // The time control: an index of controls
 static int    strength = 1;       // Under a time control
 static uint32_t game_seed;         // Of the noise of a level or a strength
 
-// The result of a game lost on time, beside the engine's results.
-enum { RESULT_TIME = 16 };
+// The results of a game beside the engine's: lost on time, and those
+// of remote play.
+enum
+{
+    RESULT_TIME = 16,
+    RESULT_RESIGN,                 // r_loser resigned
+    RESULT_AGREED,                 // A draw by agreement
+    RESULT_BYE,                    // The other board left
+    RESULT_ERROR                   // The other board's move did not check
+};
+
+// Remote play (see the top, and "Remote play" below)
+static int    net_open;            // L opened the network
+static int    r_game;              // The other side is the other board's
+static int    r_asked;             // N sent NEW; the game starts at its ACCEPT
+static int    r_auto;              // M: the engine plays this side
+static int    r_over;              // A result of remote play, or 0
+static int    r_loser;             // Of RESULT_RESIGN: 1 white, -1 black
+static int    r_undo_in, r_draw_in;   // The other board asks
+static int    r_undo_out, r_draw_out; // This board asked
+static int    r_gone;              // The other board does not answer
+static char   r_fen[ENGINE_FEN_MAX];  // After its move, to check
+static int    r_fen_wait;
+#define MAX_FOUND 4
+static uint32_t r_found[MAX_FOUND];   // The boards that answered L
+static int    n_found;
 
 // The position the screen shows, and its legal moves. While the engine
 // ponders, its own board is in the search, so what is drawn, and the
@@ -250,6 +293,7 @@ static uint32_t clock_bonus[2];    // The seconds of increment each side has gai
 static int    flagged;             // 1 + the side whose time ran out, or 0
 
 static void log_result(void);
+static int remote_service(int in_ponder);
 
 /***************************************************************
  * Writing to the screen
@@ -409,10 +453,23 @@ static uint32_t clock_limit(int side)
     return controls[control].base + clock_bonus[side];
 }
 
-// The game's result: the engine's, or RESULT_TIME.
+// The game's result: the engine's, RESULT_TIME, or one of remote play.
 static int game_result(void)
 {
-    return flagged ? RESULT_TIME : view.result;
+    return flagged ? RESULT_TIME : r_over ? r_over : view.result;
+}
+
+// Whether the engine plays a side, 1 white or -1 black: the side the
+// player does not have, or in remote play this side, after M.
+static int engine_plays(int side)
+{
+    return r_game ? r_auto && side == human : side != human;
+}
+
+// Whether the player moves now.
+static int players_turn(void)
+{
+    return game_result() == ENGINE_PLAYING && view.side == human && !engine_plays(human);
 }
 
 // A player and their clock: "White  you          0:12", the side whose
@@ -422,7 +479,15 @@ static void draw_player(int side)
 {
     char buf[40];
     char *p = fmt_str(buf, side ? "Black  " : "White  ");
-    p = fmt_str(p, (human > 0) == !side ? "you" : "nice_chess");
+    int color = side ? -1 : 1;
+    char ip[16];
+    if (r_game && color != human)
+    {
+        remote_ip_to_str(remote_peer(), ip);
+        p = fmt_str(p, ip);
+    }
+    else
+        p = fmt_str(p, engine_plays(color) ? "nice_chess" : "you");
     while (p < buf + 20)
         *p++ = ' ';
     uint32_t s = clock_secs[side];
@@ -503,10 +568,17 @@ static const char *status_text(int result)
         case ENGINE_REPETITION: return "A draw by repetition.";
         case RESULT_TIME:       return flagged == 1 ? "White's time is up. Black wins."
                                                     : "Black's time is up. White wins.";
+        case RESULT_RESIGN:     return r_loser > 0 ? "White resigns. Black wins."
+                                                   : "Black resigns. White wins.";
+        case RESULT_AGREED:     return "A draw by agreement.";
+        case RESULT_BYE:        return "The other board left.";
+        case RESULT_ERROR:      return "The other board's move is wrong.";
         default: break;
     }
     if (thinking)
         return "Thinking... Esc: move now";
+    if (r_game && view.side != human)
+        return r_gone ? "The other board does not answer" : "The other board's move";
     if (view.in_check)
         return white ? "White to move, in check" : "Black to move, in check";
     return white ? "White to move" : "Black to move";
@@ -628,6 +700,30 @@ static void draw_input(void)
     draw_line(ROW_MSG, COLOR(PANEL, WARN), message);
 }
 
+// The row of remote play: what L, N, and the keys of the game do now.
+static void draw_net(void)
+{
+    char buf[48];
+    char ip[16];
+    remote_ip_to_str(remote_peer(), ip);
+    const char *s = "L: play another board";
+    if (net_open && !remote_peer())
+        s = "Looking for boards; L again";
+    else if (r_asked)
+    {
+        fmt_str(fmt_str(fmt_str(buf, "Asked "), ip), " for a game");
+        s = buf;
+    }
+    else if (r_game && game_result() == ENGINE_PLAYING)
+        s = r_auto ? "M you  = draw  X resign  L leave" : "M engine  = draw  X resign  L leave";
+    else if (net_open)
+    {
+        fmt_str(fmt_str(fmt_str(buf, "Board "), ip), ": N game, L next");
+        s = buf;
+    }
+    draw_line(ROW_NET, COLOR(PANEL, net_open ? TEXT : DIM), s);
+}
+
 static void draw_all(void)
 {
     draw_board();
@@ -639,7 +735,7 @@ static void draw_all(void)
     draw_ponder();
     draw_info();
     draw_moves();
-    draw_line(ROW_INPUT - 1, COLOR(PANEL, TEXT), "");
+    draw_net();
     draw_input();
     draw_line(ROW_HELP,     COLOR(PANEL, DIM), "Arrows+Enter or e2e4: move  Q quit");
     draw_line(ROW_HELP + 1, COLOR(PANEL, DIM), "U undo  S switch  R rotate  N new");
@@ -738,9 +834,14 @@ static int wait_key(void)
         return k;
     }
     // K_NONE when a side's time runs out, for the screen to show it.
+    // K_NONE too when the other board's message changed the screen.
     int k, was = flagged;
     while ((k = poll_key()) == K_NONE && flagged == was)
+    {
         clock_tick();
+        if (remote_service(0))
+            return K_NONE;
+    }
     return k;
 }
 
@@ -772,6 +873,7 @@ static void log_result(void)
 }
 
 static void ponder_hit(void);
+static void remote_moved(int side, move_t m);
 
 // Plays a move, unless the mover's time ran out first, and gives the
 // mover the increment. While the engine ponders, the player's move is
@@ -801,6 +903,7 @@ static void play(move_t m)
     log_move(m);
     if (game_result() != ENGINE_PLAYING)
         log_result();
+    remote_moved(side ? -1 : 1, m);
 }
 
 static void new_game(void)
@@ -816,6 +919,7 @@ static void new_game(void)
     game_seed = platform_seed();
     clock_last = platform_micros();
     have_info = 0;
+    r_over = r_undo_in = r_draw_in = r_undo_out = r_draw_out = r_fen_wait = 0;
     clear_selection();
 }
 
@@ -867,6 +971,15 @@ static int stop_search(void)
         clock_tick();
         if (flagged)
             return 1;
+        // The other board's move is a hit or a miss, as the player's;
+        // another message stops the search, and waits.
+        if (net_open && remote_service(1))
+        {
+            if (!pondering)
+                return 0;
+            if (ponder_stop || ponder_miss)
+                return 1;
+        }
         int queued = n_ahead > 0;
         int k = queued ? wait_key() : poll_key();
         if (k == K_NONE)
@@ -891,6 +1004,8 @@ static int stop_search(void)
         return ponder_stop || ponder_miss || !ponder_on;
     }
     clock_tick();
+    if (net_open)
+        remote_poll(); // The ACKs and resends; a message waits
     if (flagged || elapsed() >= hard_time)
         return 1;
     if (!live)
@@ -941,10 +1056,15 @@ static void set_times(void)
 
 // Plays the move that the search found, and keeps the reply it
 // expects, the second move of its principal variation, to ponder on.
+static void remote_check(void);
+
 static void engine_moved(move_t m)
 {
     thinking = 0;
-    if (!m)
+    // After a ponder hit, the other board's move is checked now, with
+    // the engine's board back at the position after it.
+    remote_check();
+    if (!m || game_result() != ENGINE_PLAYING)
         return;
     play(m);
     if (have_info == 1 && info.pv_len >= 2 && info.pv[0] == m)
@@ -1041,6 +1161,353 @@ static void ponder(void)
 }
 
 /***************************************************************
+ * Remote play: the other board plays the side the player does not
+ * have. Its moves come in as the player's do, through play, so a
+ * ponder on its time hits or misses as on the player's.
+ ***************************************************************/
+static int same(const char *a, const char *b)
+{
+    while (*a && *a == *b)
+        ++a, ++b;
+    return *a == *b;
+}
+
+// The time control as NEW gives it: none, or base+inc in minutes and
+// seconds, such as 3+2.
+static void tc_name(char *buf, int c)
+{
+    if (!c)
+        fmt_str(buf, "none");
+    else
+        fmt_uint(fmt_str(fmt_uint(buf, controls[c].base / 60), "+"), controls[c].inc);
+}
+
+// The milliseconds left on a side's clock, 1 white or -1 black, under
+// a time control, and 0 without one.
+static uint32_t ms_left(int color)
+{
+    if (!control)
+        return 0;
+    int side = color < 0;
+    uint32_t limit = clock_limit(side) * 1000, used = clock_ms(side);
+    return limit > used ? limit - used : 0;
+}
+
+static void remote_error(void)
+{
+    r_over = RESULT_ERROR;
+    r_fen_wait = 0;
+    remote_send("BYE", "");
+    log_result();
+    ponder_stop = 1;
+}
+
+// Compares the FEN after the other board's move with the engine's.
+static void remote_check(void)
+{
+    if (!r_fen_wait)
+        return;
+    r_fen_wait = 0;
+    char fen[ENGINE_FEN_MAX];
+    engine_get_fen(fen);
+    if (!same(fen, r_fen))
+        remote_error();
+}
+
+// After play: this side's move goes to the other board, and the other
+// board's is checked.
+static void remote_moved(int color, move_t m)
+{
+    if (!r_game || !net_open)
+        return;
+    if (color != human)
+    {
+        remote_check();
+        return;
+    }
+    remote_send_move(m, ms_left(color));
+    if (r_draw_in)
+    {
+        remote_send("NO", ""); // A move declines the offer
+        r_draw_in = 0;
+    }
+}
+
+// The other board's move: legal in the view, at this ply, and played
+// as the player's would be, its FEN checked after it.
+static void remote_arrived(const remote_msg_t *m)
+{
+    move_t mv = m->ply == n_played ? view_move(m->move) : 0;
+    char b[8];
+    if (mv)
+        engine_move_to_str(mv, b);
+    if (!mv || !same(b, m->move))
+    {
+        remote_error();
+        return;
+    }
+    fmt_str(r_fen, m->fen);
+    r_fen_wait = 1;
+    r_undo_out = 0; // A move after UNDO? refuses it
+    play(mv);
+}
+
+static void remote_start(int color)
+{
+    human = color;
+    flipped = human < 0;
+    new_game();
+    r_game = 1;
+    r_asked = 0;
+}
+
+// Takes back the last move, of either side.
+static void undo_one(void)
+{
+    if (!n_played)
+        return;
+    engine_undo();
+    --n_played;
+    snapshot(&view);
+    expected = 0;
+    have_info = 0;
+    clear_selection();
+}
+
+static void remote_handle(const remote_msg_t *m)
+{
+    int playing = r_game && game_result() == ENGINE_PLAYING;
+    switch (m->type)
+    {
+    case REMOTE_HELLO:
+    {
+        int known = 0;
+        for (int i = 0; i < n_found; ++i)
+            known |= r_found[i] == m->ip;
+        if (!known && n_found < MAX_FOUND)
+            r_found[n_found++] = m->ip;
+        if (!remote_peer())
+            remote_connect(m->ip);
+        break;
+    }
+    case REMOTE_NEW:
+        remote_connect(m->ip);
+        control = 0;
+        for (int c = 1; c < N_CONTROLS; ++c)
+        {
+            char tc[8];
+            tc_name(tc, c);
+            if (same(tc, m->tc))
+                control = c;
+        }
+        remote_send("ACCEPT", "");
+        remote_start(-m->color);
+        message = "A new game from the other board.";
+        break;
+    case REMOTE_ACCEPT:
+        if (r_asked)
+            remote_start(human);
+        break;
+    case REMOTE_MOVE:
+        if (playing && view.side != human)
+            remote_arrived(m);
+        break;
+    case REMOTE_RESIGN:
+        if (playing)
+        {
+            r_over = RESULT_RESIGN;
+            r_loser = -human;
+            log_result();
+        }
+        break;
+    case REMOTE_DRAW_OFFER:
+        if (!playing)
+            break;
+        if (r_auto)
+            remote_send("NO", "");
+        else
+        {
+            r_draw_in = 1;
+            message = "A draw offered: = accepts.";
+        }
+        break;
+    case REMOTE_DRAW_ACCEPT:
+        if (playing && r_draw_out)
+        {
+            r_over = RESULT_AGREED;
+            log_result();
+        }
+        break;
+    case REMOTE_UNDO_ASK:
+        // Only right after the other board's move, before the reply.
+        if (playing && view.side == human && !r_auto && n_played)
+        {
+            r_undo_in = 1;
+            message = "Take back its move? U agrees.";
+        }
+        else
+            remote_send("NO", "");
+        break;
+    case REMOTE_UNDO_AGREE:
+        if (playing && r_undo_out)
+        {
+            r_undo_out = 0;
+            undo_one();
+        }
+        break;
+    case REMOTE_NO:
+        if (r_undo_out || r_draw_out)
+            message = "Refused.";
+        r_undo_out = r_draw_out = 0;
+        break;
+    case REMOTE_BYE:
+        if (playing)
+        {
+            r_over = RESULT_BYE;
+            log_result();
+        }
+        r_asked = 0;
+        break;
+    default:
+        break;
+    }
+}
+
+// Takes in the other board's messages. During a ponder, a move is
+// played as the player's would be, and any other message stops the
+// search and waits for after it. Returns 1 if the screen changed.
+static int remote_service(int in_ponder)
+{
+    if (!net_open)
+        return 0;
+    int changed = 0;
+    if (remote_gone() != r_gone)
+    {
+        r_gone = !r_gone;
+        changed = 1;
+    }
+    const remote_msg_t *m = remote_poll();
+    if (!m)
+        return changed;
+    if (in_ponder && m->type != REMOTE_MOVE)
+    {
+        ponder_stop = 1;
+        return 1;
+    }
+    remote_handle(m);
+    remote_done();
+    return 1;
+}
+
+// L, leaving: the game goes on against the engine.
+static void remote_leave(void)
+{
+    if (r_game && game_result() == ENGINE_PLAYING)
+        remote_send("BYE", "");
+    uint32_t t = platform_micros();
+    while (remote_pending() && !remote_gone()
+           && platform_micros() - t < 2 * platform_clock_second())
+        remote_poll();
+    remote_close();
+    net_open = r_game = r_asked = r_auto = n_found = 0;
+    remote_connect(0);
+    message = "Left the network.";
+}
+
+// L: open the network and look for boards, or the next board that
+// answered, or leave.
+static void key_net(void)
+{
+    if (!net_open)
+    {
+        if (remote_open("full"))
+        {
+            message = "No network.";
+            return;
+        }
+        net_open = 1;
+        n_found = r_gone = 0;
+        remote_hello(REMOTE_BROADCAST);
+        return;
+    }
+    if (!remote_peer())
+    {
+        remote_hello(REMOTE_BROADCAST);
+        return;
+    }
+    if (!r_game || game_result() != ENGINE_PLAYING)
+        for (int i = 0; i + 1 < n_found; ++i)
+            if (r_found[i] == remote_peer())
+            {
+                remote_connect(r_found[i + 1]);
+                r_game = 0;
+                return;
+            }
+    remote_leave();
+}
+
+// N with another board: ask it for a game, with this side and the time
+// control. The game starts at its ACCEPT.
+static void key_new_remote(void)
+{
+    char tc[8];
+    tc_name(tc, control);
+    r_asked = remote_send_new(human, tc) == 0;
+}
+
+// U in remote play: agree to take back the other board's move, or ask
+// to take back this side's.
+static void key_undo_remote(void)
+{
+    if (game_result() != ENGINE_PLAYING)
+        message = "The game is over.";
+    else if (r_undo_in)
+    {
+        r_undo_in = 0;
+        remote_send("UNDO!", "");
+        undo_one();
+    }
+    else if (view.side != human && n_played)
+    {
+        remote_send("UNDO?", "");
+        r_undo_out = 1;
+        message = "Asked to take back.";
+    }
+    else
+        message = "Only your move, before the reply.";
+}
+
+// =: offer a draw, or accept the other board's offer.
+static void key_draw(void)
+{
+    if (game_result() != ENGINE_PLAYING)
+        return;
+    if (r_draw_in)
+    {
+        remote_send("DRAW!", "");
+        r_over = RESULT_AGREED;
+        log_result();
+    }
+    else
+    {
+        remote_send("DRAW?", "");
+        r_draw_out = 1;
+        message = "A draw offered.";
+    }
+}
+
+// X: resign.
+static void key_resign(void)
+{
+    if (game_result() != ENGINE_PLAYING)
+        return;
+    remote_send("RESIGN", "");
+    r_over = RESULT_RESIGN;
+    r_loser = human;
+    log_result();
+}
+
+/***************************************************************
  * The keys
  ***************************************************************/
 
@@ -1049,7 +1516,7 @@ static void enter_typed(void)
 {
     typed[n_typed] = '\0';
     move_t m = view_move(typed);
-    if (m && (game_result() != ENGINE_PLAYING || view.side != human))
+    if (m && !players_turn())
         m = 0;
     if (m)
         play(m);
@@ -1066,7 +1533,7 @@ static void enter_typed(void)
 static void enter_square(void)
 {
     int sq = sq_index(cur_file, cur_rank);
-    if (game_result() != ENGINE_PLAYING || view.side != human)
+    if (!players_turn())
         return;
 
     if (selected >= 0 && targets[sq])
@@ -1163,7 +1630,8 @@ static int handle_key(int k)
     }
     else if (n_typed)
         message = "Type a move such as e2e4.";
-    else if (pondering && (k == 'q' || k == 'u' || k == 'n' || k == 's' || k == 't'))
+    else if (pondering && (k == 'q' || k == 'u' || k == 'n' || k == 's' || k == 't'
+                           || k == 'l' || k == 'x'))
         ponder_stop = 1; // After the search, from ahead
     else switch (k)
     {
@@ -1175,17 +1643,51 @@ static int handle_key(int k)
             nice_poke(FONT_BASE, 0);
             nice_screen_clear();
             return 0;
-        case 'u': undo(); break;
-        case 'n': new_game(); break;
+        case 'u':
+            if (r_game)
+                key_undo_remote();
+            else
+                undo();
+            break;
+        case 'n':
+            if (net_open && remote_peer())
+                key_new_remote();
+            else
+                new_game();
+            break;
         case 'r': flipped = !flipped; break;
         case 's':
+            if (r_game)
+            {
+                message = "Not in remote play.";
+                break;
+            }
             human = -human;
             flipped = human < 0;
             clear_selection();
             break;
         case 't':
+            if (r_game && game_result() == ENGINE_PLAYING)
+            {
+                message = "Not during a remote game.";
+                break;
+            }
+            r_game = 0;
             control = (control + 1) % N_CONTROLS;
             new_game();
+            break;
+        case 'l': key_net(); break;
+        case 'm':
+            if (r_game)
+                r_auto = !r_auto;
+            break;
+        case '=':
+            if (r_game)
+                key_draw();
+            break;
+        case 'x':
+            if (r_game)
+                key_resign();
             break;
         case '+':
         case '-':
@@ -1215,7 +1717,7 @@ int main(void)
     {
         clock_switch();
         draw_all();
-        if (game_result() == ENGINE_PLAYING && view.side != human)
+        if (game_result() == ENGINE_PLAYING && engine_plays(view.side))
         {
             think();
             continue;
@@ -1231,6 +1733,8 @@ int main(void)
         if (k == K_END || !handle_key(k))
             break;
     }
+    if (net_open)
+        remote_leave();
     set_cursor(0, 0, 0);
     char fen[ENGINE_FEN_MAX];
     engine_get_fen(fen);

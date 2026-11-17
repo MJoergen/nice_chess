@@ -82,6 +82,7 @@ The other keys are on the screen:
 - T: the next time control, and a new game.
 - O: the opening book on or off.
 - P: pondering on or off.
+- L: play another board over the network (Remote play, below).
 - ESC: make the engine move now.
 - Q: clear the screen and return to the monitor.
 
@@ -169,8 +170,8 @@ board. `go depth 4` or `go nodes 20000` are quicker. `book on` makes
 ## Remote play
 
 Two boards on one network play a game against each other over UDP,
-port 4511, each board one side. The MEGA65's text front end plays a
-remote game; on the Nexys4DDR, `build/nexys/chess_peer.bin` is a
+port 4511, each board one side. Both of the MEGA65's front ends play
+remote games; on the Nexys4DDR, `build/nexys/chess_peer.bin` is a
 player whose engine plays, and which answers any board that asks for
 a game. Each board needs an IP address first, from the monitor's DHCP
 or `i A.B.C.D`. The protocol is in `src/ui/remote.h`.
@@ -195,8 +196,17 @@ In the text front end:
 
 The lines `game white|black`, `move M` for each move of the game, and
 `result R REASON` are the log of the game, the same on both boards.
-`UCI` mode has no remote games, and the windowed front end has none
-yet.
+`UCI` mode has no remote games.
+
+In the windowed front end, `L` opens the network and looks for boards,
+and the first that answers is the other board, as the row above "Your
+move" shows; `L` again chooses the next that answered, or leaves. `N`
+asks the other board for a game, with this board playing the side you
+have, under the time control of `T`. In the game, `M` lets the engine
+play this side, or you again; `U` asks to take back your last move, or
+agrees to the other board's asking; `=` offers a draw, or accepts one;
+`X` resigns. `S` is off. The engine ponders on the other board's time.
+Each board keeps both clocks itself.
 
 ## In niceemu
 

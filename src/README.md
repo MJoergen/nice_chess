@@ -57,7 +57,8 @@
   On the host, `tools/remote_test.py` plays two of them against each
   other over the loopback.
 - `ui/screen.c`: the windowed front end, on the 80x25 screen, for NICE
-  only. Its keys are listed at the top of the file and on the screen.
+  only, and remote play by its keys, with `ui/remote.c`. Its keys are
+  listed at the top of the file and on the screen.
   It copies the character ROM into the font RAM, writes the pieces over
   the codes 0x80 to 0xEB, and shows the font RAM (nice_cpu's SYSTEM.md
   §1.8). Each piece is 3x3 glyphs: a white piece its outline, a black

@@ -2,6 +2,18 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-17: The windowed front end in remote play (#27)
+
+The R3's windowed front end (`build/mega65/chess_screen.bin`, level 1,
+book on, ponder on) against the Nexys4DDR's peer (20000 nodes), by the
+keys L, N, and M, with a pause after each: 72 plies to checkmate by
+the Nexys4DDR, as black, in 41 seconds, the same moves in both logs.
+The screen showed the other board's address as black's player.
+
+The first run stopped after N: A and D, the keys first chosen for the
+engine and the draw, are files of a typed move, so A began a move
+instead. They are M and = now.
+
 ## 2026-11-17: The text front end in remote play (#27)
 
 The text front end's `remote` commands, on the R3 (192.168.1.65,

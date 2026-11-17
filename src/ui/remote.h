@@ -127,8 +127,9 @@ int remote_gone(void);
 
 // Receives and sends: the ACKs, the answers to HELLO?, and the
 // messages that are due again. Does not wait. Returns the next
-// message from the other board, or NULL. The message stays valid,
-// and no other is taken in, until remote_done.
+// message from the other board, or NULL. The message stays valid
+// until remote_done; until then the ACKs are taken in, and a new
+// message is dropped without its ACK, so that it comes again.
 const remote_msg_t *remote_poll(void);
 void remote_done(void);
 
