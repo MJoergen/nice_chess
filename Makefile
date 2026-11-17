@@ -130,7 +130,7 @@ PGN        = $(PGNDIR)/$@-$(STAMP).pgn
 export CUTECHESS ORDO STOCKFISH NODES LEVELS STRENGTHS ELOS OPPONENTS GAMES CONCURRENCY BOOK
 
 .PHONY: FORCE help all test pieces host-test nice-test tools-test perft-deep remote-relay screen-game screen-uci match-random match-mini match-mchess2 rate analyze openings size profile deps clean distclean
-.PHONY: board-text board-screen board-test board-game board-match board-stockfish dist release-check
+.PHONY: board-text board-screen board-test board-game board-match board-stockfish board-remote dist release-check
 help:
 	@echo "nice_chess: a chess engine for the NICE system"
 	@echo ""
@@ -170,11 +170,13 @@ help:
 	@echo "  make board-test    the tests of both front ends, on the board"
 	@echo "  make board-game    a full game in the windowed front end, on the board (a few minutes)"
 	@echo "  make board-match   the text front end on the board against the host build, in UCI"
+	@echo "  make board-remote  remote play: the text front end at ETH against the peer at ETH2=IP, over UDP"
+	@echo "                     (a Nexys4DDR's by default, PEER2=build/mega65/chess_peer.bin for a MEGA65)"
 	@echo "  make board-stockfish  a game on the board's screen against Stockfish (ELO=1800, MOVETIME=1000 ms, BLACK=1: it is black)"
 	@echo "  make release-check board-test and board-match, and the stamp that tools/release.py tag needs"
 	@echo "                    (doc/RELEASE.md)"
 	@echo ""
-	@echo "The matches (match-*, screen-uci, rate, board-match, board-game, board-stockfish) write their games"
+	@echo "The matches (match-*, screen-uci, rate, board-match, board-game, board-stockfish, board-remote) write their games"
 	@echo "to games/TARGET-YYYYMMDD-HHMMSS.pgn (PGNDIR=DIR another directory)."
 	@echo ""
 	@echo "NICE_CPU=DIR and NICEEMU=PATH use local copies of nice_cpu and niceemu."
@@ -445,6 +447,18 @@ board-text: build/mega65/chess_text.bin
 
 board-screen: build/mega65/chess_screen.bin
 	$(PYTHON) $(NICEMON)/tools/load.py $(BOARDLINK) --monitor $<
+
+# Remote play (#27) between two boards on one network: the text front
+# end at ETH, white, by remote auto at 2 seconds a move, against the
+# peer at ETH2, black, at its 20000 nodes. The moves and the result
+# must be the same in both logs, and legal.
+PEER2 ?= build/nexys/chess_peer.bin
+board-remote: build/mega65/chess_text.bin $(PEER2) build/host/chess_text
+	@mkdir -p $(PGNDIR)
+	$(PYTHON) tools/board_remote.py $(if $(NICEMON),--nicemon $(NICEMON)) \
+	  --eth $(or $(ETH),$(error ETH=IP names the board of the text front end)) \
+	  --eth2 $(or $(ETH2),$(error ETH2=IP names the board of the peer)) \
+	  --peer $(PEER2) --pgn $(PGN)
 
 board-test: build/mega65/chess_text.bin build/mega65/chess_screen.bin
 	@BOARDLINK="$(BOARDLINK)" tools/runtest.sh board_text text tests/text.input board build/mega65/chess_text.bin

@@ -279,6 +279,7 @@ its debug UART with NiceMonMEGA65's tools, from a checkout of it
     make board-game ETH=192.168.1.65     # a full game by the keys, through the link (a few minutes)
     make board-match ETH=192.168.1.65    # two UCI games against the host build (about 15 minutes)
     make board-stockfish ETH=192.168.1.65  # a game on the board's screen against Stockfish
+    make board-remote ETH=192.168.1.65 ETH2=192.168.1.66  # remote play: the MEGA65 against the Nexys4DDR
 
 `make board-stockfish` plays the windowed front end on the board
 against Stockfish (`STOCKFISH`) at UCI_Elo `ELO` (1800) and `MOVETIME` ms

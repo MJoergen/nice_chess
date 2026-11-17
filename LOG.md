@@ -2,6 +2,14 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-17: make board-remote (#27)
+
+`make board-remote ETH=192.168.1.65 ETH2=192.168.1.66`: the R3's text
+front end, white, by `remote auto movetime 2000`, against the
+Nexys4DDR's peer, black, at 20000 nodes: 153 plies to checkmate by
+white, in 217 seconds. The logs agreed, and the host's referee found
+every move legal.
+
 ## 2026-11-17: The windowed front end in remote play (#27)
 
 The R3's windowed front end (`build/mega65/chess_screen.bin`, level 1,
