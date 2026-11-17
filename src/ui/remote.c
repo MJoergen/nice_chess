@@ -170,6 +170,20 @@ int remote_send_new(int color, const char *tc)
     return remote_send("NEW", b);
 }
 
+const char *remote_result(void)
+{
+    int how = engine_result();
+    if (how == ENGINE_CHECKMATE)
+        return engine_side_to_move() > 0 ? "0-1 checkmate" : "1-0 checkmate";
+    if (how == ENGINE_STALEMATE)
+        return "1/2-1/2 stalemate";
+    if (how == ENGINE_FIFTY)
+        return "1/2-1/2 fifty moves";
+    if (how == ENGINE_REPETITION)
+        return "1/2-1/2 repetition";
+    return NULL;
+}
+
 int remote_ply(void)
 {
     char fen[ENGINE_FEN_MAX];

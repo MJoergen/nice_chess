@@ -13,9 +13,16 @@
  *   divide N        perft N, for each legal move
  *   book            the moves of the opening book for the position
  *   book on|off     whether go plays a move of the book (off at first)
+ *   remote [IP]     remote play: look for boards, or connect to one
+ *   remote auto [LIMITS]  the engine plays this side of a remote game,
+ *                   with the limits of go; remote auto off stops it
+ *   remote off      leave remote play
  *   uci             switch to UCI (see below)
  *   help
  *   quit
+ *
+ * In a remote game (see "Remote play" below), new [w|b], move M, go,
+ * undo, draw, no, and resign speak to the other board.
  *
  * The limits of go are those of UCI: depth N, nodes N, movetime MS,
  * wtime MS, btime MS, winc MS, binc MS, movestogo N, and infinite.
@@ -59,6 +66,7 @@
 #include <string.h>
 #include "../engine/engine.h"
 #include "../platform/platform.h"
+#include "remote.h"
 #include "version.h"
 
 static const char piece_chars[] = "kqrbnp.PNBRQK";
@@ -68,6 +76,13 @@ static int own_book = 0;
 static int strength = ENGINE_STRENGTH_MAX;
 static int noise;                  // At full strength (engine_set_noise)
 static uint32_t game_seed;         // Of the noise, new for each game
+
+// Remote play (below): whether the network is open, the work it does
+// while the console has no line, and whether it still has work after
+// the end of the input.
+static int net_open;
+static void remote_service(void);
+static int remote_busy(void);
 
 /***************************************************************
  * next_word
@@ -131,7 +146,15 @@ static int read_line(char *s)
 {
     while (!in_ready)
     {
-        int c = platform_getc();
+        // With the network open, it is served while no byte waits, and
+        // after the end of the input, until the game and its messages
+        // are done.
+        int c = net_open ? platform_pollc() : platform_getc();
+        if (c == -2 || (c == -1 && net_open && remote_busy()))
+        {
+            remote_service();
+            continue;
+        }
         if (c < 0)
         {
             if (!in_len)
@@ -394,6 +417,9 @@ static int heard(int r)
 
 static int stop_search(void)
 {
+    // The network's ACKs and resends; a message that comes waits.
+    if (net_open)
+        remote_poll();
     if ((hard_time && elapsed() >= hard_time) || heard(poll_input()))
         return 1;
     // With no limit, a line that waits, or the end of the input (see
@@ -574,6 +600,366 @@ static void print_bestmove(move_t m)
     fflush(stdout);
 }
 
+/***************************************************************
+ * Remote play (remote.h): a game against another board, which
+ * plays the other side. In it, new, move, go, undo, draw, no, and
+ * resign speak to the other board, and the other board's moves are
+ * printed as they come. The lines "game white|black", "move M" for
+ * each move of the game, and "result R REASON" are those of
+ * src/ui/peer.c too.
+ ***************************************************************/
+static int r_color;        // The local side: 1 white, -1 black
+static int r_playing;      // A game is on
+static int r_asked;        // NEW is sent, and the ACCEPT not yet in
+static int r_undo_in;      // The other board asks to take back
+static int r_draw_in;      // The other board offers a draw
+static int r_undo_out;     // This side asked to take back
+static int r_draw_out;     // This side offered a draw
+static int r_auto;         // The engine plays the local side
+static char r_auto_go[128]; // With these limits of go
+static int r_gone;
+static uint32_t r_heard;   // When the last message came
+
+static void r_over(const char *how)
+{
+    printf("result %s\n", how);
+    fflush(stdout);
+    r_playing = r_undo_in = r_draw_in = r_undo_out = r_draw_out = 0;
+}
+
+static void r_check_end(void)
+{
+    const char *how = remote_result();
+    if (how)
+        r_over(how);
+}
+
+static void r_start(int color)
+{
+    r_color = color;
+    r_playing = 1;
+    r_asked = r_undo_in = r_draw_in = r_undo_out = r_draw_out = 0;
+    printf("game %s\n", color > 0 ? "white" : "black");
+    fflush(stdout);
+}
+
+// Makes the local side's move, and sends it.
+static void r_move(move_t m)
+{
+    char buf[8];
+    if (engine_make_move(m))
+    {
+        r_over("* too long");
+        return;
+    }
+    engine_move_to_str(m, buf);
+    printf("move %s\n", buf);
+    remote_send_move(m, 0);
+    if (r_draw_in)
+    {
+        remote_send("NO", ""); // A move declines the draw
+        r_draw_in = 0;
+    }
+    r_check_end();
+}
+
+static int my_turn(void)
+{
+    return r_playing && engine_side_to_move() == r_color;
+}
+
+// Waits for the local side's turn, while the game goes on.
+static void wait_turn(void)
+{
+    while (r_playing && !my_turn())
+        remote_service();
+}
+
+static void r_handle(const remote_msg_t *m)
+{
+    char ip[16];
+    remote_ip_to_str(m->ip, ip);
+    switch (m->type)
+    {
+    case REMOTE_HELLO:
+        printf("hello %s %s\n", ip, m->kind);
+        break;
+    case REMOTE_NEW:
+        remote_connect(m->ip);
+        new_game();
+        remote_send("ACCEPT", "");
+        printf("New game from %s\n", ip);
+        r_start(-m->color);
+        break;
+    case REMOTE_ACCEPT:
+        if (r_asked)
+        {
+            new_game();
+            r_start(r_color);
+        }
+        break;
+    case REMOTE_MOVE:
+        if (!r_playing || my_turn())
+            break;
+        {
+            int r = remote_take_move(m);
+            if (r != REMOTE_OK)
+            {
+                printf("error %s %s\n", r == REMOTE_ILLEGAL ? "illegal move" : "FEN after", m->move);
+                remote_send("BYE", "");
+                r_playing = 0;
+                break;
+            }
+            printf("move %s\n", m->move);
+            r_undo_out = 0; // A move after UNDO? refuses it
+            if (!r_auto)
+                print_board();
+            r_check_end();
+        }
+        break;
+    case REMOTE_RESIGN:
+        if (r_playing)
+            r_over(r_color > 0 ? "1-0 resigns" : "0-1 resigns");
+        break;
+    case REMOTE_DRAW_OFFER:
+        if (!r_playing)
+            break;
+        if (r_auto)
+            remote_send("NO", "");
+        else
+        {
+            r_draw_in = 1;
+            printf("%s offers a draw: draw accepts, no refuses\n", ip);
+        }
+        break;
+    case REMOTE_DRAW_ACCEPT:
+        if (r_playing && r_draw_out)
+            r_over("1/2-1/2 agreed");
+        break;
+    case REMOTE_UNDO_ASK:
+        // Only right after the other board's move, before the reply.
+        if (!my_turn() || r_auto)
+            remote_send("NO", "");
+        else
+        {
+            r_undo_in = 1;
+            printf("%s asks to take back its move: undo agrees, no refuses\n", ip);
+        }
+        break;
+    case REMOTE_UNDO_AGREE:
+        if (r_playing && r_undo_out)
+        {
+            engine_undo();
+            r_undo_out = 0;
+            printf("Taken back\n");
+            print_board();
+        }
+        break;
+    case REMOTE_NO:
+        if (r_undo_out || r_draw_out)
+            printf("Refused\n");
+        r_undo_out = r_draw_out = 0;
+        break;
+    case REMOTE_BYE:
+        if (r_playing)
+        {
+            printf("bye\n");
+            r_playing = 0;
+        }
+        r_asked = 0;
+        break;
+    default:
+        break;
+    }
+    fflush(stdout);
+}
+
+static void remote_service(void)
+{
+    const remote_msg_t *m = remote_poll();
+    if (m)
+    {
+        r_heard = platform_micros();
+        r_handle(m);
+        remote_done();
+    }
+    if (remote_gone() != r_gone)
+    {
+        r_gone = !r_gone;
+        printf(r_gone ? "gone\n" : "back\n");
+        fflush(stdout);
+    }
+    if (r_auto && my_turn() && !r_undo_out)
+    {
+        char args[sizeof r_auto_go];
+        strcpy(args, r_auto_go);
+        r_move(do_go(args));
+    }
+}
+
+// Whether the network has work after the end of the input: a game,
+// messages that wait for their ACK, or a message in the last 2
+// seconds, whose repeats it answers.
+static int remote_busy(void)
+{
+    return r_playing || r_asked || remote_pending()
+        || platform_micros() - r_heard < 2 * platform_clock_second();
+}
+
+// remote, remote IP, remote auto [LIMITS], remote auto off, remote off
+static void do_remote(char *arg)
+{
+    if (uci_mode)
+        return;
+    if (!strcmp(arg, "off"))
+    {
+        if (!net_open)
+            return;
+        if (r_playing)
+            remote_send("BYE", "");
+        r_playing = r_asked = r_auto = 0;
+        uint32_t t = platform_micros();
+        while (remote_pending() && !remote_gone()
+               && platform_micros() - t < 2 * platform_clock_second())
+            remote_service();
+        remote_close();
+        net_open = 0;
+        return;
+    }
+    if (!strncmp(arg, "auto", 4) && (arg[4] == '\0' || arg[4] == ' '))
+    {
+        arg += 4;
+        while (*arg == ' ')
+            arg++;
+        r_auto = strcmp(arg, "off") != 0;
+        if (r_auto)
+            snprintf(r_auto_go, sizeof r_auto_go, "%s", arg);
+        return;
+    }
+    if (!net_open)
+    {
+        if (remote_open("full"))
+        {
+            printf("No network\n");
+            return;
+        }
+        net_open = 1;
+        r_heard = platform_micros();
+    }
+    if (*arg)
+    {
+        uint32_t ip = remote_parse_ip(arg);
+        if (!ip)
+        {
+            printf("Not an IP address: %s\n", arg);
+            return;
+        }
+        remote_connect(ip);
+        remote_hello(ip);
+        printf("Connected to %s\n", arg);
+    }
+    else
+    {
+        remote_hello(REMOTE_BROADCAST);
+        printf("Looking for boards\n");
+    }
+}
+
+// The commands of a remote game. Returns 0 for a command that it does
+// not take, which then runs as usual.
+static int remote_command(const char *cmd, char *arg)
+{
+    if (!net_open || uci_mode || !remote_peer())
+        return 0;
+    if (!strcmp(cmd, "new"))
+    {
+        r_color = *arg == 'b' ? -1 : 1;
+        r_playing = 0;
+        r_asked = remote_send_new(r_color, "none") == 0;
+        if (!r_asked)
+        {
+            printf("The queue is full\n");
+            return 1;
+        }
+        // The game starts at the ACCEPT, before the next command.
+        while (r_asked && !remote_gone())
+            remote_service();
+        if (r_asked)
+        {
+            printf("No answer\n");
+            r_asked = 0;
+        }
+        return 1;
+    }
+    if (!r_playing)
+        return 0;
+    if (!strcmp(cmd, "move") || looks_like_move(cmd) || !strcmp(cmd, "go"))
+    {
+        wait_turn();
+        if (!r_playing)
+            return 1;
+        if (!strcmp(cmd, "go"))
+        {
+            move_t m = do_go(arg);
+            print_bestmove(m);
+            r_move(m);
+            return 1;
+        }
+        move_t m = engine_parse_move(strcmp(cmd, "move") ? cmd : arg, NULL);
+        if (m)
+            r_move(m);
+        else
+            printf("Illegal move: %s\n", strcmp(cmd, "move") ? cmd : arg);
+        return 1;
+    }
+    if (!strcmp(cmd, "undo"))
+    {
+        if (r_undo_in)
+        {
+            engine_undo();
+            remote_send("UNDO!", "");
+            r_undo_in = 0;
+            print_board();
+        }
+        else if (!my_turn() && remote_ply() > 0)
+        {
+            remote_send("UNDO?", "");
+            r_undo_out = 1;
+        }
+        else
+            printf("Only your last move, before the reply\n");
+        return 1;
+    }
+    if (!strcmp(cmd, "draw"))
+    {
+        if (r_draw_in)
+        {
+            remote_send("DRAW!", "");
+            r_over("1/2-1/2 agreed");
+        }
+        else
+        {
+            remote_send("DRAW?", "");
+            r_draw_out = 1;
+        }
+        return 1;
+    }
+    if (!strcmp(cmd, "no"))
+    {
+        if (r_undo_in || r_draw_in)
+            remote_send("NO", "");
+        r_undo_in = r_draw_in = 0;
+        return 1;
+    }
+    if (!strcmp(cmd, "resign"))
+    {
+        remote_send("RESIGN", "");
+        r_over(r_color > 0 ? "0-1 resigns" : "1-0 resigns");
+        return 1;
+    }
+    return 0;
+}
+
 int main(void)
 {
     static char line[sizeof in_line];
@@ -600,6 +986,10 @@ int main(void)
 
         if (*cmd == '\0')
             continue;
+        else if (remote_command(cmd, arg))
+            continue;
+        else if (!strcmp(cmd, "remote"))
+            do_remote(arg);
         else if (!strcmp(cmd, "quit"))
             break;
         else if (!strcmp(cmd, "uci"))
@@ -677,12 +1067,16 @@ int main(void)
         else if (!strcmp(cmd, "help"))
             printf("Commands: new, fen FEN, show, moves, move M (or just M), undo,\n"
                    "go [depth N | nodes N | movetime MS | ...], perft N, divide N,\n"
-                   "book [on | off], uci, help, quit\n");
+                   "book [on | off], remote [IP | auto [LIMITS] | auto off | off],\n"
+                   "uci, help, quit\n"
+                   "In a remote game: new [w | b], move M, go, undo, draw, no, resign\n");
         else if (looks_like_move(cmd))
             do_move(cmd);
         else
             printf("Unknown command: %s. Type help for the commands.\n", cmd);
     }
 
+    if (net_open)
+        do_remote("off");
     return 0;
 }

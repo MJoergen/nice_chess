@@ -2,6 +2,16 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-17: The text front end in remote play (#27)
+
+The text front end's `remote` commands, on the R3 (192.168.1.65,
+`build/mega65/chess_text.bin`, `remote auto movetime 2000`, white)
+against the Nexys4DDR's peer (192.168.1.66, 20000 nodes, black): 107
+plies to checkmate by white, in 2 minutes 38 seconds, with no error
+and no gone, and the same moves in both logs. On the host, a person's
+moves, a draw and an undo that the peer refused, and a resignation
+went as the log of the peer shows.
+
 ## 2026-11-16: Remote play between the boards (#27)
 
 `src/ui/peer.c`, the player whose engine plays, with `src/ui/remote.c`,

@@ -89,8 +89,11 @@ MONFLAGS = $(NICEFLAGS) --monitor
 MINIFLAGS = -O z -D NDEBUG -D TT_BITS=8 --no-bounds-checks --trust-alignment --byte-windows \
             --stack 8192 --memory 65536 --memory-bytes auto --symbols --keep
 MINI = src/ui/mini.c src/ui/miniuci.c
-# Remote play's player whose engine plays (#27), on the host for now.
+# Remote play's player whose engine plays (#27).
 PEER = src/ui/peer.c src/ui/remote.c
+# The network on the boards: the monitor's UDP entries, through the stubs
+# of src/platform/net.nasm, for the builds of remote play under the monitor.
+PEERNET = -D NICE_NET --asm src/platform/net.nasm
 
 # The host: with asserts, and a check of the Zobrist key, the
 # evaluation's sums, and the captures-only move list at every node
@@ -197,17 +200,17 @@ all: build/nice/chess_text.bin build/nice/chess_screen.bin build/host/chess_text
      build/nice/chess_mini.bin build/nexys/chess_mini.bin build/host/chess_mini build/host/chess_peer \
      build/nexys/chess_peer.bin build/mega65/chess_peer.bin
 
-build/nice/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
+build/nice/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/ui/remote.c src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
-	$(NICEBUILD) $(NICEFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/text.c src/platform/nice.c
+	$(NICEBUILD) $(NICEFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/text.c src/ui/remote.c src/platform/nice.c
 
 build/nice/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/ui/pieces.h src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(NICEFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/screen.c src/platform/nice.c
 
-build/mega65/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
+build/mega65/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/ui/remote.c src/platform/nice.c src/platform/net.nasm $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
-	$(NICEBUILD) $(MONFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/text.c src/platform/nice.c
+	$(NICEBUILD) $(MONFLAGS) $(PEERNET) -o $@ $(ENGINE) $(VERSIONC) src/ui/text.c src/ui/remote.c src/platform/nice.c
 
 build/mega65/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/ui/pieces.h src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
@@ -229,9 +232,8 @@ build/nice/monstub.bin: $(NICE_CPU)/runtime/test/monitor.nasm $(TOOLCHAIN)
 	$(PYTHON) $(NICE_CPU)/assembler/niceasm.py -o $@ $<
 
 # Remote play's player whose engine plays (src/ui/peer.c), with the
-# monitor's UDP entries (src/platform/net.nasm): for the Nexys4DDR, in
+# network (PEERNET): for the Nexys4DDR, in
 # its 28K words, as the minimal build, and for the MEGA65.
-PEERNET = -D NICE_NET --asm src/platform/net.nasm
 build/nexys/chess_peer.bin: $(ENGINE) $(HEADERS) $(PEER) src/ui/remote.h src/platform/nice.c src/platform/net.nasm $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(MINIFLAGS) --monitor $(PEERNET) -o $@ $(ENGINE) $(VERSIONC) $(PEER) src/platform/nice.c
@@ -283,9 +285,9 @@ $(BOOKDATA): build/host/mkbook src/engine/book.txt
 	build/host/mkbook < src/engine/book.txt > $@.tmp
 	mv $@.tmp $@
 
-build/host/chess_text: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/host.c $(VERSIONC)
+build/host/chess_text: $(ENGINE) $(HEADERS) src/ui/text.c src/ui/remote.c src/platform/host.c $(VERSIONC)
 	@mkdir -p $(@D)
-	$(CC) $(HOSTFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/text.c src/platform/host.c
+	$(CC) $(HOSTFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/text.c src/ui/remote.c src/platform/host.c
 
 build/host/chess_mini: $(ENGINE) $(HEADERS) $(MINI) src/ui/miniuci.h src/platform/host.c $(VERSIONC)
 	@mkdir -p $(@D)
@@ -297,9 +299,9 @@ build/host/chess_peer: $(ENGINE) $(HEADERS) $(PEER) src/ui/remote.h src/platform
 	@mkdir -p $(@D)
 	$(CC) $(HOSTFLAGS) -DTT_BITS=8 -o $@ $(ENGINE) $(VERSIONC) $(PEER) src/platform/host.c
 
-build/host/chess_fast: $(ENGINE) $(HEADERS) src/ui/text.c src/platform/host.c $(VERSIONC)
+build/host/chess_fast: $(ENGINE) $(HEADERS) src/ui/text.c src/ui/remote.c src/platform/host.c $(VERSIONC)
 	@mkdir -p $(@D)
-	$(CC) $(FASTFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/text.c src/platform/host.c
+	$(CC) $(FASTFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/text.c src/ui/remote.c src/platform/host.c
 
 build/host/perftsuite: $(ENGINE) $(HEADERS) tests/perftsuite.c
 	@mkdir -p $(@D)
@@ -325,7 +327,8 @@ host-test: build/host/chess_text build/host/chess_mini build/host/chess_peer bui
 	@tools/runtest.sh host_search_end search_end tests/search_end.input host build/host/chess_text
 	@tools/runtest.sh host_book book tests/book.input host build/host/chess_text
 	@tools/runtest.sh host_mini mini tests/mini.input host build/host/chess_mini
-	@$(PYTHON) tools/remote_test.py host_remote build/host/chess_peer
+	@$(PYTHON) tools/remote_test.py host_remote remote build/host/chess_peer
+	@$(PYTHON) tools/remote_test.py host_remote_text remote_text build/host/chess_peer --text build/host/chess_text
 	@tools/runtest.sh host_perftsuite4 perftsuite4 $(PERFTSUITE) host build/host/perftsuite 4
 	@tools/runtest.sh host_searchsuite searchsuite $(SEARCHSUITE) host build/host/searchsuite 10000
 	@tools/runtest.sh host_matesuite matesuite tests/matesuite.input host build/host/matesuite $(MATESUITE_NODES)
@@ -360,7 +363,7 @@ nice-test: build/nice/chess_text.bin build/nice/chess_screen.bin build/nice/perf
 # drops every fifth datagram and doubles every seventh, which must
 # change nothing. Each drop costs the 500 ms of a resend.
 remote-relay: build/host/chess_peer
-	@$(PYTHON) tools/remote_test.py host_remote_relay build/host/chess_peer --relay
+	@$(PYTHON) tools/remote_test.py host_remote_relay remote build/host/chess_peer --relay
 
 perft-deep: build/host/perftsuite $(PERFTSUITE)
 	@tools/runtest.sh host_perftsuite5 perftsuite5 $(PERFTSUITE) host build/host/perftsuite 5

@@ -86,15 +86,9 @@ static void game_over(const char *how)
 // Ends the game if the position has ended it.
 static void check_end(void)
 {
-    int how = engine_result();
-    if (how == ENGINE_CHECKMATE)
-        game_over(engine_side_to_move() > 0 ? "0-1 checkmate" : "1-0 checkmate");
-    else if (how == ENGINE_STALEMATE)
-        game_over("1/2-1/2 stalemate");
-    else if (how == ENGINE_FIFTY)
-        game_over("1/2-1/2 fifty moves");
-    else if (how == ENGINE_REPETITION)
-        game_over("1/2-1/2 repetition");
+    const char *r = remote_result();
+    if (r)
+        game_over(r);
 }
 
 static void print_move(move_t m)

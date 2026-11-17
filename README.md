@@ -166,6 +166,38 @@ board. `go depth 4` or `go nodes 20000` are quicker. `book on` makes
 `go` play from the opening book, where the position is in it, and
 `book` lists its moves.
 
+## Remote play
+
+Two boards on one network play a game against each other over UDP,
+port 4511, each board one side. The MEGA65's text front end plays a
+remote game; on the Nexys4DDR, `build/nexys/chess_peer.bin` is a
+player whose engine plays, and which answers any board that asks for
+a game. Each board needs an IP address first, from the monitor's DHCP
+or `i A.B.C.D`. The protocol is in `src/ui/remote.h`.
+
+In the text front end:
+
+- `remote` looks for boards, and lists those that answer;
+  `remote IP` connects to one, and `remote off` leaves.
+- `new w` or `new b` asks the other board for a game, with this side
+  white or black. The game starts when it accepts. A board that asks
+  this one for a game starts one at once.
+- In the game, `move M` (or just `M`) and `go` play this side, and
+  wait for its turn. The other board's moves are printed as they come,
+  with the board.
+- `remote auto` lets the engine play this side, with the limits of
+  `go` after it, such as `remote auto movetime 2000`; `remote auto off`
+  stops it.
+- `undo` asks to take back this side's last move, before the other
+  board replies; `draw` offers a draw; `resign` resigns. `undo` and
+  `draw` agree to the other board's request, and `no` refuses it.
+  The Nexys4DDR's player refuses them.
+
+The lines `game white|black`, `move M` for each move of the game, and
+`result R REASON` are the log of the game, the same on both boards.
+`UCI` mode has no remote games, and the windowed front end has none
+yet.
+
 ## In niceemu
 
 The front ends for niceemu run in the niceemu of nice_cpu's
@@ -221,6 +253,8 @@ from the SD card under any name that ends in `.bin`. The monitor gives
 a program 92K words of RAM. `build/nexys/chess_mini.bin` is
 `nice_chess-nexys-TAG.bin`, and `build/nice/chess_mini.bin` and
 `build/host/chess_mini` are the same build for niceemu and the host.
+`build/nexys/chess_peer.bin` and `build/mega65/chess_peer.bin` are the
+player of remote play, and `build/host/chess_peer` the host's.
 
 ## The board from a host
 

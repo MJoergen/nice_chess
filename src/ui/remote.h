@@ -137,6 +137,10 @@ void remote_done(void);
 // position unchanged.
 int remote_take_move(const remote_msg_t *m);
 
+// The result of the game in the engine, as "R REASON", such as
+// "1-0 checkmate" or "1/2-1/2 repetition", or NULL while it goes on.
+const char *remote_result(void);
+
 // The ply of the position in the engine, from its FEN: 0 at the start.
 int remote_ply(void);
 

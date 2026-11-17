@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
-"""remote_test.py NAME PEER [--relay]: a test of remote play (#27) on
-the host.
+"""remote_test.py NAME CHECK PEER [--text TEXT] [--relay]: a test of
+remote play (#27) on the host.
 
 Two host builds of the peer (src/ui/peer.c), PEER, play each other over
 the loopback: B at 127.0.0.2, which waits, and A at 127.0.0.1, which
 sends HELLO? and NEW, and plays white. Both search 2000 nodes a move,
 with seeds of their own for the opening book, so the game is the same
 every time. Both bind UDP port 4511, at their own addresses.
+
+With --text, A is the host build of the text front end, TEXT, which
+connects with remote, asks with new w, and plays by remote auto, at
+2000 nodes a move, without the book.
 
 With --relay, A plays through a relay at 127.0.0.3, which passes each
 datagram on to the other side, but drops every fifth of each direction
@@ -15,11 +19,13 @@ game the same as without it.
 
 The moves and the result of A and of B must be the same, and A's lines
 of hello, game, move, result, error, and bye must be
-tests/remote.expected. Prints PASS or FAIL, and exits with 1 on a
+tests/CHECK.expected, after the prompts "> " are taken off. Prints PASS or FAIL, and exits with 1 on a
 failure. Only the Python standard library is used.
 """
 
+import argparse
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -70,12 +76,19 @@ def run(peer: str, ip: str, commands: str, path: str) -> subprocess.Popen:
 
 
 def lines(out: str) -> list[str]:
+    out = re.sub(r"^(> )+", "", out, flags=re.M)
     return [line for line in out.splitlines() if line.split(" ")[0] in LINES]
 
 
 def main() -> None:
-    name, peer = sys.argv[1], sys.argv[2]
-    use_relay = "--relay" in sys.argv[3:]
+    ap = argparse.ArgumentParser()
+    ap.add_argument("name")
+    ap.add_argument("check")
+    ap.add_argument("peer")
+    ap.add_argument("--text")
+    ap.add_argument("--relay", action="store_true")
+    args = ap.parse_args()
+    name, peer, use_relay = args.name, args.peer, args.relay
     stop = threading.Event()
     counts = {"dropped": 0, "doubled": 0}
     t = None
@@ -85,8 +98,12 @@ def main() -> None:
     other = RELAY_IP if use_relay else B_IP
     os.makedirs("build/test", exist_ok=True)
     b = run(peer, B_IP, "seed 2\nnodes 2000\n", f"build/test/{name}_b.input")
-    a = run(peer, A_IP, f"seed 1\nnodes 2000\nhello {other}\nconnect {other}\nnew w\n",
-            f"build/test/{name}_a.input")
+    if args.text:
+        a = run(args.text, A_IP, f"remote {other}\nnew w\nremote auto nodes 2000\n",
+                f"build/test/{name}_a.input")
+    else:
+        a = run(peer, A_IP, f"seed 1\nnodes 2000\nhello {other}\nconnect {other}\nnew w\n",
+                f"build/test/{name}_a.input")
     try:
         out_a, _ = a.communicate(timeout=TIMEOUT)
         out_b, _ = b.communicate(timeout=TIMEOUT)
@@ -103,7 +120,7 @@ def main() -> None:
     got = lines(out_a)
     with open(f"build/test/{name}.out", "w") as f:
         f.write("\n".join(got) + "\n")
-    with open("tests/remote.expected") as f:
+    with open(f"tests/{args.check}.expected") as f:
         expected = f.read().splitlines()
     # In A's log the hello names the relay; B is 127.0.0.2 behind it.
     got_cmp = [line.replace(RELAY_IP, B_IP) for line in got]
@@ -117,7 +134,7 @@ def main() -> None:
     if moves(got) != moves(lines(out_b)):
         problems.append("A and B differ in the moves or the result")
     if got_cmp != expected:
-        problems.append("A's lines differ from tests/remote.expected")
+        problems.append(f"A's lines differ from tests/{args.check}.expected")
     if use_relay and not counts["dropped"]:
         problems.append("the relay dropped nothing")
     extra = f" ({counts['dropped']} dropped, {counts['doubled']} doubled)" if use_relay else ""
