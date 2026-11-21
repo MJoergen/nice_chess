@@ -1,0 +1,55 @@
+# The talk of tools/remote_talk.py: two text front ends in a remote
+# game, A at 127.0.0.1 and B at 127.0.0.2.
+B> remote
+B< Looking for boards
+A> remote 127.0.0.2
+A< hello 127.0.0.2 full
+A> new w
+B< game black
+A< game white
+A> e2e4
+B< move e2e4
+
+# A asks to take back e2e4, and B plays on, which refuses it.
+A> undo
+B< 127.0.0.1 asks to take back its move
+B> e7e5
+A< move e7e5
+
+# So B's undo asks for its own e7e5 back, and A agrees.
+B> undo
+A< 127.0.0.2 asks to take back its move
+A> undo
+B< Taken back
+B> c7c5
+A< move c7c5
+
+# A takes back g1f3, with B's agreement.
+A> g1f3
+B< move g1f3
+A> undo
+B< 127.0.0.1 asks to take back its move
+B> undo
+A< Taken back
+A> b1c3
+B< move b1c3
+
+# A draw offered, and refused by a move, and by no.
+A> draw
+B< 127.0.0.1 offers a draw
+B> b8c6
+A< move b8c6
+A< Refused
+B> draw
+A< 127.0.0.2 offers a draw
+A> no
+B< Refused
+
+# A draw agreed.
+A> g1f3
+B< move g1f3
+B> draw
+A< 127.0.0.2 offers a draw
+A> draw
+A< result 1/2-1/2 agreed
+B< result 1/2-1/2 agreed

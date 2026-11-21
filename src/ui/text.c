@@ -660,6 +660,7 @@ static void r_move(move_t m)
         remote_send("NO", ""); // A move declines the draw
         r_draw_in = 0;
     }
+    r_undo_in = 0; // And refuses to take back: the other board reads the move so
     r_check_end();
 }
 

@@ -36,7 +36,8 @@
   `build/gen/version.c`, which the Makefile writes (`VERSION`).
 - `ui/text.c`: the text front end, on the console, and UCI, and
   remote play (`remote`), with `ui/remote.c`. `help` lists
-  its commands. During a search it reads the console, every 1024 nodes,
+  its commands. On the host, `tools/remote_talk.py` runs two of them
+  in a remote game. During a search it reads the console, every 1024 nodes,
   for stop, and for ponderhit after `go ponder`. A search with no limit
   also ends when another line comes, such as quit, and at the end of
   the input.

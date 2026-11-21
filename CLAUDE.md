@@ -24,7 +24,9 @@ monitor, and on the host. See README.md.
   `remote_test.py` plays two host builds of `src/ui/peer.c` against
   each other over UDP on the loopback, or the text front end against
   one (`--text`), through a relay that drops datagrams with `--relay`
-  (`make remote-relay`). `board_remote.py` plays two boards against
+  (`make remote-relay`). `remote_talk.py` runs two host builds of the
+  text front end in a remote game, by the steps of
+  `tests/remote_talk.input`. `board_remote.py` plays two boards against
   each other in remote play (`make board-remote ETH=IP ETH2=IP2`).
   `release.py` scripts the release (`test_release.py` tests it, in
   `make test`).

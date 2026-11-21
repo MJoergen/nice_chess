@@ -1231,6 +1231,7 @@ static void remote_moved(int color, move_t m)
         remote_send("NO", ""); // A move declines the offer
         r_draw_in = 0;
     }
+    r_undo_in = 0; // And refuses to take back: the other board reads the move so
 }
 
 // The other board's move: legal in the view, at this ply, and played

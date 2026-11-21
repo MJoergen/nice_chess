@@ -337,6 +337,7 @@ host-test: build/host/chess_text build/host/chess_mini build/host/chess_peer bui
 	@tools/runtest.sh host_mini mini tests/mini.input host build/host/chess_mini
 	@$(PYTHON) tools/remote_test.py host_remote remote build/host/chess_peer
 	@$(PYTHON) tools/remote_test.py host_remote_text remote_text build/host/chess_peer --text build/host/chess_text
+	@$(PYTHON) tools/remote_talk.py host_remote_talk tests/remote_talk.input build/host/chess_text
 	@tools/runtest.sh host_perftsuite4 perftsuite4 $(PERFTSUITE) host build/host/perftsuite 4
 	@tools/runtest.sh host_searchsuite searchsuite $(SEARCHSUITE) host build/host/searchsuite 10000
 	@tools/runtest.sh host_matesuite matesuite tests/matesuite.input host build/host/matesuite $(MATESUITE_NODES)
