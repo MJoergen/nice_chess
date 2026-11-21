@@ -6,7 +6,9 @@ Two host builds of the peer (src/ui/peer.c), PEER, play each other over
 the loopback: B at 127.0.0.2, which waits, and A at 127.0.0.1, which
 sends HELLO? and NEW, and plays white. Both search 2000 nodes a move,
 with seeds of their own for the opening book, so the game is the same
-every time. Both bind UDP port 4511, at their own addresses.
+every time. Both bind UDP port 4511, at their own addresses. A starts once B has
+printed its name, which B does when its network is open, and the relay
+has its port: A's HELLO? goes once, and must find them there.
 
 With --text, A is the host build of the text front end, TEXT, which
 connects with remote, asks with new w, and plays by remote auto, at
@@ -37,11 +39,12 @@ TIMEOUT = 120
 LINES = ("hello", "game", "move", "result", "error", "bye")
 
 
-def relay(stop: threading.Event, counts: dict) -> None:
+def relay(stop: threading.Event, counts: dict, ready: threading.Event) -> None:
     """Passes the datagrams between A and B, dropping and doubling some."""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind((RELAY_IP, PORT))
     s.settimeout(0.1)
+    ready.set()
     n = {A_IP: 0, B_IP: 0}
     while not stop.is_set():
         try:
@@ -93,12 +96,15 @@ def main() -> None:
     counts = {"dropped": 0, "doubled": 0}
     t = None
     if use_relay:
-        t = threading.Thread(target=relay, args=(stop, counts))
+        ready = threading.Event()
+        t = threading.Thread(target=relay, args=(stop, counts, ready))
         t.start()
+        ready.wait(10)
     other = RELAY_IP if use_relay else B_IP
     os.makedirs("build/test", exist_ok=True)
     # B's lines end as a terminal's do, at CR, and at CR LF.
     b = run(peer, B_IP, "seed 2\rnodes 2000\r\n", f"build/test/{name}_b.input")
+    b.stdout.readline()  # B's name: its network is open
     if args.text:
         a = run(args.text, A_IP, f"remote {other}\nnew w\nremote auto nodes 2000\n",
                 f"build/test/{name}_a.input")

@@ -4,8 +4,9 @@
  * the partner of the host's tests. It refuses DRAW? and UNDO?, and
  * ignores the clocks, as a player of the kind mini.
  *
- * It answers any board's NEW, and plays. It prints each move of the
- * game as "move M", both sides', and the end as "result R REASON".
+ * It answers any board's NEW, and plays. It prints its name once its
+ * network is open, each move of the game as "move M", both sides',
+ * and the end as "result R REASON".
  * Its console takes these lines, which it reads without waiting, and
  * which end at LF or CR, or both:
  *
@@ -254,12 +255,15 @@ static void play(void)
 
 int main(void)
 {
+    engine_new_game();
+    engine_book_seed(platform_seed());
+    // The name comes once the network is open, so that whoever waits
+    // for it can send a HELLO?, which goes once.
+    int err = remote_open("mini");
     out("nice_chess ");
     out(nice_chess_version);
     out(" peer\n");
-    engine_new_game();
-    engine_book_seed(platform_seed());
-    if (remote_open("mini"))
+    if (err)
     {
         out("error network\n");
         return 1;
