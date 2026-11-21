@@ -183,7 +183,8 @@ DHCP or `IP "A.B.C.D"`. The protocol is in `src/ui/remote.h`.
 In the text front end:
 
 - `remote` looks for boards, and lists those that answer;
-  `remote IP` connects to one, and `remote off` leaves.
+  `remote IP` connects to one, and `remote off` leaves. A board with
+  another version of the protocol is named so, and not connected to.
 - `new w` or `new b` asks the other board for a game, with this side
   white or black. The game starts when it accepts. A board that asks
   this one for a game starts one at once.
@@ -208,7 +209,8 @@ The lines `game white|black`, `move M` for each move of the game, and
 
 In the windowed front end, `L` opens the network and looks for boards,
 and the first that answers is the other board, as the row above "Your
-move" shows; `L` again chooses the next that answered, or leaves. `N`
+move" shows; `L` again chooses the next that answered, or leaves. A
+board with another version of the protocol is passed over. `N`
 asks the other board for a game, with this board playing the side you
 have, under the time control of `T`. In the game, `M` lets the engine
 play this side, or you again; `U` asks to take back your last move, or

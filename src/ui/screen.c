@@ -1284,6 +1284,12 @@ static void remote_handle(const remote_msg_t *m)
     {
     case REMOTE_HELLO:
     {
+        // A board of another version of the protocol is not listed.
+        if (m->version != REMOTE_VERSION)
+        {
+            message = "A board of another version.";
+            break;
+        }
         int known = 0;
         for (int i = 0; i < n_found; ++i)
             known |= r_found[i] == m->ip;

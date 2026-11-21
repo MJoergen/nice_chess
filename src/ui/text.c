@@ -691,6 +691,18 @@ static void r_handle(const remote_msg_t *m)
     switch (m->type)
     {
     case REMOTE_HELLO:
+        if (m->version != REMOTE_VERSION)
+        {
+            // No game with a board of another version of the protocol.
+            printf("%s has version %d of the protocol, not %d\n", ip, m->version, REMOTE_VERSION);
+            if (m->ip == remote_peer() && !r_playing)
+            {
+                remote_connect(0);
+                r_asked = 0;
+                printf("Not connected\n");
+            }
+            break;
+        }
         printf("hello %s %s\n", ip, m->kind);
         break;
     case REMOTE_NEW:

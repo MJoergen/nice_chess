@@ -13,7 +13,9 @@
  *                     mini, which refuses DRAW? and UNDO? and
  *                     ignores the clocks. Sent to one address, or
  *                     to 255.255.255.255.
- *   HELLO! V K        The answer to a HELLO?.
+ *   HELLO! V K        The answer to a HELLO?. A front end does not
+ *                     list, or connect to, a board whose V is not
+ *                     its own.
  *   NEW S C TC        A new game from the opening position: the
  *                     sender plays C, w or b, and TC is the time
  *                     control, such as none or 3+2.
@@ -61,7 +63,7 @@
 // The kinds of message that remote_poll returns.
 enum
 {
-    REMOTE_HELLO = 1,   // HELLO!: ip, version, and kind
+    REMOTE_HELLO = 1,   // HELLO!: ip, version (to compare with REMOTE_VERSION), and kind
     REMOTE_NEW,         // color (the sender's: 1 white, -1 black), tc
     REMOTE_ACCEPT,
     REMOTE_MOVE,        // ply, move, ms, fen

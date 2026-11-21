@@ -177,6 +177,8 @@ static void network(void)
         out_ip(m->ip);
         out(" ");
         out(m->kind);
+        if (m->version != REMOTE_VERSION)
+            out(" of another version");
         out("\n");
         break;
     case REMOTE_NEW:

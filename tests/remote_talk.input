@@ -13,6 +13,16 @@ A+
 A< hello 127.0.0.3 mini
 A< hello 127.0.0.4 full
 
+# A board with another version of the protocol is named so, and A
+# does not stay connected to one.
+A@ 127.0.0.5 HELLO! 2 full
+A< 127.0.0.5 has version 2 of the protocol, not 1
+A> remote 127.0.0.6
+A< Connected to 127.0.0.6
+A@ 127.0.0.6 HELLO! 3 full
+A< 127.0.0.6 has version 3 of the protocol, not 1
+A< Not connected
+
 A> remote 127.0.0.2
 A< hello 127.0.0.2 full
 A> new w
