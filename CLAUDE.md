@@ -61,7 +61,7 @@ monitor, and on the host. See README.md.
     make deps           # nice_cpu, niceemu, and the test suites into deps/
     make all            # build everything
     make test           # host and niceemu tests; run after every change
-    make size           # the MEGA65 builds against the 92K-word budget
+    make size           # the MEGA65 builds against the 90K-word budget
     make perft-deep screen-game screen-uci match-random   # slower; in CI too
     make dist           # the archive of a release in build/dist/ (VERSION=V1.0)
     make release-check ETH=IP   # board-test and board-match, the stamp for release.py tag

@@ -24,7 +24,7 @@ build without asserts statically, which needs glibc's static library:
     make match-mchess2  # the host build against mchess2 (about 15 minutes)
     make openings    # the openings of make rate, 8moves_v3.pgn, into deps/books/
     make rate        # a rating of each level against Stockfish's UCI_Elo levels (hours; see below)
-    make size        # the size of the MEGA65 builds and of the Nexys4DDR's, against the 92K and 28K words the monitor leaves them
+    make size        # the size of the MEGA65 builds and of the Nexys4DDR's, against the 90K and 26K words the monitor leaves them
     make analyze PGNFILE=FILE  # Stockfish's scores of the games, and the patterns in the engine's play
     make profile     # the steps of each function in niceemu, on the 24 Bratko-Kopec positions (half a minute)
     make pieces      # draw the pieces again into src/ui/pieces.h, after a change to tools/mkpieces.py (needs Pillow)

@@ -40,7 +40,7 @@
   for stop, and for ponderhit after `go ponder`. A search with no limit
   also ends when another line comes, such as quit, and at the end of
   the input.
-- `ui/mini.c`: the minimal front end, for the Nexys4DDR's 28K words.
+- `ui/mini.c`: the minimal front end, for the Nexys4DDR's 26K words.
   It reads a line of the console, and writes the reply of
   `ui/miniuci.c`, which runs a subset of UCI, a line in and a reply
   out, with no I/O and no printf. A front end on the network can take

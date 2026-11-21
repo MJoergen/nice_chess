@@ -1,7 +1,7 @@
 /***************************************************************
  * miniuci.c: the game of the minimal build, as a subset of UCI
  * (miniuci.h). It has no printf, so that the build has no float
- * formatter, and fits in the Nexys4DDR's 28K words.
+ * formatter, and fits in the Nexys4DDR's 26K words.
  *
  * Copyright (c) 2026 Michael Jørgensen. MIT license (see LICENSE).
  ***************************************************************/

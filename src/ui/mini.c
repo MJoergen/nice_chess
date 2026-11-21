@@ -1,7 +1,7 @@
 /***************************************************************
  * mini.c: the minimal front end, on the console. It reads a line,
  * runs it as a command of miniuci.c, and writes the reply. It is the
- * build for the Nexys4DDR, whose monitor gives a program 28K words.
+ * build for the Nexys4DDR, whose monitor gives a program 26K words.
  *
  * Copyright (c) 2026 Michael Jørgensen. MIT license (see LICENSE).
  ***************************************************************/

@@ -48,13 +48,13 @@ MCHESS2_SRC = main.cc CBoard.cc CMove.cc ai.cc CMoveList.cc CPerft.cc \
 	CPerftSuite.h CSearchSuite.h CSquare.h CTime.h ai.h crc32.h trace.h
 
 # The MEGA65 gives a program under the monitor the words 0x8000 to
-# 0x1EFFF, 92K, for its image, its linear memory, and the NICE stack,
-# which the monitor's routines share and use at most 32 words of
-# (NiceMonMEGA65 V1.2.1).
-BUDGET = 94176
-# The Nexys4DDR gives 0x8000 to 0xEFFF, 28K words, less the same 32, and
-# 13 more, which BASIC's SYS keeps on the stack (NiceMonMEGA65 V2.2.1).
-NEXYS_BUDGET = 28627
+# 0x1E7FF, 90K, for its image, its linear memory, and the NICE stack,
+# which the monitor's routines share and use at most 32 words of, and
+# BASIC's SYS 13 more; BASIC's variables are above, from 0x1E800
+# (NiceMonMEGA65 V2.4, doc/SYSTEM.md).
+BUDGET = 92115
+# The Nexys4DDR gives 0x8000 to 0xE7FF, 26K words, less the same 45.
+NEXYS_BUDGET = 26579
 
 # The engine, and the table of its opening book, which tools/mkbook.c
 # makes from src/engine/book.txt with the engine's own keys.
@@ -81,7 +81,7 @@ NICEFLAGS = -O 2 -D NDEBUG --no-bounds-checks --trust-alignment --byte-windows \
             --stack 8192 --memory 196608 --symbols --keep
 # The MEGA65: the same, built for the monitor, which loads it at 0x8000.
 MONFLAGS = $(NICEFLAGS) --monitor
-# The minimal build (src/ui/mini.c), for the Nexys4DDR's 28K words
+# The minimal build (src/ui/mini.c), for the Nexys4DDR's 26K words
 # (#28): optimized for size, a transposition table of 256 entries
 # (TT_BITS), and one page of memory, of which it reserves only up to
 # the end of its static data (--memory-bytes auto). The wasm stack stays
@@ -235,7 +235,7 @@ build/nice/monstub.bin: $(NICE_CPU)/runtime/test/monitor.nasm $(TOOLCHAIN)
 
 # Remote play's player whose engine plays (src/ui/peer.c), with the
 # network (PEERNET): for the Nexys4DDR, in
-# its 28K words, as the minimal build, and for the MEGA65.
+# its 26K words, as the minimal build, and for the MEGA65.
 build/nexys/chess_peer.bin: $(ENGINE) $(HEADERS) $(PEER) src/ui/remote.h src/platform/nice.c src/platform/net.nasm $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(MINIFLAGS) --monitor $(PEERNET) -o $@ $(ENGINE) $(VERSIONC) $(PEER) src/platform/nice.c
