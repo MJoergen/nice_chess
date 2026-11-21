@@ -91,6 +91,12 @@ MINIFLAGS = -O z -D NDEBUG -D TT_BITS=8 --no-bounds-checks --trust-alignment --b
 MINI = src/ui/mini.c src/ui/miniuci.c
 # Remote play's player whose engine plays (#27).
 PEER = src/ui/peer.c src/ui/remote.c
+# The peer for the Nexys4DDR: as the minimal build, with a wasm stack
+# of 4 KB, which leaves its 1024 words to the NICE stack. A search
+# keeps 25 words on the NICE stack for each ply, and 16 bytes on the
+# wasm stack, to 63 plies; the book's 3 KB is the most on the wasm
+# stack (LOG.md, 2026-11-21).
+NEXYSPEERFLAGS = $(subst --stack 8192,--stack 4096,$(MINIFLAGS))
 # The network on the boards: the monitor's UDP entries, through the stubs
 # of src/platform/net.nasm, for the builds of remote play under the monitor.
 PEERNET = -D NICE_NET --asm src/platform/net.nasm
@@ -238,7 +244,7 @@ build/nice/monstub.bin: $(NICE_CPU)/runtime/test/monitor.nasm $(TOOLCHAIN)
 # its 26K words, as the minimal build, and for the MEGA65.
 build/nexys/chess_peer.bin: $(ENGINE) $(HEADERS) $(PEER) src/ui/remote.h src/platform/nice.c src/platform/net.nasm $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
-	$(NICEBUILD) $(MINIFLAGS) --monitor $(PEERNET) -o $@ $(ENGINE) $(VERSIONC) $(PEER) src/platform/nice.c
+	$(NICEBUILD) $(NEXYSPEERFLAGS) --monitor $(PEERNET) -o $@ $(ENGINE) $(VERSIONC) $(PEER) src/platform/nice.c
 
 build/mega65/chess_peer.bin: $(ENGINE) $(HEADERS) $(PEER) src/ui/remote.h src/platform/nice.c src/platform/net.nasm $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
@@ -433,11 +439,13 @@ size: build/mega65/chess_text.bin build/mega65/chess_screen.bin build/test/mon_c
 	  --budget $(BUDGET) --check build/mega65/chess_text.bin
 	$(PYTHON) tools/size.py --emu $(NICEEMU) --input tests/screen.keys --run build/test/mon_chess_screen.bin \
 	  --budget $(BUDGET) --check build/mega65/chess_screen.bin
-	$(PYTHON) tools/size.py --emu $(NICEEMU) --input tests/mini.input --run build/test/nexys_chess_mini.bin \
+	$(PYTHON) tools/size.py --emu $(NICEEMU) --input tests/size_mini.input --run build/test/nexys_chess_mini.bin \
 	  --budget $(NEXYS_BUDGET) --check build/nexys/chess_mini.bin
-	@# The peer, without a run: in niceemu it has no network, and stops.
-	@# Its NICE stack is about the minimal build's, 277 words.
-	$(PYTHON) tools/size.py --budget $(NEXYS_BUDGET) --check build/nexys/chess_peer.bin
+	@# The peer has no network in niceemu, and stops. Its stacks are taken
+	@# as the minimal build's, which has the same book and the same search,
+	@# from a few words deeper.
+	$(PYTHON) tools/size.py --emu $(NICEEMU) --input tests/size_mini.input --run build/test/nexys_chess_mini.bin \
+	  --stacks-of build/nexys/chess_mini.bin --budget $(NEXYS_BUDGET) --check build/nexys/chess_peer.bin
 
 # The board. load.py loads a program under the monitor and types
 # SYS 0x8000, which runs it; what it prints then comes on the line, such

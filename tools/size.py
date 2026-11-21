@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """size.py - reports the size of a NICE program built by nicebuild.py.
 
-Usage: size.py [--emu NICEEMU --input FILE [--run FILE]] [--budget WORDS [--check]] program.bin
+Usage: size.py [--emu NICEEMU --input FILE [--run FILE] [--stacks-of OTHER.bin]]
+               [--budget WORDS [--check]] program.bin
 
 Reads program.bin, and the program.sym and program.wasm that
 nicebuild.py --symbols --keep leaves beside it. The figures are from
@@ -23,11 +24,19 @@ for a monitor), and reads the peak use of the wasm stack and of the NICE stack
 from the memory after the run: the wasm stack is cleared at the start,
 and niceemu's memory starts at 0, so the lowest word that is not 0 is the
 deepest the stack has gone. Words the program wrote as 0 are not seen,
-so the figures are a lower bound, close in practice.
+so the figures are a lower bound, close in practice. They are the peaks
+of that input, not a bound: the NICE stack grows with the depth of the
+search.
+
+With --stacks-of, the run is of another program, OTHER.bin (or the
+file of --run), and its peaks are counted for program.bin: for a
+program that does not run in niceemu, such as one that needs the
+network, beside one with the same engine that does.
 
 With --budget, it compares the program, its memory, and the NICE stack
 with a budget in words. With --check too, it exits with 1 if they do
-not fit.
+not fit, or if the peak of the wasm stack is all of the program's wasm
+stack. It needs the run, as without one no NICE stack is counted.
 """
 
 from __future__ import annotations
@@ -161,25 +170,38 @@ def dump(emu: str, inp: str, binfile: str, ranges: list[tuple[int, int]]) -> dic
     return mem
 
 
+def layout(binfile: str) -> dict:
+    """What read_wasm gives of a program, and, in words from its lowest
+    address, low: the start of its memory (membase), the words of the
+    memory it reserves, and the end of its image."""
+    base = binfile[:-4] if binfile.endswith(".bin") else binfile
+    low, image_end = read_bin(binfile)
+    w = read_wasm(base + ".wasm")
+    reserved = read_reserved(base + ".nasm")
+    w.update(low=low, image_end=image_end - low, reserved=reserved,
+             membase=read_sym(base + ".sym", "___wasm_memory") - low,
+             mem_words=w["pages"] * PAGE_WORDS if reserved is None else (reserved + 3) // 4)
+    return w
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Reports the size of a NICE program.")
     ap.add_argument("bin")
     ap.add_argument("--emu", help="niceemu, to measure the peak stacks")
     ap.add_argument("--input", help="the console input of the measuring run")
-    ap.add_argument("--run", help="the file to run in niceemu, if not program.bin itself")
+    ap.add_argument("--run", help="the file to run in niceemu, if not the program itself")
+    ap.add_argument("--stacks-of", metavar="OTHER.bin",
+                    help="the program of the measuring run, if not program.bin")
     ap.add_argument("--budget", type=int, help="words for program, memory, and NICE stack")
     ap.add_argument("--check", action="store_true", help="exit with 1 if over the budget")
     args = ap.parse_args()
 
-    base = args.bin[:-4] if args.bin.endswith(".bin") else args.bin
-    low, image_end = read_bin(args.bin)
-    membase = read_sym(base + ".sym", "___wasm_memory") - low
-    image_end -= low
-    w = read_wasm(base + ".wasm")
-    mem_words = w["pages"] * PAGE_WORDS
-    reserved = read_reserved(base + ".nasm")
-    if reserved is not None:
-        mem_words = (reserved + 3) // 4
+    if args.check and not (args.emu and args.input):
+        sys.exit("size.py: --check needs a run, --emu and --input, for the NICE stack")
+
+    w = layout(args.bin)
+    low, image_end, membase = w["low"], w["image_end"], w["membase"]
+    reserved, mem_words = w["reserved"], w["mem_words"]
     data_words = (w["data_end"] - w["data_start"] + 3) // 4
     stack_words = w["stack"] // 4
 
@@ -201,22 +223,34 @@ def main() -> None:
     print(f"program end:          {total:6d} words  (with all of its linear memory)")
 
     nice_peak = 0
+    fits = True
     if args.emu and args.input:
-        mem = dump(args.emu, args.input, args.run or args.bin,
-                   [(low + membase, stack_words), (NICE_SP - NICE_STACK_SCAN, NICE_STACK_SCAN)])
-        unused = next((k for k in range(stack_words) if mem.get(low + membase + k, 0)), stack_words)
-        print(f"peak wasm stack:      {stack_words - unused:6d} words  (of {stack_words})")
+        # The program of the run, and its wasm stack, where the peak is read.
+        ran = layout(args.stacks_of) if args.stacks_of else w
+        ran_low, ran_words = ran["low"] + ran["membase"], ran["stack"] // 4
+        mem = dump(args.emu, args.input, args.run or args.stacks_of or args.bin,
+                   [(ran_low, ran_words), (NICE_SP - NICE_STACK_SCAN, NICE_STACK_SCAN)])
+        unused = next((k for k in range(ran_words) if mem.get(ran_low + k, 0)), ran_words)
+        wasm_peak = ran_words - unused
         nlow = next((a for a in range(NICE_SP - NICE_STACK_SCAN, NICE_SP) if mem.get(a, 0)), NICE_SP)
         nice_peak = NICE_SP - nlow
+        if args.stacks_of:
+            print(f"the peaks are those of {args.stacks_of}:")
+        print(f"peak wasm stack:      {wasm_peak:6d} words  (of {stack_words})")
         print(f"peak NICE stack:      {nice_peak:6d} words")
+        if wasm_peak >= stack_words:
+            print(f"wasm stack:           {stack_words:6d} words, the peak is {wasm_peak}: does NOT fit")
+            fits = False
 
     if args.budget:
         need = total + nice_peak
+        if need > args.budget:
+            fits = False
         verdict = "fits" if need <= args.budget else "does NOT fit"
         print(f"budget:               {args.budget:6d} words, needs {need}: {verdict} "
               f"({args.budget - need:+d})")
-        if need > args.budget and args.check:
-            sys.exit(1)
+    if args.check and not fits:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
