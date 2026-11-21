@@ -12,7 +12,8 @@
  *   hello [IP]     sends HELLO? to IP, or to everyone
  *   connect IP     chooses the other board
  *   new w|b        a new game against it, with this side playing w or b
- *   nodes N        the nodes of a search (MINI_NODES by default)
+ *   nodes N        the nodes of a search, 1 or more (MINI_NODES by
+ *                  default)
  *   seed N         the seed of the opening book's choices
  *   quit
  *
@@ -127,7 +128,12 @@ static void command(const char *s)
             out("error no board\n");
     }
     else if ((r = word(s, "nodes")))
-        nodes = number(r);
+    {
+        // 0, or no number, would be a search with no limit.
+        uint32_t n = number(r);
+        if (n)
+            nodes = n;
+    }
     else if ((r = word(s, "seed")))
         engine_book_seed(number(r));
     else if (word(s, "quit"))

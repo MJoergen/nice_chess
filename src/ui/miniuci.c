@@ -98,7 +98,13 @@ static const char *go(char *s)
     while (*s)
     {
         if ((r = word(s, "nodes")))
-            limits.nodes = number(s = r);
+        {
+            // 0, or no number, would be a search with no limit, which
+            // nothing stops here: the default stays.
+            uint32_t n = number(s = r);
+            if (n)
+                limits.nodes = n;
+        }
         while (*s && *s != ' ' && *s != '\t')
             s++;
         s = skip_space(s);

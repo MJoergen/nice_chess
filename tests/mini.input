@@ -21,6 +21,9 @@ position startpos moves e2e5
 position fen 8/P6k/8/8/8/8/8/K7 w - - 0 1 moves a1b1x
 position fen 8/8/8 w - - 0 1
    go   nodes   2000   wtime 1000
+position fen 8/P6k/8/8/8/8/8/K7 w - - 0 1
+go nodes 0
+go nodes
 unknown command
 position startpos moves e2e4 c7c5
 quit

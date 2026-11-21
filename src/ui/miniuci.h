@@ -27,7 +27,8 @@ void mini_init(uint32_t seed);
 //   position startpos|fen FEN [moves M...]
 //   go [nodes N]                bestmove, from the book where the
 //                               position is in it, or a search of N
-//                               nodes (MINI_NODES by default)
+//                               nodes (MINI_NODES by default, and
+//                               when N is 0 or not a number)
 //   quit
 //
 // Any other line is ignored, as UCI asks. Where the game has ended,

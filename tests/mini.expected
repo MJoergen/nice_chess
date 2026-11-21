@@ -18,4 +18,6 @@ info string illegal move
 info string illegal move
 info string invalid FEN
 bestmove a7a8q
+bestmove a7a8q
+bestmove a7a8q
 exit 0

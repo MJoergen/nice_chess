@@ -103,7 +103,9 @@ def main() -> None:
         a = run(args.text, A_IP, f"remote {other}\nnew w\nremote auto nodes 2000\n",
                 f"build/test/{name}_a.input")
     else:
-        a = run(peer, A_IP, f"seed 1\nnodes 2000\nhello {other}\nconnect {other}\nnew w\n",
+        # nodes 0 and nodes x are not limits, and leave the 2000.
+        a = run(peer, A_IP,
+                f"seed 1\nnodes 2000\nnodes 0\nnodes x\nhello {other}\nconnect {other}\nnew w\n",
                 f"build/test/{name}_a.input")
     try:
         out_a, _ = a.communicate(timeout=TIMEOUT)
