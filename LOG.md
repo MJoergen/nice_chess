@@ -2,6 +2,106 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-21: The fixes after the review of dev-V1.2
+
+A review of the branch gave 11 findings. What was measured for those
+that changed how a program behaves, and one more that the checks on
+the boards found. The boards: a MEGA65 R6 at 192.168.1.67, under
+NiceMonMEGA65 V2.4-17-gaa15de1, and the Nexys4DDR at 192.168.1.66,
+under V2.4, and the host at 192.168.1.3.
+
+- The Nexys4DDR's peer, and its NICE stack. `make size` checked the
+  peer without a run, so with no NICE stack: 26351 words of the 26579,
+  "fits (+228)". In the build at `-O z`, `search` keeps 25 words on
+  the NICE stack for each ply (6 registers, 18 words of its own, and
+  the return address), and `quiescence` 11, to 63 plies. The peak of
+  the minimal build, in niceemu, at 20000 nodes a search:
+
+  | Position | Peak NICE stack, words |
+  |---|---:|
+  | `tests/mini.input` | 277 |
+  | Kiwipete | 327 |
+  | `8/8/8/4k3/8/8/8/K7 w`, the kings alone | 345 |
+  | `8/8/8/4k3/8/4K3/4P3/8 w` | 381 |
+  | `8/k7/p1p1p1p1/P1P1P1P1/8/8/8/K7 w` | 395 |
+  | `4k3/8/8/p1p1p1p1/P1P1P1P1/8/8/4K3 w` | 445 |
+  | `8/8/3k4/p1p1p1p1/P1P1P1P1/3K4/8/8 w` | 470 |
+
+  The last but one at 200000 nodes reaches 620. So the peer did not
+  fit. On the wasm stack the most is the book's move lists, 3104 bytes
+  (`engine_book_move` 2048, `engine_book_moves` 1040, `main` 16), the
+  776 words that `make size` shows; a search keeps 16 bytes a ply
+  there, and `engine_search` 96, 1120 bytes at 63 plies. The peer for
+  the Nexys4DDR now has a wasm stack of 4 KB, which gives 1024 words
+  back. `make size` counts the minimal build's peaks for it, on
+  `tests/size_mini.input`, a move of the book and the last position of
+  the table. After all the fixes below the peer needs 25888 words, and
+  fits by 691: 1161 words are there for the NICE stack, 46 plies of
+  `search`. The 63 plies that the engine allows, 1575 words, do not
+  fit; the minimal build, with 2349 words, has them.
+  `make board-remote ETH=192.168.1.67 ETH2=192.168.1.66`, the R6's text
+  front end against this peer: 107 plies to checkmate in 148 seconds,
+  and with all the fixes 153 plies in 217 seconds, the same moves in
+  both logs.
+- A move after the other board's UNDO? left the request standing, in
+  both front ends. Two text front ends on the host: A plays e2e4 and
+  asks to take it back, B plays e7e5 and then types `undo`. Before, A
+  printed nothing of it, and kept
+  `rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w`: B then takes
+  back its own e7e5, and sends UNDO!, which A ignores. Now B's `undo`
+  asks A, and A prints so. On the R6, the windowed
+  front end as B against the host as A: before, U made the host print
+  nothing; now the host prints that 192.168.1.67 asks to take back its
+  move, and the board "Asked to take back."
+- A board that vanished while it was to move was never gone, as
+  `remote_gone` looked only at this side's messages. `remote.c` now
+  sends a silent board a HELLO? after 5 seconds, and it is gone after
+  30 seconds of nothing. `make remote-gone`: of two text front ends in
+  a game, B is killed while A waits for its turn; A prints `gone` 30
+  seconds later, gives up the wait, and ends at the end of its input.
+  Before, it printed no `gone` in 45 seconds, and did not end in 15
+  more, with its input ended. The host's text front end
+  against the Nexys4DDR's peer: no line of hello or gone in two
+  silences of 12 seconds, and `gone` 30 seconds after the last message
+  when the peer had quit. The peer is 124 words more for it.
+- M during a ponder, in the windowed front end, on the R6 against the
+  host's text front end, with the book off: M, the engine's e2e4, with
+  d7d5 expected, M again during the ponder, and d7d5 from the host.
+  Before, the board played b1c3 by itself, 0.6 seconds later. Now it
+  plays nothing, and shows "White to move".
+- Not a finding: of two boards that answered L together, the R6 found
+  one, the host, and L again left the network. `remote_poll` read on
+  after its first message, and dropped the HELLO! of the Nexys4DDR,
+  which comes once. It now stops at the first message. L then shows
+  192.168.1.66, L again 192.168.1.3, and L again leaves. The peer is
+  77 words less.
+- L to the next board, on the R6 with both boards found and the first,
+  the host, then ended: N, and L. Before, the row read "Asked
+  192.168.1.66 for a game", with no NEW sent there. Now it reads "Board
+  192.168.1.66: N game, L next", and N starts a game with it.
+- A line that ends at CR: `tests/mini.input` with its lines ended at
+  CR and at CR LF by turns got 7 of the 20 lines of
+  `tests/mini.expected` from the minimal build before, and gets all
+  now. On the Nexys4DDR the peer ended at `quit` and a CR. The minimal
+  build for the Nexys4DDR is 19 words more, and the peer 20.
+- `go nodes 0`: the minimal build before did not end on
+  `position fen 8/P6k/8/8/8/8/8/K7 w - - 0 1` and `go nodes 0`, in 10
+  seconds on the host. Now it replies `bestmove a7a8q`, at its 20000
+  nodes.
+- The first HELLO? to the Nexys4DDR's peer, sent when its name had
+  come, got no answer; one 1.5 seconds later did. The peer printed its
+  name before it opened its network. It prints it after now, and
+  `make board-remote`'s log has the Nexys4DDR's hello. On the host,
+  with a B that starts half a second late, host_remote_text failed
+  before, and passes with remote_test.py waiting for B's name.
+- The version of the protocol: the R6's windowed front end, sent
+  `HELLO! 2 full` from the host, kept "Looking for boards", with the
+  message "A board of another version."; sent `HELLO! 1 full`, it
+  listed the host.
+
+`make test`, with host_remote_talk and host_mini_cr new in it, `make
+remote-relay`, `make remote-gone`, and `make size` pass.
+
 ## 2026-11-17: make board-remote (#27)
 
 `make board-remote ETH=192.168.1.65 ETH2=192.168.1.66`: the R3's text
