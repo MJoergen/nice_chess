@@ -1402,6 +1402,14 @@ static int remote_service(int in_ponder)
     return 1;
 }
 
+// Nothing is left of a game with the other board, or of what was asked
+// of it, when the player leaves it for the next board, or the network.
+static void remote_forget(void)
+{
+    r_game = r_asked = r_auto = 0;
+    r_undo_in = r_draw_in = r_undo_out = r_draw_out = 0;
+}
+
 // L, leaving: the game goes on against the engine.
 static void remote_leave(void)
 {
@@ -1412,7 +1420,8 @@ static void remote_leave(void)
            && platform_micros() - t < 2 * platform_clock_second())
         remote_poll();
     remote_close();
-    net_open = r_game = r_asked = r_auto = n_found = 0;
+    remote_forget();
+    net_open = n_found = 0;
     remote_connect(0);
     message = "Left the network.";
 }
@@ -1442,8 +1451,9 @@ static void key_net(void)
         for (int i = 0; i + 1 < n_found; ++i)
             if (r_found[i] == remote_peer())
             {
+                // A NEW that waits for the board before is dropped too.
                 remote_connect(r_found[i + 1]);
-                r_game = 0;
+                remote_forget();
                 return;
             }
     remote_leave();
