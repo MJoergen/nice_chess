@@ -83,8 +83,10 @@
  * position after it, on the player's time. The search reads a key
  * every 1024 nodes, from a keyboard or a file alike, so a run from a
  * file is still the same every time. The keys that need the engine's
- * board (U, S, N, T, Q, the end of the input) stop it; they then wait
- * in ahead, and the expected move is taken back. So does a move of
+ * board (U, S, N, T, Q, the end of the input) stop it, and in remote
+ * play L, X, and M, after which a hit would not be the engine's to go
+ * on with; they then wait in ahead, and the expected move is taken
+ * back. So does a move of
  * the player other than the expected one, which is then played. The
  * expected move is a hit: it is played on the screen only, and the
  * search goes on as the engine's, with its time from then. Meanwhile
@@ -1632,7 +1634,7 @@ static int handle_key(int k)
     else if (n_typed)
         message = "Type a move such as e2e4.";
     else if (pondering && (k == 'q' || k == 'u' || k == 'n' || k == 's' || k == 't'
-                           || k == 'l' || k == 'x'))
+                           || k == 'l' || k == 'x' || (k == 'm' && r_game)))
         ponder_stop = 1; // After the search, from ahead
     else switch (k)
     {
