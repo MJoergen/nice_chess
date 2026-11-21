@@ -4,7 +4,8 @@
 Usage: board.py [--nicemon DIR] LINK [-i INPUT] [-s | --color] [--dump FILE] PROG.bin
 
 Loads PROG.bin, built with nicebuild.py --monitor, into the board
-through the debug link of NiceMonMEGA65, types r to the monitor, which
+through the debug link of NiceMonMEGA65, types the run command of its
+tools/load.py (SYS 0x8000 to BASIC, from NiceMonMEGA65 V2.2.1 on), which
 runs the program, and is then the program's console: INPUT (a file, or
 stdin) goes to the program, paced to its input buffer, and what it
 prints comes to stdout. The run ends when the monitor prints Returned,
@@ -149,9 +150,9 @@ class Board:
         return out
 
     def halt(self) -> None:
-        """Halts the core through the monitor's h, once the program has
+        """Halts the core through BASIC's HALT, once the program has
         returned to it."""
-        self.link.send_console(b"h\r")
+        self.link.send_console(b"HALT\r")
 
     def close(self) -> None:
         self.link.close()

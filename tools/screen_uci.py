@@ -60,7 +60,7 @@ script exits with 1.
 
 On quit, or the end of stdin, the script leaves the windowed front end
 running on the board, so that the screen keeps the game: once a
-program has ended, the monitor writes its lines over the screen, in
+program has ended, BASIC writes its lines over the screen, in
 its own font. Q on the MEGA65's keyboard ends the front end, and the
 next load does not need that. In niceemu the script ends the program's
 input, which ends the front end, and it sends the text front end quit;

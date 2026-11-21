@@ -40,16 +40,20 @@ banner of the text front end, and its UCI `id name`.
 
 `nice_chess-TAG.bin` runs on the MEGA65 under the monitor of
 [NiceMonMEGA65](https://github.com/MJoergen/NiceMonMEGA65), V2.0 or
-later. The monitor loads it from a FAT32 SD card, so the board needs
-no host.
+later. BASIC's `LOAD` loads it from a FAT32 SD card, so the board
+needs no host.
 
 On a PC, make the folder `NICE` in the root of the card and copy
 `mega65/nice_chess-TAG.bin` from the release into it. Put the card in
-the MEGA65 and type at the monitor's prompt, with the release's tag,
-such as:
+the MEGA65 and type at BASIC's `READY.`, with the release's tag, such
+as:
 
-    load nice_chess-V1.2.bin
-    r
+    LOAD "nice_chess-V1.2.bin"
+    SYS 0x8000
+
+`RUN "nice_chess-V1.2.bin"` does both. These are BASIC's statements,
+from NiceMonMEGA65 V2.2.1 on. Up to V2.2 the monitor took commands
+instead: `load nice_chess-V1.2.bin`, then `r`.
 
 ## On the Nexys4DDR
 
@@ -84,7 +88,7 @@ The other keys are on the screen:
 - P: pondering on or off.
 - L: play another board over the network (Remote play, below).
 - ESC: make the engine move now.
-- Q: clear the screen and return to the monitor.
+- Q: clear the screen and return to BASIC.
 
 The game starts with no time control, at level 1, the weakest. There
 are 5 levels; a level sets the time the engine takes for a move, and
@@ -173,8 +177,8 @@ Two boards on one network play a game against each other over UDP,
 port 4511, each board one side. Both of the MEGA65's front ends play
 remote games; on the Nexys4DDR, `build/nexys/chess_peer.bin` is a
 player whose engine plays, and which answers any board that asks for
-a game. Each board needs an IP address first, from the monitor's DHCP
-or `i A.B.C.D`. The protocol is in `src/ui/remote.h`.
+a game. Each board needs an IP address first, from DHCP or
+`IP "A.B.C.D"`. The protocol is in `src/ui/remote.h`.
 
 In the text front end:
 

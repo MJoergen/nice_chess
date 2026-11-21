@@ -439,9 +439,10 @@ size: build/mega65/chess_text.bin build/mega65/chess_screen.bin build/test/mon_c
 	@# Its NICE stack is about the minimal build's, 277 words.
 	$(PYTHON) tools/size.py --budget $(NEXYS_BUDGET) --check build/nexys/chess_peer.bin
 
-# The board. load.py loads a program under the monitor and types r, which
-# runs it; what it prints then comes on the line, such as nc IP 4510 or
-# picocom -b 2000000 DEVICE (NiceMonMEGA65's tools/README.md).
+# The board. load.py loads a program under the monitor and types
+# SYS 0x8000, which runs it; what it prints then comes on the line, such
+# as nc IP 4510 or picocom -b 2000000 DEVICE (NiceMonMEGA65's
+# tools/README.md).
 board-text: build/mega65/chess_text.bin
 	$(PYTHON) $(NICEMON)/tools/load.py $(BOARDLINK) --monitor $<
 
