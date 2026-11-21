@@ -31,6 +31,12 @@ static int sent;             // Whether the first has been sent
 static uint32_t seq_in, seq_in_ip;
 static int seq_in_known;
 
+// Whether the other board is there: when it was last heard, and when
+// it was last asked, with a HELLO? whose answer is not reported.
+static uint32_t heard_at, asked_at;
+static int asked;
+static int silent;
+
 static remote_msg_t msg;
 static int held;
 static char in[MSG_MAX + 1];
@@ -115,6 +121,7 @@ int remote_open(const char *kind)
     queue_len = 0;
     held = 0;
     seq_in_known = 0;
+    asked = silent = 0;
     seq_out = platform_micros() % 1000000; // Not the same after a restart
     return platform_net_open(REMOTE_PORT);
 }
@@ -127,7 +134,11 @@ void remote_close(void)
 void remote_connect(uint32_t ip)
 {
     if (ip != peer)
+    {
         queue_len = 0;
+        heard_at = asked_at = platform_micros();
+        asked = silent = 0;
+    }
     peer = ip;
 }
 
@@ -138,6 +149,7 @@ uint32_t remote_peer(void)
 
 void remote_hello(uint32_t ip)
 {
+    asked = 0; // The answer is the front end's
     send_hello(ip, "HELLO?");
 }
 
@@ -217,7 +229,25 @@ int remote_pending(void)
 
 int remote_gone(void)
 {
-    return queue_len && sent && platform_micros() - first_at >= 30u * platform_clock_second();
+    uint32_t now = platform_micros(), limit = 30u * platform_clock_second();
+    if (queue_len && sent && now - first_at >= limit)
+        return 1;
+    // A silent board stays so until it is heard, however the clock wraps.
+    if (peer && now - heard_at >= limit)
+        silent = 1;
+    return silent;
+}
+
+// Asks the other board whether it is there, when nothing has come
+// from it for 5 seconds, and every 5 seconds until something does.
+static void ask(void)
+{
+    uint32_t now = platform_micros(), wait = 5u * platform_clock_second();
+    if (!peer || now - heard_at < wait || now - asked_at < wait)
+        return;
+    asked_at = now;
+    asked = 1;
+    send_hello(peer, "HELLO?");
 }
 
 // Sends the first message of the queue when it is due.
@@ -266,11 +296,21 @@ static int parse(uint32_t ip)
     const char *s = in;
     char w[8];
     int ok = 1;
+    if (peer && ip == peer)
+    {
+        heard_at = platform_micros();
+        silent = 0;
+    }
     if (!word(&s, w, sizeof w))
         return 0;
     if (!strcmp(w, "HELLO?"))
     {
         send_hello(ip, "HELLO!");
+        return 0;
+    }
+    if (!strcmp(w, "HELLO!") && asked && ip == peer)
+    {
+        asked = 0; // The answer to ask
         return 0;
     }
     if (held && !strcmp(w, "HELLO!"))
@@ -349,6 +389,7 @@ static int parse(uint32_t ip)
 const remote_msg_t *remote_poll(void)
 {
     resend();
+    ask();
     uint32_t ip;
     // A few datagrams a call, so that a burst does not wait. While a
     // message is held, the ACKs are still taken in.

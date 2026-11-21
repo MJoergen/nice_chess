@@ -669,11 +669,19 @@ static int my_turn(void)
     return r_playing && engine_side_to_move() == r_color;
 }
 
-// Waits for the local side's turn, while the game goes on.
-static void wait_turn(void)
+// Waits for the local side's turn, while the game goes on. Returns 0
+// if the wait ended without it: the game ended, the other board is
+// gone, or a line came at the console, which runs next. The line stop
+// only ends the wait.
+static int wait_turn(void)
 {
     while (r_playing && !my_turn())
+    {
         remote_service();
+        if (r_gone || poll_input() == 1 || in_ready)
+            break;
+    }
+    return my_turn();
 }
 
 static void r_handle(const remote_msg_t *m)
@@ -798,12 +806,16 @@ static void remote_service(void)
     }
 }
 
-// Whether the network has work after the end of the input: a game,
+// Whether the network has work after the end of the input: a game in
+// which the other board is to move, or the engine is for this side,
 // messages that wait for their ACK, or a message in the last 2
-// seconds, whose repeats it answers.
+// seconds, whose repeats it answers. It has none once the other board
+// is gone.
 static int remote_busy(void)
 {
-    return r_playing || r_asked || remote_pending()
+    if (remote_gone())
+        return 0;
+    return (r_playing && (r_auto || !my_turn())) || r_asked || remote_pending()
         || platform_micros() - r_heard < 2 * platform_clock_second();
 }
 
@@ -882,8 +894,9 @@ static int remote_command(const char *cmd, char *arg)
             printf("The queue is full\n");
             return 1;
         }
-        // The game starts at the ACCEPT, before the next command.
-        while (r_asked && !remote_gone())
+        // The game starts at the ACCEPT, before the next command. The
+        // wait ends too when the other board is gone, and at stop.
+        while (r_asked && !remote_gone() && poll_input() != 1)
             remote_service();
         if (r_asked)
         {
@@ -896,9 +909,12 @@ static int remote_command(const char *cmd, char *arg)
         return 0;
     if (!strcmp(cmd, "move") || looks_like_move(cmd) || !strcmp(cmd, "go"))
     {
-        wait_turn();
-        if (!r_playing)
+        if (!wait_turn())
+        {
+            if (r_playing)
+                printf("Not played\n");
             return 1;
+        }
         if (!strcmp(cmd, "go"))
         {
             move_t m = do_go(arg);

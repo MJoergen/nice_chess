@@ -135,7 +135,7 @@ STAMP     := $(shell date +%Y%m%d-%H%M%S)
 PGN        = $(PGNDIR)/$@-$(STAMP).pgn
 export CUTECHESS ORDO STOCKFISH NODES LEVELS STRENGTHS ELOS OPPONENTS GAMES CONCURRENCY BOOK
 
-.PHONY: FORCE help all test pieces host-test nice-test tools-test perft-deep remote-relay screen-game screen-uci match-random match-mini match-mchess2 rate analyze openings size profile deps clean distclean
+.PHONY: FORCE help all test pieces host-test nice-test tools-test perft-deep remote-relay remote-gone screen-game screen-uci match-random match-mini match-mchess2 rate analyze openings size profile deps clean distclean
 .PHONY: board-text board-screen board-test board-game board-match board-stockfish board-remote dist release-check
 help:
 	@echo "nice_chess: a chess engine for the NICE system"
@@ -148,6 +148,7 @@ help:
 	@echo "  make test          the tests, on the host and in niceemu, and of tools/release.py"
 	@echo "  make perft-deep    the perft suite to depth 5 on the host (a minute)"
 	@echo "  make remote-relay  remote play on the host, through a relay that drops and doubles datagrams (30 seconds)"
+	@echo "  make remote-gone   remote play on the host, with the other board switched off in a game (30 seconds)"
 	@echo "  make screen-game   a full game in the windowed front end, in niceemu (a minute)"
 	@echo "  make screen-uci    the windowed front end as a UCI engine, by its keys, in niceemu (2 games, 2 minutes)"
 	@echo "  make match-random  the host build against random moves (20 games)"
@@ -373,6 +374,12 @@ nice-test: build/nice/chess_text.bin build/nice/chess_screen.bin build/nice/perf
 # change nothing. Each drop costs the 500 ms of a resend.
 remote-relay: build/host/chess_peer
 	@$(PYTHON) tools/remote_test.py host_remote_relay remote build/host/chess_peer --relay
+
+# Remote play (#27): the other board is switched off in a game of two
+# text front ends. The one left says gone after 30 seconds, its wait
+# for the turn is over, and it ends at the end of its input.
+remote-gone: build/host/chess_text
+	@$(PYTHON) tools/remote_talk.py --wait 45 host_remote_gone tests/remote_gone.input build/host/chess_text
 
 perft-deep: build/host/perftsuite $(PERFTSUITE)
 	@tools/runtest.sh host_perftsuite5 perftsuite5 $(PERFTSUITE) host build/host/perftsuite 5

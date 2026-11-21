@@ -19,6 +19,8 @@ jobs:
         run: make perft-deep
       - name: Remote play through a relay that drops datagrams
         run: make remote-relay
+      - name: Remote play with the other board switched off
+        run: make remote-gone
       - name: A full game in the windowed front end
         run: make screen-game
       - name: The windowed front end as a UCI engine

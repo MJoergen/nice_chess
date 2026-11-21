@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""remote_talk.py NAME SCRIPT TEXT: a test of remote play (#27) between
-two text front ends on the host.
+"""remote_talk.py [--wait SECONDS] NAME SCRIPT TEXT: a test of remote
+play (#27) between two text front ends on the host.
 
 Two host builds of the text front end, TEXT, run at 127.0.0.1 (A) and
 127.0.0.2 (B), both at UDP port 4511, with their consoles on pipes.
@@ -8,16 +8,18 @@ SCRIPT is the talk, a step on each line:
 
   A> LINE     types LINE at A's console
   A< TEXT     waits until A prints a line that starts with TEXT, after
-              its prompts "> " are taken off, for at most 10 seconds;
-              other lines before it are passed over
+              its prompts "> " are taken off, for at most --wait
+              seconds, 10 by default; other lines before it are passed
+              over
   A!          kills A, as a board that is switched off
-  A.          waits until A has ended by itself, for at most --end seconds
+  A.          ends A's input, and waits until A has ended, for at most
+              --wait seconds
 
 and the same with B. Empty lines and lines that start with # are left
-out. After the last step the input of both ends, and both must exit
-with 0 within 15 seconds. What the two print goes to
-build/test/NAME.out. Prints PASS or FAIL, and exits with 1 on a
-failure. Only the Python standard library is used.
+out. After the last step the input of both ends, and both must end
+within 15 seconds. One that was not killed must exit with 0. What the
+two print goes to build/test/NAME.out. Prints PASS or FAIL, and exits
+with 1 on a failure. Only the Python standard library is used.
 """
 
 import argparse
@@ -30,7 +32,6 @@ import threading
 import time
 
 IPS = {"A": "127.0.0.1", "B": "127.0.0.2"}
-WAIT = 10
 EXIT = 15
 
 
@@ -44,8 +45,8 @@ def main() -> None:
     ap.add_argument("name")
     ap.add_argument("script")
     ap.add_argument("text")
-    ap.add_argument("--end", type=float, default=EXIT,
-                    help="seconds a step 'A.' waits for the end (default 15)")
+    ap.add_argument("--wait", type=float, default=10,
+                    help="seconds a step waits for a line, or for the end (default 10)")
     args = ap.parse_args()
 
     procs: dict[str, subprocess.Popen] = {}
@@ -62,7 +63,7 @@ def main() -> None:
     killed = set()
 
     def expect(who: str, text: str) -> bool:
-        end = time.time() + WAIT
+        end = time.time() + args.wait
         while time.time() < end:
             try:
                 line = lines[who].get(timeout=max(0.01, end - time.time()))
@@ -98,11 +99,12 @@ def main() -> None:
                 procs[who].wait()
                 killed.add(who)
             else:
+                procs[who].stdin.close()
                 try:
-                    procs[who].wait(timeout=args.end)
+                    procs[who].wait(timeout=args.wait)
                     log.write(f"{who}. exit {procs[who].returncode}\n")
                 except subprocess.TimeoutExpired:
-                    problem = f"{args.script}:{n}: {who} did not end in {args.end:.0f} seconds"
+                    problem = f"{args.script}:{n}: {who} did not end in {args.wait:.0f} seconds"
             if problem:
                 break
 

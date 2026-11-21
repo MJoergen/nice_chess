@@ -45,9 +45,19 @@ A< 127.0.0.2 offers a draw
 A> no
 B< Refused
 
-# A draw agreed.
+# A types a move before its turn, which waits, until another line
+# comes: stop, or one that runs then.
 A> g1f3
 B< move g1f3
+A> d2d4
+A> stop
+A< Not played
+A> d2d3
+A> show
+A< Not played
+A< Black to move
+
+# A draw agreed.
 B> draw
 A< 127.0.0.2 offers a draw
 A> draw

@@ -26,7 +26,8 @@ monitor, and on the host. See README.md.
   one (`--text`), through a relay that drops datagrams with `--relay`
   (`make remote-relay`). `remote_talk.py` runs two host builds of the
   text front end in a remote game, by the steps of
-  `tests/remote_talk.input`. `board_remote.py` plays two boards against
+  `tests/remote_talk.input`, or of `tests/remote_gone.input`, where one
+  is killed (`make remote-gone`). `board_remote.py` plays two boards against
   each other in remote play (`make board-remote ETH=IP ETH2=IP2`).
   `release.py` scripts the release (`test_release.py` tests it, in
   `make test`).
@@ -64,7 +65,7 @@ monitor, and on the host. See README.md.
     make all            # build everything
     make test           # host and niceemu tests; run after every change
     make size           # the MEGA65 builds against the 90K-word budget
-    make perft-deep screen-game screen-uci match-random   # slower; in CI too
+    make perft-deep remote-relay remote-gone screen-game screen-uci match-random   # slower; in CI too
     make dist           # the archive of a release in build/dist/ (VERSION=V1.0)
     make release-check ETH=IP   # board-test and board-match, the stamp for release.py tag
 

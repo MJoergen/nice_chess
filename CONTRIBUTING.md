@@ -17,6 +17,7 @@ build without asserts statically, which needs glibc's static library:
     make test        # the tests, on the host and in niceemu
     make perft-deep  # the perft suite to depth 5 on the host (about a minute)
     make remote-relay  # remote play on the host, through a relay that drops datagrams (30 seconds)
+    make remote-gone   # remote play on the host, with the other board switched off in a game (30 seconds)
     make screen-game # a full game in the windowed front end, in niceemu (about a minute)
     make screen-uci  # the windowed front end as a UCI engine, by its keys, in niceemu (about 2 minutes)
     make match-random   # the host build against random moves
@@ -81,8 +82,8 @@ what `git describe` says between tags. `build/gen/version.c` holds it.
 `*.expected` files do not depend on it.
 
 GitHub Actions runs `make test`, `make perft-deep`, `make remote-relay`,
-`make screen-game`, `make screen-uci`, `make match-random`,
-`make match-mini`, and `make size` on every push
+`make remote-gone`, `make screen-game`, `make screen-uci`,
+`make match-random`, `make match-mini`, and `make size` on every push
 ([.github/workflows/test.yml](.github/workflows/test.yml)). The tests
 on the board are in [README.md](README.md#the-board-from-a-host).
 

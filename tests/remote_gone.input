@@ -1,0 +1,23 @@
+# The talk of make remote-gone, by tools/remote_talk.py: the other
+# board is switched off in a game.
+B> remote
+B< Looking for boards
+A> remote 127.0.0.2
+A< hello 127.0.0.2 full
+A> new w
+B< game black
+A< game white
+A> e2e4
+B< move e2e4
+
+# A types a move before its turn. B is switched off: after 30 seconds
+# A says so, and the wait is over.
+A> d2d4
+B!
+A< gone
+A< Not played
+
+# With the engine for its side A would wait for B's move. At the end
+# of its input it leaves, as B is gone.
+A> remote auto nodes 2000
+A.

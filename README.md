@@ -188,7 +188,11 @@ In the text front end:
   this one for a game starts one at once.
 - In the game, `move M` (or just `M`) and `go` play this side, and
   wait for its turn. The other board's moves are printed as they come,
-  with the board.
+  with the board. Another line ends the wait, with the move not
+  played: `stop`, or a command, which runs then.
+- `gone` is printed when the other board has not answered for 30
+  seconds, and `back` when it answers again. While it is gone, a move
+  does not wait for the turn, and `new` gets no answer.
 - `remote auto` lets the engine play this side, with the limits of
   `go` after it, such as `remote auto movetime 2000`; `remote auto off`
   stops it.

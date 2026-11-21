@@ -40,6 +40,11 @@
  * with its own: a move that is not legal, or a FEN that differs,
  * ends the game with an error.
  *
+ * A board that has heard nothing from the other board for 5 seconds
+ * sends it a HELLO?, and again every 5 seconds. The other board is
+ * gone when nothing has come from it for 30 seconds, or a message
+ * has waited that long for its ACK.
+ *
  * Copyright (c) 2026 Michael Jørgensen. MIT license (see LICENSE).
  ***************************************************************/
 
@@ -121,12 +126,15 @@ int remote_send_move(move_t move, uint32_t ms);
 // Whether messages wait for their ACK.
 int remote_pending(void);
 
-// Whether the oldest of them has waited 30 seconds or more: the other
-// board is gone, for now.
+// Whether the other board is gone, for now: nothing has come from it
+// for 30 seconds, though remote_poll asks it with a HELLO? after 5
+// seconds of silence, or the oldest of the messages has waited 30
+// seconds for its ACK. It is back when something comes from it.
 int remote_gone(void);
 
-// Receives and sends: the ACKs, the answers to HELLO?, and the
-// messages that are due again. Does not wait. Returns the next
+// Receives and sends: the ACKs, the answers to HELLO?, the messages
+// that are due again, and the HELLO? to a silent board, whose answer
+// it keeps. Does not wait. Returns the next
 // message from the other board, or NULL. The message stays valid
 // until remote_done; until then the ACKs are taken in, and a new
 // message is dropped without its ACK, so that it comes again.

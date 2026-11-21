@@ -50,7 +50,8 @@
   UDP, through the platform's network. `remote.h` specifies the
   protocol. It sends each message again until its ACK comes, ignores
   the repeats, and checks the other side's moves and FEN against the
-  engine.
+  engine. It asks a board that is silent whether it is there, and
+  tells when it is gone.
 - `ui/peer.c`: a player of remote play whose engine plays its side. It
   answers a NEW, or sends one, and prints the moves of the game. It is
   built for the host, for the Nexys4DDR (`build/nexys/chess_peer.bin`),
