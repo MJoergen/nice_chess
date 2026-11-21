@@ -64,6 +64,10 @@ ENGINE = $(CORE) $(BOOKDATA)
 # The headers, and the Makefile, whose flags every build takes, so that
 # a change of the flags rebuilds.
 HEADERS = $(wildcard src/engine/*.h) src/platform/platform.h Makefile
+# The headers of the front ends, all of them for each front end: the
+# protocol of remote play, the minimal build's UCI, the pieces, and
+# the version.
+UIHEADERS = $(wildcard src/ui/*.h)
 # The version, for the front ends (VERSION).
 VERSIONC = build/gen/version.c
 
@@ -209,27 +213,27 @@ all: build/nice/chess_text.bin build/nice/chess_screen.bin build/host/chess_text
      build/nice/chess_mini.bin build/nexys/chess_mini.bin build/host/chess_mini build/host/chess_peer \
      build/nexys/chess_peer.bin build/mega65/chess_peer.bin
 
-build/nice/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/ui/remote.c src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
+build/nice/chess_text.bin: $(ENGINE) $(HEADERS) $(UIHEADERS) src/ui/text.c src/ui/remote.c src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(NICEFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/text.c src/ui/remote.c src/platform/nice.c
 
-build/nice/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/ui/pieces.h src/ui/remote.c src/ui/remote.h src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
+build/nice/chess_screen.bin: $(ENGINE) $(HEADERS) $(UIHEADERS) src/ui/screen.c src/ui/remote.c src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(NICEFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/screen.c src/ui/remote.c src/platform/nice.c
 
-build/mega65/chess_text.bin: $(ENGINE) $(HEADERS) src/ui/text.c src/ui/remote.c src/platform/nice.c src/platform/net.nasm $(VERSIONC) $(TOOLCHAIN)
+build/mega65/chess_text.bin: $(ENGINE) $(HEADERS) $(UIHEADERS) src/ui/text.c src/ui/remote.c src/platform/nice.c src/platform/net.nasm $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(MONFLAGS) $(PEERNET) -o $@ $(ENGINE) $(VERSIONC) src/ui/text.c src/ui/remote.c src/platform/nice.c
 
-build/mega65/chess_screen.bin: $(ENGINE) $(HEADERS) src/ui/screen.c src/ui/pieces.h src/ui/remote.c src/ui/remote.h src/platform/nice.c src/platform/net.nasm $(VERSIONC) $(TOOLCHAIN)
+build/mega65/chess_screen.bin: $(ENGINE) $(HEADERS) $(UIHEADERS) src/ui/screen.c src/ui/remote.c src/platform/nice.c src/platform/net.nasm $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(MONFLAGS) $(PEERNET) -o $@ $(ENGINE) $(VERSIONC) src/ui/screen.c src/ui/remote.c src/platform/nice.c
 
-build/nice/chess_mini.bin: $(ENGINE) $(HEADERS) $(MINI) src/ui/miniuci.h src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
+build/nice/chess_mini.bin: $(ENGINE) $(HEADERS) $(UIHEADERS) $(MINI) src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(MINIFLAGS) -o $@ $(ENGINE) $(VERSIONC) $(MINI) src/platform/nice.c
 
-build/nexys/chess_mini.bin: $(ENGINE) $(HEADERS) $(MINI) src/ui/miniuci.h src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
+build/nexys/chess_mini.bin: $(ENGINE) $(HEADERS) $(UIHEADERS) $(MINI) src/platform/nice.c $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(MINIFLAGS) --monitor -o $@ $(ENGINE) $(VERSIONC) $(MINI) src/platform/nice.c
 
@@ -243,11 +247,11 @@ build/nice/monstub.bin: $(NICE_CPU)/runtime/test/monitor.nasm $(TOOLCHAIN)
 # Remote play's player whose engine plays (src/ui/peer.c), with the
 # network (PEERNET): for the Nexys4DDR, in
 # its 26K words, as the minimal build, and for the MEGA65.
-build/nexys/chess_peer.bin: $(ENGINE) $(HEADERS) $(PEER) src/ui/remote.h src/platform/nice.c src/platform/net.nasm $(VERSIONC) $(TOOLCHAIN)
+build/nexys/chess_peer.bin: $(ENGINE) $(HEADERS) $(UIHEADERS) $(PEER) src/platform/nice.c src/platform/net.nasm $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(NEXYSPEERFLAGS) --monitor $(PEERNET) -o $@ $(ENGINE) $(VERSIONC) $(PEER) src/platform/nice.c
 
-build/mega65/chess_peer.bin: $(ENGINE) $(HEADERS) $(PEER) src/ui/remote.h src/platform/nice.c src/platform/net.nasm $(VERSIONC) $(TOOLCHAIN)
+build/mega65/chess_peer.bin: $(ENGINE) $(HEADERS) $(UIHEADERS) $(PEER) src/platform/nice.c src/platform/net.nasm $(VERSIONC) $(TOOLCHAIN)
 	@mkdir -p $(@D)
 	$(NICEBUILD) $(MONFLAGS) $(PEERNET) -o $@ $(ENGINE) $(VERSIONC) $(PEER) src/platform/nice.c
 
@@ -294,21 +298,21 @@ $(BOOKDATA): build/host/mkbook src/engine/book.txt
 	build/host/mkbook < src/engine/book.txt > $@.tmp
 	mv $@.tmp $@
 
-build/host/chess_text: $(ENGINE) $(HEADERS) src/ui/text.c src/ui/remote.c src/platform/host.c $(VERSIONC)
+build/host/chess_text: $(ENGINE) $(HEADERS) $(UIHEADERS) src/ui/text.c src/ui/remote.c src/platform/host.c $(VERSIONC)
 	@mkdir -p $(@D)
 	$(CC) $(HOSTFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/text.c src/ui/remote.c src/platform/host.c
 
-build/host/chess_mini: $(ENGINE) $(HEADERS) $(MINI) src/ui/miniuci.h src/platform/host.c $(VERSIONC)
+build/host/chess_mini: $(ENGINE) $(HEADERS) $(UIHEADERS) $(MINI) src/platform/host.c $(VERSIONC)
 	@mkdir -p $(@D)
 	$(CC) $(HOSTFLAGS) -DTT_BITS=8 -o $@ $(ENGINE) $(VERSIONC) $(MINI) src/platform/host.c
 
 # The player of remote play whose engine plays (src/ui/peer.c), which
 # the remote tests run twice, over the loopback.
-build/host/chess_peer: $(ENGINE) $(HEADERS) $(PEER) src/ui/remote.h src/platform/host.c $(VERSIONC)
+build/host/chess_peer: $(ENGINE) $(HEADERS) $(UIHEADERS) $(PEER) src/platform/host.c $(VERSIONC)
 	@mkdir -p $(@D)
 	$(CC) $(HOSTFLAGS) -DTT_BITS=8 -o $@ $(ENGINE) $(VERSIONC) $(PEER) src/platform/host.c
 
-build/host/chess_fast: $(ENGINE) $(HEADERS) src/ui/text.c src/ui/remote.c src/platform/host.c $(VERSIONC)
+build/host/chess_fast: $(ENGINE) $(HEADERS) $(UIHEADERS) src/ui/text.c src/ui/remote.c src/platform/host.c $(VERSIONC)
 	@mkdir -p $(@D)
 	$(CC) $(FASTFLAGS) -o $@ $(ENGINE) $(VERSIONC) src/ui/text.c src/ui/remote.c src/platform/host.c
 
