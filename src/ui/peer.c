@@ -6,7 +6,8 @@
  *
  * It answers any board's NEW, and plays. It prints each move of the
  * game as "move M", both sides', and the end as "result R REASON".
- * Its console takes these lines, which it reads without waiting:
+ * Its console takes these lines, which it reads without waiting, and
+ * which end at LF or CR, or both:
  *
  *   hello [IP]     sends HELLO? to IP, or to everyone
  *   connect IP     chooses the other board
@@ -35,6 +36,7 @@
 
 static char line[LINE_MAX];
 static int line_len;
+static int line_last;  // The byte before
 static int input_ended;
 
 static int my_color;   // 1 white, -1 black
@@ -138,15 +140,19 @@ static void console(void)
     int c;
     while (input_ended == 0 && (c = platform_pollc()) != -2)
     {
+        int prev = line_last;
+        line_last = c;
         if (c == -1)
             input_ended = 1;
-        else if (c == '\n')
+        else if (c == '\n' && prev == '\r')
+            continue; // The LF of a CR LF
+        else if (c == '\n' || c == '\r')
         {
             line[line_len] = '\0';
             line_len = 0;
             command(line);
         }
-        else if (c != '\r' && line_len < LINE_MAX - 1)
+        else if (line_len < LINE_MAX - 1)
             line[line_len++] = (char) c;
     }
 }

@@ -330,12 +330,19 @@ test: host-test nice-test tools-test
 tools-test:
 	$(PYTHON) -m unittest discover -s tools -p 'test_*.py'
 
-host-test: build/host/chess_text build/host/chess_mini build/host/chess_peer build/host/perftsuite build/host/searchsuite build/host/matesuite $(PERFTSUITE) $(SEARCHSUITE)
+# tests/mini.input with the lines ended as a terminal ends them, at CR
+# and at CR LF by turns: the replies must be the same.
+build/test/mini_cr.input: tests/mini.input
+	@mkdir -p $(@D)
+	awk '{ printf "%s%s", $$0, NR % 2 ? "\r" : "\r\n" }' $< > $@
+
+host-test: build/host/chess_text build/host/chess_mini build/host/chess_peer build/host/perftsuite build/host/searchsuite build/host/matesuite $(PERFTSUITE) $(SEARCHSUITE) build/test/mini_cr.input
 	@tools/runtest.sh host_text text tests/text.input host build/host/chess_text
 	@tools/runtest.sh host_search search tests/search.input host build/host/chess_text
 	@tools/runtest.sh host_search_end search_end tests/search_end.input host build/host/chess_text
 	@tools/runtest.sh host_book book tests/book.input host build/host/chess_text
 	@tools/runtest.sh host_mini mini tests/mini.input host build/host/chess_mini
+	@tools/runtest.sh host_mini_cr mini build/test/mini_cr.input host build/host/chess_mini
 	@$(PYTHON) tools/remote_test.py host_remote remote build/host/chess_peer
 	@$(PYTHON) tools/remote_test.py host_remote_text remote_text build/host/chess_peer --text build/host/chess_text
 	@$(PYTHON) tools/remote_talk.py host_remote_talk tests/remote_talk.input build/host/chess_text

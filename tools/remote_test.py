@@ -97,7 +97,8 @@ def main() -> None:
         t.start()
     other = RELAY_IP if use_relay else B_IP
     os.makedirs("build/test", exist_ok=True)
-    b = run(peer, B_IP, "seed 2\nnodes 2000\n", f"build/test/{name}_b.input")
+    # B's lines end as a terminal's do, at CR, and at CR LF.
+    b = run(peer, B_IP, "seed 2\rnodes 2000\r\n", f"build/test/{name}_b.input")
     if args.text:
         a = run(args.text, A_IP, f"remote {other}\nnew w\nremote auto nodes 2000\n",
                 f"build/test/{name}_a.input")
