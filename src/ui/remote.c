@@ -391,23 +391,20 @@ const remote_msg_t *remote_poll(void)
     resend();
     ask();
     uint32_t ip;
-    // A few datagrams a call, so that a burst does not wait. While a
-    // message is held, the ACKs are still taken in.
-    for (int i = 0; i < 4 && !held; i++)
+    // A few datagrams a call, so that a burst does not wait, up to the
+    // first message for the front end: those after it wait in the
+    // platform's queue for the next call, as a HELLO! of a second
+    // board, which comes once, must not be dropped. While a message
+    // is held from a call before, the ACKs are still taken in.
+    int was_held = held;
+    for (int i = 0; i < 4 && (was_held || !held); i++)
     {
         int n = platform_net_recv(in, MSG_MAX, &ip);
         if (n <= 0)
             break;
         in[n] = '\0';
-        held = parse(ip);
-    }
-    for (int i = 0; i < 4 && held; i++)
-    {
-        int n = platform_net_recv(in, MSG_MAX, &ip);
-        if (n <= 0)
-            break;
-        in[n] = '\0';
-        parse(ip);
+        if (parse(ip))
+            held = 1;
     }
     return held ? &msg : NULL;
 }

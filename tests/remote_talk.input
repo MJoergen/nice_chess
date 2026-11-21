@@ -2,6 +2,17 @@
 # game, A at 127.0.0.1 and B at 127.0.0.2.
 B> remote
 B< Looking for boards
+
+# Two more boards answer A at once: it lists both.
+A> remote
+A< Looking for boards
+A-
+A@ 127.0.0.3 HELLO! 1 mini
+A@ 127.0.0.4 HELLO! 1 full
+A+
+A< hello 127.0.0.3 mini
+A< hello 127.0.0.4 full
+
 A> remote 127.0.0.2
 A< hello 127.0.0.2 full
 A> new w

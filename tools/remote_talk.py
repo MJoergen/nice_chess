@@ -12,6 +12,10 @@ SCRIPT is the talk, a step on each line:
               seconds, 10 by default; other lines before it are passed
               over
   A!          kills A, as a board that is switched off
+  A@ IP TEXT  sends A the datagram TEXT from the address IP, such as
+              127.0.0.3, as a board there would
+  A-          stops A, and A+ lets it run again, so that the datagrams
+              sent meanwhile all wait for it at once
   A.          ends A's input, and waits until A has ended, for at most
               --wait seconds
 
@@ -26,12 +30,15 @@ import argparse
 import os
 import queue
 import re
+import signal
+import socket
 import subprocess
 import sys
 import threading
 import time
 
 IPS = {"A": "127.0.0.1", "B": "127.0.0.2"}
+PORT = 4511
 EXIT = 15
 
 
@@ -81,8 +88,17 @@ def main() -> None:
             if not step.strip() or step.startswith("#"):
                 continue
             who, what, text = step[0], step[1:2], step[3:]
-            if who not in procs or what not in (">", "<", "!", "."):
+            if who not in procs or what not in (">", "<", "!", ".", "@", "-", "+"):
                 problem = f"{args.script}:{n}: not a step: {step}"
+            elif what == "@":
+                log.write(f"{step}\n")
+                ip, _, datagram = text.partition(" ")
+                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                    sock.bind((ip, 0))
+                    sock.sendto(datagram.encode(), (IPS[who], PORT))
+            elif what in "-+":
+                log.write(f"{step}\n")
+                procs[who].send_signal(signal.SIGSTOP if what == "-" else signal.SIGCONT)
             elif what == ">":
                 log.write(f"{who}> {text}\n")
                 try:
