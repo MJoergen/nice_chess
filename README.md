@@ -176,8 +176,9 @@ Two boards on one network play a game against each other over UDP,
 port 4511, each board one side. Both of the MEGA65's front ends play
 remote games; on the Nexys4DDR, `build/nexys/chess_peer.bin` is a
 player whose engine plays, and which answers any board that asks for
-a game. Each board needs an IP address first, from DHCP or
-`IP "A.B.C.D"`. The protocol is in `src/ui/remote.h`.
+a game. It is not in a release's archive: `make all` builds it from a
+checkout (Building, below). Each board needs an IP address first, from
+DHCP or `IP "A.B.C.D"`. The protocol is in `src/ui/remote.h`.
 
 In the text front end:
 
@@ -271,7 +272,8 @@ a program 90K words of RAM. `build/nexys/chess_mini.bin` is
 `nice_chess-nexys-TAG.bin`, and `build/nice/chess_mini.bin` and
 `build/host/chess_mini` are the same build for niceemu and the host.
 `build/nexys/chess_peer.bin` and `build/mega65/chess_peer.bin` are the
-player of remote play, and `build/host/chess_peer` the host's.
+player of remote play, and `build/host/chess_peer` the host's; no
+release has them.
 
 ## The board from a host
 

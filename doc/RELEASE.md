@@ -31,6 +31,8 @@ release workflow sets `VERSION` to the tag.
     - `niceemu/nice_chess-niceemu-V1.0.bin` and
       `niceemu/nice_chess-text-niceemu-V1.0.bin`, the same front ends
       for niceemu, which do not run under the monitor;
+    - `nexys/nice_chess-nexys-V1.0.bin`, the minimal build for the
+      Nexys4DDR, under the monitor;
     - `linux-x86_64/nice_chess`, the text front end on the host,
       without asserts and linked statically, as a UCI engine;
     - `README.md`, `RELEASE_NOTES.md`, and `LICENSE`.
