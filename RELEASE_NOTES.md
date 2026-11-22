@@ -65,8 +65,10 @@ and new names for the files of the archive.
   and no clock, and speaks a part of UCI on the console. `go` plays a
   move of the book, or searches 20000 nodes, under a second.
 
-Built with nice_cpu V2.2, and checked on a MEGA65 under NiceMonMEGA65
-TBD: `make board-test` passed, and TBD in `make board-match`.
+Built with nice_cpu V2.2, and checked on a MEGA65 R6 under
+NiceMonMEGA65 V2.4.1: `make board-test` passed, and in
+`make board-match` the board drew one game, by the 50-move rule, and
+won the other, with no illegal move.
 
 ## V1.1 (2026-11-13)
 
