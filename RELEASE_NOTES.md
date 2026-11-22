@@ -13,6 +13,61 @@ A release is named `Vmajor.minor`, and its files are
 the release is built with, and the NiceMonMEGA65 release it was
 checked on.
 
+## V1.2 (2026-11-22)
+
+Remote play between two boards, a minimal build for the Nexys4DDR,
+and new names for the files of the archive.
+
+**What it needs**
+
+- The MEGA65 builds need the monitor of NiceMonMEGA65 V2.0 or later,
+  as before. From V2.2.1 on, BASIC loads and runs them from the SD
+  card: `RUN "nice_chess-V1.2.bin"`. Up to V2.2:
+  `load nice_chess-V1.2.bin`, then `r`.
+- Remote play needs a monitor with the UDP entries, and an IP address
+  on each board, by DHCP or `IP "A.B.C.D"`.
+- The minimal build for the Nexys4DDR fits the 26K words that the
+  monitor gives a program there from NiceMonMEGA65 V2.3.1 on, and was
+  checked under V2.4.
+- The builds for niceemu need niceemu of nice_cpu V2.0 or later, the
+  window build for the windowed front end.
+- The host build is for x86_64 Linux, linked statically.
+
+**The files**
+
+- The builds are named by the tag: `mega65/nice_chess-V1.2.bin` and
+  `mega65/nice_chess-text-V1.2.bin`, where they were `CHESS.BIN` and
+  `CHESST.BIN`, and `niceemu/nice_chess-niceemu-V1.2.bin` and
+  `niceemu/nice_chess-text-niceemu-V1.2.bin`.
+- `nexys/nice_chess-nexys-V1.2.bin` is new: the minimal build for the
+  Nexys4DDR.
+
+**Remote play**
+
+- Two boards on one network play a game against each other over UDP,
+  port 4511, each board one side ([README.md](README.md#remote-play)).
+- The text front end: `remote` looks for boards, `remote IP` connects
+  to one, `new w` or `new b` asks for a game, and `remote auto` lets
+  the engine play this side. `undo`, `draw`, and `resign` are asked of
+  the other board, and `gone` is printed when it has not answered for
+  30 seconds.
+- The windowed front end: L looks for boards, and L again chooses the
+  next; N asks for a game; M lets the engine play this side; U, =, and X ask to
+  take back, offer a draw, and resign.
+- A board with another version of the protocol is not played.
+- The host's text front end plays remote games too, and waits for the
+  network without taking a core.
+
+**The Nexys4DDR**
+
+- `nice_chess-nexys-V1.2.bin`: the same engine, built for size, with a
+  transposition table of 256 entries and the book. It has no screen
+  and no clock, and speaks a part of UCI on the console. `go` plays a
+  move of the book, or searches 20000 nodes, under a second.
+
+Built with nice_cpu V2.2, and checked on a MEGA65 under NiceMonMEGA65
+TBD: `make board-test` passed, and TBD in `make board-match`.
+
 ## V1.1 (2026-11-13)
 
 A stronger engine, time controls, strengths, and pondering.

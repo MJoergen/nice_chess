@@ -195,3 +195,52 @@ as lichess-bot drives an engine.
 12 findings. Undo did not clear the move the engine expected
 (`a34023f`), and a search with no limit did not end at `quit` or at the
 end of the input (`4a30fdf`); both are fixed, with tests.
+
+## From V1.1 to V1.2
+
+The work from 2026-11-16 to 2026-11-22, by subject. The measurements
+are in LOG.md, by date.
+
+**The files of a release** (#30, `4f74c12`, `4cb55c1`): the builds in
+the archive are named by the repository and the tag, such as
+`nice_chess-V1.2.bin`, in place of `CHESS.BIN` and `CHESST.BIN`.
+
+**nice_cpu V2.2** (`d1951b0`): the pin was raised for `--memory-bytes`,
+which the minimal build needs. The builds change by a few words, and
+the steps by 0.003%.
+
+**The Nexys4DDR** (#28, 2026-11-16 to 2026-11-21): a minimal build,
+`src/ui/mini.c`, at `-O z` with a transposition table of 256 entries
+and the book, which speaks a part of UCI on the console (`4b2096a`).
+It searches 20000 nodes a move, under a second. NiceMonMEGA65 V2.4
+gives the Nexys4DDR 26K words, and the MEGA65 90K (`317dfbc`).
+
+**Remote play** (#27, 2026-11-16 to 2026-11-17): two boards play a
+game against each other over UDP, through the monitor's UDP entries.
+The protocol and the host's UDP (`476996d`), the peer, whose engine
+plays, on both boards (`1c6d74d`), the text front end's `remote`
+commands (`1cc5358`), the windowed front end's keys L, N, M, U, =, and
+X (`d412933`), and `make board-remote` (`6f1e1e5`). The R3 against the
+Nexys4DDR's peer played to checkmate with the same moves in both logs.
+
+**Loading from BASIC** (#29, `7a22292`): from NiceMonMEGA65 V2.2.1 on,
+the monitor's prompt is BASIC, and the README and `tools/board.py`
+load and run by `LOAD` and `SYS`, and halt by `HALT`.
+
+**The review** (2026-11-21): a review of the branch before V1.2 gave
+11 findings. The Nexys4DDR's peer had no room for its NICE stack, and
+now has a wasm stack of 4 KB (`f8c61f0`). A move left the other
+board's request to take back standing (`b10025d`), a board that
+vanished while it was to move was never gone (`34edb9b`), M during a
+ponder played a move after it (`cb31727`), the HELLO! of a second
+board was dropped (`0a8ebb1`), L to the next board kept what was asked
+of the one before (`f01cef9`), the minimal build did not end a line
+at CR (`f6e5978`) and took `go nodes 0` as a search with no limit
+(`aa34eaf`), and a board of another version of the protocol was
+played (`f87e714`). Each is fixed, with tests where the host can run
+them.
+
+**After the review** (2026-11-22): the peer kept the first board that
+played it, and now lets go of it after the game (#31, `1930eb8`); and
+the host's front ends took a whole core while the network was open,
+and now wait in `poll` (#32, `3e3fe44`).
