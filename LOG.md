@@ -2,6 +2,16 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
+## 2026-11-22: The peer's next board (#31)
+
+- The peer kept the first board that sent it a NEW, and dropped the
+  messages of every other board after that. It now lets go of the
+  board once the game has ended and its last message has its ACK, at
+  BYE, and when the board is gone. `tools/peer_boards.py` plays X, Y,
+  and X again against it: before the change Y's NEW had no answer,
+  after it all three get their game. The Nexys4DDR's peer fits by 654
+  words (`make size`), 37 less than before.
+
 ## 2026-11-21: The fixes after the review of dev-V1.2
 
 A review of the branch gave 11 findings. What was measured for those

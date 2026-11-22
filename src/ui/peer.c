@@ -6,7 +6,10 @@
  *
  * It answers any board's NEW, and plays. It prints its name once its
  * network is open, each move of the game as "move M", both sides',
- * and the end as "result R REASON".
+ * and the end as "result R REASON". It lets go of the other board
+ * once the game has ended and its last message has its ACK, at the
+ * other board's BYE, and when the other board is gone, so that
+ * another board can have the next game.
  * Its console takes these lines, which it reads without waiting, and
  * which end at LF or CR, or both:
  *
@@ -44,6 +47,7 @@ static int input_ended;
 static int my_color;   // 1 white, -1 black
 static int playing;    // A game is on
 static int asked;      // NEW is sent, and the ACCEPT not yet in
+static int done;       // The game is over: let go of the board
 static int games;      // Games that have ended
 static uint32_t nodes = MINI_NODES;
 static uint32_t last_heard;
@@ -84,6 +88,7 @@ static void game_over(const char *how)
     out(how);
     out("\n");
     playing = 0;
+    done = 1;
     games++;
 }
 
@@ -108,7 +113,7 @@ static void start(int color)
 {
     my_color = color;
     playing = 1;
-    asked = 0;
+    asked = done = 0;
     out(color > 0 ? "game white\n" : "game black\n");
 }
 
@@ -118,9 +123,13 @@ static void command(const char *s)
     if ((r = word(s, "hello")))
         remote_hello(*r ? remote_parse_ip(r) : REMOTE_BROADCAST);
     else if ((r = word(s, "connect")))
+    {
+        done = 0;
         remote_connect(remote_parse_ip(r));
+    }
     else if ((r = word(s, "new")))
     {
+        done = 0;
         engine_new_game();
         my_color = *r == 'b' ? -1 : 1;
         playing = 0;
@@ -209,6 +218,7 @@ static void network(void)
                 out(m->move);
                 out("\n");
                 playing = 0;
+                done = 1;
                 remote_send("BYE", "");
             }
         }
@@ -227,6 +237,7 @@ static void network(void)
             out("bye\n");
             playing = 0;
         }
+        done = 1;
         break;
     default:
         break;
@@ -270,17 +281,26 @@ int main(void)
         out("error network\n");
         return 1;
     }
-    int gone = 0;
     last_heard = platform_micros();
     while (input_ended < 2)
     {
         console();
         network();
         play();
-        if (remote_gone() != gone)
+        // remote_connect(0) drops the queue, so only once it is empty,
+        // unless the other board is gone.
+        if (remote_gone())
         {
-            gone = !gone;
-            out(gone ? "gone\n" : "back\n");
+            out("gone\n");
+            if (playing)
+                games++;
+            playing = asked = 0;
+            remote_connect(0);
+        }
+        if (done && !remote_pending())
+        {
+            done = 0;
+            remote_connect(0);
         }
         if (input_ended && games && !playing && !remote_pending()
             && platform_micros() - last_heard >= 2 * platform_clock_second())

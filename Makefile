@@ -350,6 +350,7 @@ host-test: build/host/chess_text build/host/chess_mini build/host/chess_peer bui
 	@$(PYTHON) tools/remote_test.py host_remote remote build/host/chess_peer
 	@$(PYTHON) tools/remote_test.py host_remote_text remote_text build/host/chess_peer --text build/host/chess_text
 	@$(PYTHON) tools/remote_talk.py host_remote_talk tests/remote_talk.input build/host/chess_text
+	@$(PYTHON) tools/peer_boards.py build/host/chess_peer
 	@tools/runtest.sh host_perftsuite4 perftsuite4 $(PERFTSUITE) host build/host/perftsuite 4
 	@tools/runtest.sh host_searchsuite searchsuite $(SEARCHSUITE) host build/host/searchsuite 10000
 	@tools/runtest.sh host_matesuite matesuite tests/matesuite.input host build/host/matesuite $(MATESUITE_NODES)

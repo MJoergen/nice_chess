@@ -53,11 +53,14 @@
   engine. It asks a board that is silent whether it is there, and
   tells when it is gone.
 - `ui/peer.c`: a player of remote play whose engine plays its side. It
-  answers a NEW, or sends one, and prints the moves of the game. It is
+  answers a NEW, or sends one, and prints the moves of the game. Once
+  the game is over, it lets go of the other board, so that any board
+  can have the next game. It is
   built for the host, for the Nexys4DDR (`build/nexys/chess_peer.bin`),
   and for the MEGA65 (`build/mega65/chess_peer.bin`).
   On the host, `tools/remote_test.py` plays two of them against each
-  other over the loopback.
+  other over the loopback, and `tools/peer_boards.py` two boards
+  against one, in turn.
 - `ui/screen.c`: the windowed front end, on the 80x25 screen, for NICE
   only, and remote play by its keys, with `ui/remote.c`. Its keys are
   listed at the top of the file and on the screen.
