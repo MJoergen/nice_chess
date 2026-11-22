@@ -72,6 +72,11 @@ void platform_putc(int c)
     nice_putc(c);
 }
 
+void platform_wait(int console)
+{
+    (void) console;
+}
+
 // The network: the UDP entries of NiceMonMEGA65's monitor, through the
 // stubs of net.nasm, in a build with -D NICE_NET. The monitor's
 // dispatch table is a JMP to an address at each even address, whose

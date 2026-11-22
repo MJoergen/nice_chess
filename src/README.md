@@ -23,7 +23,8 @@
     table, `build/gen/book_data.c`, with the engine's own keys.
 - `platform/`: the clock, the default time of a move, the rate of the
   players' clocks, reads of the console, a byte at a time, which
-  wait or not, and writes: `nice.c` for NICE, `host.c` for a PC, behind
+  wait or not, and writes, and a wait for the loops that poll, which
+  on a PC keeps them from taking a whole core: `nice.c` for NICE, `host.c` for a PC, behind
   `platform.h`, and a UDP endpoint for remote play: a socket in `host.c`,
   and in `nice.c`, built with `-D NICE_NET`, the monitor's UDP entries,
   through the stubs of `net.nasm`.

@@ -302,6 +302,7 @@ int main(void)
             done = 0;
             remote_connect(0);
         }
+        platform_wait(!input_ended);
         if (input_ended && games && !playing && !remote_pending()
             && platform_micros() - last_heard >= 2 * platform_clock_second())
             break;

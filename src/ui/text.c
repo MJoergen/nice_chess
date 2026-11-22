@@ -153,6 +153,7 @@ static int read_line(char *s)
         if (c == -2 || (c == -1 && net_open && remote_busy()))
         {
             remote_service();
+            platform_wait(c == -2);
             continue;
         }
         if (c < 0)
@@ -680,6 +681,7 @@ static int wait_turn(void)
         remote_service();
         if (r_gone || poll_input() == 1 || in_ready)
             break;
+        platform_wait(!in_ended);
     }
     return my_turn();
 }

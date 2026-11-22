@@ -2,7 +2,7 @@
 
 Investigations made during the development (doc/HISTORY.md), newest first.
 
-## 2026-11-22: The peer's next board (#31)
+## 2026-11-22: The peer's next board (#31), and the wait on the host (#32)
 
 - The peer kept the first board that sent it a NEW, and dropped the
   messages of every other board after that. It now lets go of the
@@ -11,6 +11,19 @@ Investigations made during the development (doc/HISTORY.md), newest first.
   and X again against it: before the change Y's NEW had no answer,
   after it all three get their game. The Nexys4DDR's peer fits by 654
   words (`make size`), 37 less than before.
+- The CPU time of the host's front ends, with the network open and
+  nothing to do, before and after `platform_wait` (a `poll` of the
+  socket, and of the console until its input ends, for 5 ms at most):
+
+  | Program | Before | After |
+  |---|---:|---:|
+  | `chess_text`, 5 s after `remote` | 4.99 s | 0.01 s |
+  | `chess_peer`, 5 s | 5.00 s | 0.00 s |
+  | `make remote-gone`, 30 s | about 30 s | 0.15 s |
+
+  The tests pass the same, `make remote-relay` and `make remote-gone`
+  too. The wait takes 10 words of the Nexys4DDR's peer, which fits
+  by 644.
 
 ## 2026-11-21: The fixes after the review of dev-V1.2
 

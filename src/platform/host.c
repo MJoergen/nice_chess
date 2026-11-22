@@ -68,6 +68,12 @@ void platform_putc(int c)
         return;
 }
 
+void platform_wait(int console)
+{
+    struct pollfd p[2] = {{net_sock, POLLIN, 0}, {0, POLLIN, 0}};
+    poll(p, console ? 2 : 1, 5);
+}
+
 int platform_net_open(unsigned port)
 {
     platform_net_close();

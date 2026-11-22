@@ -55,6 +55,13 @@ int platform_getc(void);
 // Writes a byte to the console. On a PC it is written at once.
 void platform_putc(int c);
 
+// Waits a few milliseconds, or less if a datagram comes to the
+// network's endpoint, or, if console is not 0, a byte to the console.
+// For a loop that polls, when it has found nothing to do, so that it
+// does not take a whole core of a PC. On NICE, where a program waits
+// by polling, it returns at once.
+void platform_wait(int console);
+
 // The network: one UDP endpoint, at one local port, for remote play
 // (ui/remote.c). An IP address is a uint32_t, A.B.C.D as A in bits
 // 31..24, and 255.255.255.255 sends to everyone on the network. The
